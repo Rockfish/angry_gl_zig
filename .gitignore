@@ -1,0 +1,11 @@
+
+# Ignore some special directories
+zig-cache
+zig-out
+backup
+
+# Ignore some special system files
+*.DS_Store
+
+# Unity copyrighted assets
+assets/
