@@ -6,6 +6,7 @@
         .zglfw = .{ .path = "libs/zglfw" },
         .zopengl = .{ .path = "libs/zopengl" },
         .system_sdk = .{ .path = "libs/system-sdk" },
+        .assimp = .{ .path = "libs/assimp" },
     },
 
     // Specifies the set of files and directories that are included in this package.
