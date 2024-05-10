@@ -5,12 +5,22 @@ pub fn build(b: *std.Build) void {
 
     const optimize = b.standardOptimizeOption(.{});
 
+    const zmath = b.dependency("zmath", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const zglfw = b.dependency("zglfw", .{
         .target = target,
         .optimize = optimize,
     });
 
     const zopengl = b.dependency("zopengl", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const zstbi = b.dependency("zstbi", .{
         .target = target,
         .optimize = optimize,
     });
@@ -36,10 +46,14 @@ pub fn build(b: *std.Build) void {
     });
 
     @import("system_sdk").addLibraryPathsTo(exe);
+
+    exe.root_module.addImport("zmath", zmath.module("root"));
     exe.root_module.addImport("zglfw", zglfw.module("root"));
     exe.root_module.addImport("zopengl", zopengl.module("root"));
+    exe.root_module.addImport("zstbi", zstbi.module("root"));
     exe.root_module.addImport("assimp", assimp.module("root"));
 
+    exe.linkLibrary(zstbi.artifact("zstbi"));
     exe.linkLibrary(zglfw.artifact("glfw"));
     exe.linkLibrary(assimp.artifact("assimp"));
 

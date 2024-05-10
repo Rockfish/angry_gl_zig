@@ -1,6 +1,12 @@
 const std = @import("std");
 const glfw = @import("zglfw");
 const zopengl = @import("zopengl");
+const zm = @import("zmath");
+const zstbi = @import("zstbi");
+const model = @import("core/model_mesh.zig");
+
+// const texture = @import("core/texture.zig");
+const Texture = @import("core/texture.zig").Texture;
 
 const assimp = @cImport({
     @cInclude("assimp/cimport.h");
@@ -8,8 +14,30 @@ const assimp = @cImport({
     @cInclude("assimp/postprocess.h");
 });
 
+const content_dir = "angrygl_assets";
+
 pub fn main() !void {
-    loadTest();
+    _ = zm.f32x4s(0.0);
+    var m: model.ModelVertex = .{
+        .position = zm.vec3(0.0, 0.0, 0.0),
+        .normal = zm.vec3(0.0, 0.0, 0.0),
+        .uv = zm.vec2(0.0, 0.0),
+        .tangent = zm.vec3(0.0, 0.0, 0.0),
+        .bi_tangent = zm.vec3(0.0, 0.0, 0.0),
+        .bone_ids = .{ 0, 0, 0, 0 },
+        .bone_weights = .{ 0.0, 0.0, 0.0, 0.0 },
+    };
+    m.uv = zm.vec2(0.0, 0.0);
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+
+    const allocator = gpa.allocator();
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    loadModelTest();
 
     try glfw.init();
     defer glfw.terminate();
@@ -23,14 +51,28 @@ pub fn main() !void {
     glfw.windowHintTyped(.client_api, .opengl_api);
     glfw.windowHintTyped(.doublebuffer, true);
 
-    const window = try glfw.Window.create(600, 600, "zig-gamedev: minimal_glfw_gl", null);
+    const window = try glfw.Window.create(600, 600, "Angry ", null);
     defer window.destroy();
 
     glfw.makeContextCurrent(window);
 
     try zopengl.loadCoreProfile(glfw.getProcAddress, gl_major, gl_minor);
-
     const gl = zopengl.bindings;
+
+    const texture_config: Texture.TextureConfig = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
+
+    std.debug.print("Creating a texture\n", .{});
+    var texture = Texture.new(arena, "angrygl_assets/bullet/burn_mark.png", texture_config) catch {
+        std.debug.print("Load error\n", .{});
+        return undefined;
+    };
+    std.debug.print("burn mark texture id: {d}  width: {d},  height: {d}  path: {s}\n", .{ texture.id, texture.width, texture.height, texture.texture_path });
+
+    texture = Texture.new(arena, "angrygl_assets/Player/muzzle_spritesheet.png", texture_config) catch {
+        std.debug.print("Load error\n", .{});
+        return undefined;
+    };
+    std.debug.print("muzzle texture id: {d}  width: {d},  height: {d}  path: {s}\n", .{ texture.id, texture.width, texture.height, texture.texture_path });
 
     glfw.swapInterval(1);
 
@@ -46,11 +88,13 @@ pub fn main() !void {
     }
 }
 
-pub fn loadTest() void {
-    const file = "/Users/john/Dev/Dev_Rust/small_gl_core/examples/sample_animation/vampire/dancing_vampire.dae";
+pub fn createMesh() void {}
+
+pub fn loadModelTest() void {
+    const file = "assets/Models/Player/Player.fbx";
     // const file = "/Users/john/Dev/Dev_Rust/russimp_glam/models/OBJ/cube.obj";
 
-    std.debug.print("Zig example\nLoading model: {s}\n", .{file});
+    std.debug.print("\nZig example with math\nLoading model: {s}\n", .{file});
 
     const aiScene = assimp.aiImportFile(file, assimp.aiProcess_CalcTangentSpace |
         assimp.aiProcess_Triangulate |

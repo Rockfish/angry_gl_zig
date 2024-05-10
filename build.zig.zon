@@ -3,29 +3,21 @@
     .version = "0.0.0",
 
     .dependencies = .{
-        .zglfw = .{ .path = "libs/zglfw" },
-        .zopengl = .{ .path = "libs/zopengl" },
-        .system_sdk = .{ .path = "libs/system-sdk" },
         .assimp = .{ .path = "libs/assimp" },
+        .system_sdk = .{ .path = "libs/system-sdk" },
+        .zglfw = .{ .path = "libs/zglfw" },
+        .zmath = .{ .path = "libs/zmath" },
+        .zopengl = .{ .path = "libs/zopengl" },
+        .zstbi = .{ .path = "libs/zstbi" },
     },
 
-    // Specifies the set of files and directories that are included in this package.
-    // Only files and directories listed here are included in the `hash` that
-    // is computed for this package.
-    // Paths are relative to the build root. Use the empty string (`""`) to refer to
-    // the build root itself.
-    // A directory listed here means that all files within, recursively, are included.
     .paths = .{
-        // This makes *all* files, recursively, included in this package. It is generally
-        // better to explicitly list the files and directories instead, to insure that
-        // fetching from tarballs, file system paths, and version control all result
-        // in the same contents hash.
-        "",
-        // For example...
-        //"build.zig",
-        //"build.zig.zon",
-        //"src",
+        "angrygl_assets",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "libs",
         //"LICENSE",
-        //"README.md",
+        "README.md",
     },
 }
