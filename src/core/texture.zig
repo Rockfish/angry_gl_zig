@@ -55,14 +55,14 @@ pub const Texture = struct {
         gamma_correction: bool,
     };
 
-    pub fn new(allocator: std.mem.Allocator, path: []const u8, texture_config: TextureConfig) !*Texture {
+    pub fn new(allocator: std.mem.Allocator, path: []const u8, texture_config: TextureConfig) !Texture {
         std.debug.print("init zsbi\n", .{});
         zstbi.init(allocator);
         defer zstbi.deinit();
 
         zstbi.setFlipVerticallyOnLoad(texture_config.flip_v);
 
-        const c_path = try std.mem.concatWithSentinel(allocator, u8, &.{path}, 0);
+        const c_path:[:0]const u8 = try allocator.dupeZ(u8, path);
         defer allocator.free(c_path);
 
         std.debug.print("loading image\n", .{});
@@ -115,15 +115,17 @@ pub const Texture = struct {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         }
 
-        const texture = try allocator.create(Texture);
-
-        texture.* = .{
+        return Texture {
             .id = texture_id,
             .texture_path = path,
             .texture_type = TextureType.Diffuse,
             .width = image.width,
             .height = image.height,
         };
-        return texture;
+    }
+
+    pub fn deinit(self: *Texture) void {
+        // TODO
+        _ = self;
     }
 };

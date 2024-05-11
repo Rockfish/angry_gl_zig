@@ -55,10 +55,12 @@ pub fn main() !void {
     defer window.destroy();
 
     glfw.makeContextCurrent(window);
+    glfw.swapInterval(1);
 
     try zopengl.loadCoreProfile(glfw.getProcAddress, gl_major, gl_minor);
     const gl = zopengl.bindings;
 
+    // ----- test 
     const texture_config: Texture.TextureConfig = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
 
     std.debug.print("Creating a texture\n", .{});
@@ -68,14 +70,10 @@ pub fn main() !void {
     };
     std.debug.print("burn mark texture id: {d}  width: {d},  height: {d}  path: {s}\n", .{ texture.id, texture.width, texture.height, texture.texture_path });
 
-    texture = Texture.new(arena, "angrygl_assets/Player/muzzle_spritesheet.png", texture_config) catch {
-        std.debug.print("Load error\n", .{});
-        return undefined;
-    };
+    texture = Texture.new(arena, "angrygl_assets/Player/muzzle_spritesheet.png", texture_config) catch { return undefined; };
     std.debug.print("muzzle texture id: {d}  width: {d},  height: {d}  path: {s}\n", .{ texture.id, texture.width, texture.height, texture.texture_path });
 
-    glfw.swapInterval(1);
-
+    // --- event loop
     while (!window.shouldClose()) {
         glfw.pollEvents();
         if (window.getKey(glfw.Key.escape) == glfw.Action.press) {
