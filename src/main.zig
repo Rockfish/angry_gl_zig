@@ -4,6 +4,7 @@ const zopengl = @import("zopengl");
 const zm = @import("zmath");
 const zstbi = @import("zstbi");
 const model = @import("core/model_mesh.zig");
+const ModelBuilder = @import("core/model_builder.zig").ModelBuilder;
 
 // const texture = @import("core/texture.zig");
 const Texture = @import("core/texture.zig").Texture;
@@ -17,18 +18,6 @@ const assimp = @cImport({
 const content_dir = "angrygl_assets";
 
 pub fn main() !void {
-    _ = zm.f32x4s(0.0);
-    var m: model.ModelVertex = .{
-        .position = zm.vec3(0.0, 0.0, 0.0),
-        .normal = zm.vec3(0.0, 0.0, 0.0),
-        .uv = zm.vec2(0.0, 0.0),
-        .tangent = zm.vec3(0.0, 0.0, 0.0),
-        .bi_tangent = zm.vec3(0.0, 0.0, 0.0),
-        .bone_ids = .{ 0, 0, 0, 0 },
-        .bone_weights = .{ 0.0, 0.0, 0.0, 0.0 },
-    };
-    m.uv = zm.vec2(0.0, 0.0);
-
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
@@ -38,6 +27,7 @@ pub fn main() !void {
     const arena = arena_state.allocator();
 
     loadModelTest();
+    createMesh();
 
     try glfw.init();
     defer glfw.terminate();
@@ -86,7 +76,20 @@ pub fn main() !void {
     }
 }
 
-pub fn createMesh() void {}
+pub fn createMesh() void {
+    var m: model.ModelVertex = .{
+        .position = zm.vec3(0.0, 0.0, 0.0),
+        .normal = zm.vec3(0.0, 0.0, 0.0),
+        .uv = zm.vec2(0.0, 0.0),
+        .tangent = zm.vec3(0.0, 0.0, 0.0),
+        .bi_tangent = zm.vec3(0.0, 0.0, 0.0),
+        .bone_ids = .{ 0, 0, 0, 0 },
+        .bone_weights = .{ 0.0, 0.0, 0.0, 0.0 },
+    };
+    m.uv = zm.vec2(0.0, 0.0);
+
+    model.print_model_mesh(m);
+}
 
 pub fn loadModelTest() void {
     const file = "assets/Models/Player/Player.fbx";

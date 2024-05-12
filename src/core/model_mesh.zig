@@ -6,15 +6,31 @@ const Shader = @import("shader.zig").Shader;
 
 const MAX_BONE_INFLUENCE: usize = 4;
 
-pub const ModelVertex = struct {
+// const OFFSET_OF_POSITION = @as(?*anyopaque, @ptrFromInt(0));
+// const OFFSET_OF_NORMAL = @as(?*anyopaque, @ptrFromInt(@offsetOf(ModelVertex, "normal")));
+// const OFFSET_OF_TEXCOORDS = @as(?*anyopaque, @ptrFromInt(@offsetOf(ModelVertex, "uv")));
+// const OFFSET_OF_TANGENT = @as(?*anyopaque, @ptrFromInt(@offsetOf(ModelVertex, "tangent")));
+// const OFFSET_OF_BITANGENT = @as(?*anyopaque, @ptrFromInt(@offsetOf(ModelVertex, "bi_tangent")));
+// const OFFSET_OF_BONE_IDS = @as(?*anyopaque, @ptrFromInt(@offsetOf(ModelVertex, "bone_ids")));
+// const OFFSET_OF_WEIGHTS = @as(?*anyopaque, @ptrFromInt(@offsetOf(ModelVertex, "bone_weights")));
+
+pub const ModelVertex = extern struct {
     position: zm.Vec3,
     normal: zm.Vec3,
     uv: zm.Vec2,
     tangent: zm.Vec3,
     bi_tangent: zm.Vec3,
-    bone_ids: [MAX_BONE_INFLUENCE]i32,
+    bone_ids: [MAX_BONE_INFLUENCE]i32, //  align(1),
     bone_weights: [MAX_BONE_INFLUENCE]f32,
 };
+
+const OFFSET_OF_POSITION = 0;
+const OFFSET_OF_NORMAL = @offsetOf(ModelVertex, "normal");
+const OFFSET_OF_TEXCOORDS = @offsetOf(ModelVertex, "uv");
+const OFFSET_OF_TANGENT = @offsetOf(ModelVertex, "tangent");
+const OFFSET_OF_BITANGENT = @offsetOf(ModelVertex, "bi_tangent");
+const OFFSET_OF_BONE_IDS = @offsetOf(ModelVertex, "bone_ids");
+const OFFSET_OF_WEIGHTS = @offsetOf(ModelVertex, "bone_weights");
 
 pub const ModelMesh = struct {
     id: i32,
@@ -26,10 +42,10 @@ pub const ModelMesh = struct {
     vbo: u32,
     ebo: u32,
 
-    pub fn new(allocator: std.mem.Allocator, id: i32, name: []const u8, vertices: std.ArrayList(ModelVertex), indices: std.ArrayList(u32), textures: std.ArrayList(Texture)) !*ModelMesh {
-        const model_mesh = try allocator.create(ModelMesh);
+    pub fn init(id: i32, name: []const u8, vertices: std.ArrayList(ModelVertex), indices: std.ArrayList(u32), textures: std.ArrayList(Texture)) ModelMesh {
+        // const model_mesh = try allocator.create(ModelMesh);
 
-        model_mesh.* = .{
+        const model_mesh = ModelVertex{
             .id = id,
             .name = name,
             .vertices = vertices,
@@ -40,6 +56,7 @@ pub const ModelMesh = struct {
             .ebo = 0,
         };
 
+        setupMesh(&model_mesh);
         return model_mesh;
     }
 
@@ -62,4 +79,145 @@ pub const ModelMesh = struct {
         );
         gl.BindVertexArray(0);
     }
+
+    pub fn renderNoTextures(self: *ModelMesh) void {
+        gl.BindVertexArray(self.vao);
+        gl.DrawElements(
+            gl.TRIANGLES,
+            self.indices.len(),
+            gl.UNSIGNED_INT,
+            null,
+        );
+        gl.BindVertexArray(0);
+    }
+
+    fn setupMesh(self: *ModelMesh) void {
+        gl.GenVertexArrays(1, &self.vao);
+        gl.GenBuffers(1, &self.vbo);
+        gl.GenBuffers(1, &self.ebo);
+
+        // load vertex data into vertex buffers
+        gl.BindVertexArray(self.vao);
+        gl.BindBuffer(gl.ARRAY_BUFFER, self.vbo);
+        gl.BufferData(
+            gl.ARRAY_BUFFER,
+            (self.vertices.len() * @sizeOf(ModelVertex)),
+            self.vertices.items.ptr,
+            gl.STATIC_DRAW,
+        );
+
+        // load index data into element buffer
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.ebo);
+        gl.BufferData(
+            gl.ELEMENT_ARRAY_BUFFER,
+            (self.indices.len * @sizeOf(32)),
+            self.indices.items.ptr,
+            gl.STATIC_DRAW,
+        );
+
+        // set the vertex attribute pointers vertex Positions
+        gl.EnableVertexAttribArray(0);
+        gl.VertexAttribPointer(
+            0,
+            3,
+            gl.FLOAT,
+            gl.FALSE,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, OFFSET_OF_POSITION),
+        );
+
+        // vertex normals
+        gl.EnableVertexAttribArray(1);
+        gl.VertexAttribPointer(
+            1,
+            3,
+            gl.FLOAT,
+            gl.FALSE,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, OFFSET_OF_NORMAL),
+        );
+
+        // vertex texture coordinates
+        gl.EnableVertexAttribArray(2);
+        gl.VertexAttribPointer(
+            2,
+            2,
+            gl.FLOAT,
+            gl.FALSE,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, OFFSET_OF_TEXCOORDS),
+        );
+
+        // vertex tangent
+        gl.EnableVertexAttribArray(3);
+        gl.VertexAttribPointer(
+            3,
+            3,
+            gl.FLOAT,
+            gl.FALSE,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, OFFSET_OF_TANGENT),
+        );
+
+        // vertex bitangent
+        gl.EnableVertexAttribArray(4);
+        gl.VertexAttribPointer(
+            4,
+            3,
+            gl.FLOAT,
+            gl.FALSE,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, OFFSET_OF_BITANGENT),
+        );
+
+        // bone ids
+        gl.EnableVertexAttribArray(5);
+        gl.VertexAttribIPointer(
+            5,
+            4,
+            gl.INT,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, OFFSET_OF_BONE_IDS),
+        );
+
+        // weights
+        gl.EnableVertexAttribArray(6);
+        gl.VertexAttribPointer(
+            6,
+            4,
+            gl.FLOAT,
+            gl.FALSE,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, OFFSET_OF_WEIGHTS),
+        );
+
+        gl.BindVertexArray(0);
+    }
+
+    pub fn deinit(self: ModelMesh) void {
+        gl.DeleteVertexArrays(1, &self.vao);
+        gl.DeleteBuffers(1, &self.vbo);
+        gl.DeleteBuffers(1, &self.ebo);
+    }
 };
+
+pub fn print_model_mesh(mesh: ModelVertex) void {
+    _ = mesh;
+    // std.debug.print("mesh: {:#?}", mesh);
+
+    std.debug.print("size vertex: {d}\n", .{@sizeOf(ModelVertex)});
+    std.debug.print("OFFSET_OF_POSITION: {any}\n", .{OFFSET_OF_POSITION});
+    std.debug.print("OFFSET_OF_NORMAL: {any}\n", .{OFFSET_OF_NORMAL});
+    std.debug.print("OFFSET_OF_TEXCOORDS: {any}\n", .{OFFSET_OF_TEXCOORDS});
+    std.debug.print("OFFSET_OF_TANGENT: {any}\n", .{OFFSET_OF_TANGENT});
+    std.debug.print("OFFSET_OF_BITANGENT: {any}\n", .{OFFSET_OF_BITANGENT});
+    std.debug.print("OFFSET_OF_BONE_IDS: {any}\n", .{OFFSET_OF_BONE_IDS});
+    std.debug.print("OFFSET_OF_WEIGHTS: {any}\n", .{OFFSET_OF_WEIGHTS});
+
+    std.debug.print("size of Vec2: {d}\n", .{@sizeOf(zm.Vec2)});
+    std.debug.print("size of Vec3: {d}\n", .{@sizeOf(zm.Vec3)});
+    std.debug.print("size of [4]i32: {d}\n", .{@sizeOf([4]i32)});
+    std.debug.print("size of [4]f32: {d}\n", .{@sizeOf([4]f32)});
+
+    std.debug.print("size of vertex parts: {d}\n", .{@sizeOf(zm.Vec3) * 4 + @sizeOf(zm.Vec2) + @sizeOf([4]i32) + @sizeOf([4]f32)});
+}
