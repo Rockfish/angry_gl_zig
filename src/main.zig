@@ -3,7 +3,7 @@ const glfw = @import("zglfw");
 const zopengl = @import("zopengl");
 const zm = @import("zmath");
 const zstbi = @import("zstbi");
-const model = @import("core/model_mesh.zig");
+const Model = @import("core/model_mesh.zig");
 const ModelBuilder = @import("core/model_builder.zig").ModelBuilder;
 
 // const texture = @import("core/texture.zig");
@@ -22,13 +22,19 @@ pub fn main() !void {
     defer _ = gpa.deinit();
 
     const allocator = gpa.allocator();
-    var arena_state = std.heap.ArenaAllocator.init(allocator);
-    defer arena_state.deinit();
-    const arena = arena_state.allocator();
+    // var arena_state = std.heap.ArenaAllocator.init(allocator);
+    // defer arena_state.deinit();
+    // const arena = arena_state.allocator();
 
-    loadModelTest();
-    createMesh();
+    // loadModelTest();
+    // createMesh();
+    std.debug.print("\n", .{});
+    builderTest(allocator);
 
+    // run(arena);
+}
+
+pub fn run(arena: std.mem.Allocator) !void {
     try glfw.init();
     defer glfw.terminate();
 
@@ -50,7 +56,7 @@ pub fn main() !void {
     try zopengl.loadCoreProfile(glfw.getProcAddress, gl_major, gl_minor);
     const gl = zopengl.bindings;
 
-    // ----- test 
+    // ----- test
     const texture_config: Texture.TextureConfig = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
 
     std.debug.print("Creating a texture\n", .{});
@@ -60,7 +66,9 @@ pub fn main() !void {
     };
     std.debug.print("burn mark texture id: {d}  width: {d},  height: {d}  path: {s}\n", .{ texture.id, texture.width, texture.height, texture.texture_path });
 
-    texture = Texture.new(arena, "angrygl_assets/Player/muzzle_spritesheet.png", texture_config) catch { return undefined; };
+    texture = Texture.new(arena, "angrygl_assets/Player/muzzle_spritesheet.png", texture_config) catch {
+        return undefined;
+    };
     std.debug.print("muzzle texture id: {d}  width: {d},  height: {d}  path: {s}\n", .{ texture.id, texture.width, texture.height, texture.texture_path });
 
     // --- event loop
@@ -77,7 +85,7 @@ pub fn main() !void {
 }
 
 pub fn createMesh() void {
-    var m: model.ModelVertex = .{
+    var m: Model.ModelVertex = .{
         .position = zm.vec3(0.0, 0.0, 0.0),
         .normal = zm.vec3(0.0, 0.0, 0.0),
         .uv = zm.vec2(0.0, 0.0),
@@ -88,7 +96,22 @@ pub fn createMesh() void {
     };
     m.uv = zm.vec2(0.0, 0.0);
 
-    model.print_model_mesh(m);
+    Model.print_model_mesh(m);
+}
+
+// test "model_builder test" {
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // defer _ = gpa.deinit();
+    // const allocator = gpa.allocator();
+pub fn builderTest(allocator: std.mem.Allocator) void {
+    var builder = ModelBuilder.init(allocator, "Player", "assets/Models/Player/Player.fbx");
+
+    const model = builder.flipv().build();
+    _ = model;
+
+    // std.debug.print("model number of meshes: {d}\n", .{model.meshes.items.len});
+
+    std.debug.print("\nmodel builder test completed.\n\n", .{});
 }
 
 pub fn loadModelTest() void {
