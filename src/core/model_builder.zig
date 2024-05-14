@@ -73,17 +73,27 @@ pub const ModelBuilder = struct {
         self.load_textures = false;
     }
 
-    pub fn build(self: *Self) void { // Model {
+    pub fn build(self: *Self) Model {
         // const model = Model{ .name = self.name, .meshes = self.meshes, .animator = undefined };
         // return model;
         self.loadScene(self.filepath);
         std.debug.print("number of meshes: {}\n", .{self.meshes.items.len});
+
+        const model = Model {
+            .allocator = self.allocator,
+            .name = self.name,
+            .meshes = self.meshes,
+            .animator = undefined,
+        };
+        return model;
     }
 
     fn loadScene(self: *Self, file_path: []const u8) void {
         const c_path: [:0]const u8 = self.allocator.dupeZ(u8, file_path) catch {
             @panic("Allocator dupeZ error.\n");
         };
+        defer self.allocator.free(c_path);
+
         const aiScene = Assimp.aiImportFile(c_path, Assimp.aiProcess_CalcTangentSpace |
             Assimp.aiProcess_Triangulate |
             Assimp.aiProcess_JoinIdenticalVertices |
@@ -95,7 +105,7 @@ pub const ModelBuilder = struct {
     }
 
     fn processNode(self: *Self, node: Assimp.aiNode, aiScene: Assimp.aiScene) void {
-        const c_name = node.mName.data[0..node.mName.length+1];
+        const c_name = node.mName.data[0 .. node.mName.length + 1];
         std.debug.print("node name: '{s}'  num meshes: {d}\n", .{ c_name, node.mNumMeshes });
         const num_mesh: u32 = node.mNumMeshes;
         for (0..num_mesh) |i| {
@@ -113,17 +123,52 @@ pub const ModelBuilder = struct {
 
     fn processMesh(self: *Self, aiMesh: Assimp.aiMesh, aiScene: Assimp.aiScene) ModelMesh {
         _ = aiScene;
-        const vertices = std.ArrayList(ModelVertex).init(self.allocator);
+        var vertices = std.ArrayList(ModelVertex).init(self.allocator);
         const indices = std.ArrayList(u32).init(self.allocator);
         const textures = std.ArrayList(Texture).init(self.allocator);
 
-        const c_name = aiMesh.mName.data[0..aiMesh.mName.length+1];
-        const mesh = ModelMesh.init(self.mesh_count, c_name, vertices, indices, textures);
+        for (0..aiMesh.mNumVertices) |i| {
+            var model_vertex = ModelVertex.init();
+            model_vertex.position = vec3FromVector3D(aiMesh.mVertices[i]);
+
+            if (aiMesh.mNormals != null) {
+                model_vertex.normal = vec3FromVector3D(aiMesh.mNormals[i]);
+            }
+            
+            if (aiMesh.mTextureCoords[0] != null) {
+                const tex_coords = aiMesh.mTextureCoords[0];
+                model_vertex.uv = .{tex_coords[i].x, tex_coords[i].y};
+                model_vertex.tangent = vec3FromVector3D(aiMesh.mTangents[i]);
+                model_vertex.bi_tangent = vec3FromVector3D(aiMesh.mBitangents[i]);
+            }
+            vertices.append(model_vertex) catch {
+                @panic("ArrayList error appending model_vertex\n");
+            };
+        }
+
+
+
+
+
+
+
+        const c_name = aiMesh.mName.data[0 .. aiMesh.mName.length + 1];
+        // const mesh = ModelMesh.init(self.allocator, self.mesh_count, c_name, vertices, indices, textures);
+        var model_mesh = ModelMesh{
+            .allocator = self.allocator,
+            .id = self.mesh_count,
+            .name = c_name,
+            .vertices = vertices,
+            .indices = indices,
+            .textures = textures,
+            .vao = 0,
+            .vbo = 0,
+            .ebo = 0,
+        };
+        model_mesh.setupMesh();
         self.mesh_count += 1;
-        return mesh;
+        return model_mesh;
     }
-
-
 
     fn printSceneInfo(aiScene: Assimp.aiScene) void {
         // if (aiScene != null) {
@@ -142,3 +187,11 @@ pub const ModelBuilder = struct {
         // }
     }
 };
+
+inline fn vec2FromVector2D(aiVec: Assimp.aiVector2D) zm.Vec2 {
+    return .{ aiVec.x, aiVec.y };
+}
+
+inline fn vec3FromVector3D(aiVec: Assimp.aiVector3D) zm.Vec3 {
+    return .{ aiVec.x, aiVec.y, aiVec.z };
+}

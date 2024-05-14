@@ -5,6 +5,7 @@ const zm = @import("zmath");
 const zstbi = @import("zstbi");
 const Model = @import("core/model_mesh.zig");
 const ModelBuilder = @import("core/model_builder.zig").ModelBuilder;
+const gl = @import("zopengl").bindings;
 
 // const texture = @import("core/texture.zig");
 const Texture = @import("core/texture.zig").Texture;
@@ -22,19 +23,10 @@ pub fn main() !void {
     defer _ = gpa.deinit();
 
     const allocator = gpa.allocator();
-    // var arena_state = std.heap.ArenaAllocator.init(allocator);
-    // defer arena_state.deinit();
-    // const arena = arena_state.allocator();
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
 
-    // loadModelTest();
-    // createMesh();
-    std.debug.print("\n", .{});
-    builderTest(allocator);
-
-    // run(arena);
-}
-
-pub fn run(arena: std.mem.Allocator) !void {
     try glfw.init();
     defer glfw.terminate();
 
@@ -54,7 +46,18 @@ pub fn run(arena: std.mem.Allocator) !void {
     glfw.swapInterval(1);
 
     try zopengl.loadCoreProfile(glfw.getProcAddress, gl_major, gl_minor);
-    const gl = zopengl.bindings;
+
+    // loadModelTest();
+    // createMesh();
+    std.debug.print("\n", .{});
+    builderTest(allocator);
+
+    // run(arena, window);
+    _ = arena;
+}
+
+pub fn run(arena: std.mem.Allocator, window: *glfw.Window) !void {
+
 
     // ----- test
     const texture_config: Texture.TextureConfig = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
@@ -106,12 +109,13 @@ pub fn createMesh() void {
 pub fn builderTest(allocator: std.mem.Allocator) void {
     var builder = ModelBuilder.init(allocator, "Player", "assets/Models/Player/Player.fbx");
 
-    const model = builder.flipv().build();
-    _ = model;
+    var model = builder.flipv().build();
 
     // std.debug.print("model number of meshes: {d}\n", .{model.meshes.items.len});
 
     std.debug.print("\nmodel builder test completed.\n\n", .{});
+
+    model.deinit();
 }
 
 pub fn loadModelTest() void {

@@ -22,6 +22,20 @@ pub const ModelVertex = extern struct {
     bi_tangent: zm.Vec3,
     bone_ids: [MAX_BONE_INFLUENCE]i32, //  align(1),
     bone_weights: [MAX_BONE_INFLUENCE]f32,
+
+    const Self = @This();
+
+    pub fn init() Self {
+        return Self {
+            .position = undefined,
+            .normal = undefined,
+            .uv = undefined,
+            .tangent = undefined,
+            .bi_tangent = undefined,
+            .bone_ids = undefined,
+            .bone_weights = undefined,
+        };
+    }
 };
 
 const OFFSET_OF_POSITION = 0;
@@ -33,6 +47,7 @@ const OFFSET_OF_BONE_IDS = @offsetOf(ModelVertex, "bone_ids");
 const OFFSET_OF_WEIGHTS = @offsetOf(ModelVertex, "bone_weights");
 
 pub const ModelMesh = struct {
+    allocator: std.mem.Allocator, 
     id: i32,
     name: []const u8,
     vertices: std.ArrayList(ModelVertex),
@@ -42,8 +57,11 @@ pub const ModelMesh = struct {
     vbo: c_uint,
     ebo: c_uint,
 
-    pub fn init(id: i32, name: []const u8, vertices: std.ArrayList(ModelVertex), indices: std.ArrayList(u32), textures: std.ArrayList(Texture)) ModelMesh {
+    const Self = @This();
+
+    pub fn init(allocator: std.mem.Allocator, id: i32, name: []const u8, vertices: std.ArrayList(ModelVertex), indices: std.ArrayList(u32), textures: std.ArrayList(Texture)) ModelMesh {
         var model_mesh = ModelMesh{
+            .allocator = allocator,
             .id = id,
             .name = name,
             .vertices = vertices,
@@ -89,122 +107,124 @@ pub const ModelMesh = struct {
         gl.bindVertexArray(0);
     }
 
-    fn setupMesh(self: *ModelMesh) void {
+    pub fn setupMesh(self: *ModelMesh) void {
         var vao: gl.Uint = undefined;
-        // var vbo: gl.Uint = undefined;
-        // var ebo: gl.Uint = undefined;
-        _ = self;
+        var vbo: gl.Uint = undefined;
+        var ebo: gl.Uint = undefined;
 
         gl.genVertexArrays(1, &vao);
-        // gl.genBuffers(1, &vbo);
-        // gl.genBuffers(1, &ebo);
-        // self.vao = vao;
-        // self.vbo = vbo;
-        // self.ebo = ebo;
+        gl.genBuffers(1, &vbo);
+        gl.genBuffers(1, &ebo);
+        self.vao = vao;
+        self.vbo = vbo;
+        self.ebo = ebo;
         
 
-        // // load vertex data into vertex buffers
-        // gl.bindVertexArray(self.vao);
-        // gl.bindBuffer(gl.ARRAY_BUFFER, self.vbo);
-        // gl.bufferData(
-        //     gl.ARRAY_BUFFER,
-        //     @intCast(self.vertices.items.len * @sizeOf(ModelVertex)),
-        //     self.vertices.items.ptr,
-        //     gl.STATIC_DRAW,
-        // );
+        // load vertex data into vertex buffers
+        gl.bindVertexArray(self.vao);
+        gl.bindBuffer(gl.ARRAY_BUFFER, self.vbo);
+        gl.bufferData(
+            gl.ARRAY_BUFFER,
+            @intCast(self.vertices.items.len * @sizeOf(ModelVertex)),
+            self.vertices.items.ptr,
+            gl.STATIC_DRAW,
+        );
 
-        // // load index data into element buffer
-        // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.ebo);
-        // gl.bufferData(
-        //     gl.ELEMENT_ARRAY_BUFFER,
-        //     @intCast(self.indices.items.len * @sizeOf(u32)),
-        //     self.indices.items.ptr,
-        //     gl.STATIC_DRAW,
-        // );
+        // load index data into element buffer
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.ebo);
+        gl.bufferData(
+            gl.ELEMENT_ARRAY_BUFFER,
+            @intCast(self.indices.items.len * @sizeOf(u32)),
+            self.indices.items.ptr,
+            gl.STATIC_DRAW,
+        );
 
-        // // set the vertex attribute pointers vertex Positions
-        // gl.enableVertexAttribArray(0);
-        // gl.vertexAttribPointer(
-        //     0,
-        //     3,
-        //     gl.FLOAT,
-        //     gl.FALSE,
-        //     @sizeOf(ModelVertex),
-        //     @as(?*anyopaque, @ptrFromInt(OFFSET_OF_POSITION)),
-        // );
+        // set the vertex attribute pointers vertex Positions
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(
+            0,
+            3,
+            gl.FLOAT,
+            gl.FALSE,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_POSITION)),
+        );
 
-        // // vertex normals
-        // gl.enableVertexAttribArray(1);
-        // gl.vertexAttribPointer(
-        //     1,
-        //     3,
-        //     gl.FLOAT,
-        //     gl.FALSE,
-        //     @sizeOf(ModelVertex),
-        //     @as(?*anyopaque, @ptrFromInt(OFFSET_OF_NORMAL)),
-        // );
+        // vertex normals
+        gl.enableVertexAttribArray(1);
+        gl.vertexAttribPointer(
+            1,
+            3,
+            gl.FLOAT,
+            gl.FALSE,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_NORMAL)),
+        );
 
-        // // vertex texture coordinates
-        // gl.enableVertexAttribArray(2);
-        // gl.vertexAttribPointer(
-        //     2,
-        //     2,
-        //     gl.FLOAT,
-        //     gl.FALSE,
-        //     @sizeOf(ModelVertex),
-        //     @as(?*anyopaque, @ptrFromInt(OFFSET_OF_TEXCOORDS)),
-        // );
+        // vertex texture coordinates
+        gl.enableVertexAttribArray(2);
+        gl.vertexAttribPointer(
+            2,
+            2,
+            gl.FLOAT,
+            gl.FALSE,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_TEXCOORDS)),
+        );
 
-        // // vertex tangent
-        // gl.enableVertexAttribArray(3);
-        // gl.vertexAttribPointer(
-        //     3,
-        //     3,
-        //     gl.FLOAT,
-        //     gl.FALSE,
-        //     @sizeOf(ModelVertex),
-        //     @as(?*anyopaque, @ptrFromInt(OFFSET_OF_TANGENT)),
-        // );
+        // vertex tangent
+        gl.enableVertexAttribArray(3);
+        gl.vertexAttribPointer(
+            3,
+            3,
+            gl.FLOAT,
+            gl.FALSE,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_TANGENT)),
+        );
 
-        // // vertex bitangent
-        // gl.enableVertexAttribArray(4);
-        // gl.vertexAttribPointer(
-        //     4,
-        //     3,
-        //     gl.FLOAT,
-        //     gl.FALSE,
-        //     @sizeOf(ModelVertex),
-        //     @as(?*anyopaque, @ptrFromInt(OFFSET_OF_BITANGENT)),
-        // );
+        // vertex bitangent
+        gl.enableVertexAttribArray(4);
+        gl.vertexAttribPointer(
+            4,
+            3,
+            gl.FLOAT,
+            gl.FALSE,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_BITANGENT)),
+        );
 
-        // // bone ids
-        // gl.enableVertexAttribArray(5);
-        // gl.vertexAttribIPointer(
-        //     5,
-        //     4,
-        //     gl.INT,
-        //     @sizeOf(ModelVertex),
-        //     @as(?*anyopaque, @ptrFromInt(OFFSET_OF_BONE_IDS)),
-        // );
+        // bone ids
+        gl.enableVertexAttribArray(5);
+        gl.vertexAttribIPointer(
+            5,
+            4,
+            gl.INT,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_BONE_IDS)),
+        );
 
-        // // weights
-        // gl.enableVertexAttribArray(6);
-        // gl.vertexAttribPointer(
-        //     6,
-        //     4,
-        //     gl.FLOAT,
-        //     gl.FALSE,
-        //     @sizeOf(ModelVertex),
-        //     @as(?*anyopaque, @ptrFromInt(OFFSET_OF_WEIGHTS)),
-        // );
+        // weights
+        gl.enableVertexAttribArray(6);
+        gl.vertexAttribPointer(
+            6,
+            4,
+            gl.FLOAT,
+            gl.FALSE,
+            @sizeOf(ModelVertex),
+            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_WEIGHTS)),
+        );
 
-        // gl.bindVertexArray(0);
+        gl.bindVertexArray(0);
     }
 
     pub fn deinit(self: ModelMesh) void {
         gl.deleteVertexArrays(1, &self.vao);
         gl.deleteBuffers(1, &self.vbo);
         gl.deleteBuffers(1, &self.ebo);
+        self.allocator.free(self.vertices);
+        self.allocator.free(self.indices);
+        self.allocator.free(self.textures);
     }
 };
 
