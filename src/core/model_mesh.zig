@@ -47,14 +47,14 @@ pub const ModelMesh = struct {
     name: []const u8,
     vertices: ArrayList(ModelVertex),
     indices: ArrayList(u32),
-    textures: ArrayList(Texture),
+    textures: ArrayList(*Texture),
     vao: c_uint,
     vbo: c_uint,
     ebo: c_uint,
 
     const Self = @This();
 
-    pub fn init(allocator: Allocator, id: i32, name: []const u8, vertices: ArrayList(ModelVertex), indices: ArrayList(u32), textures: ArrayList(Texture)) !*ModelMesh {
+    pub fn init(allocator: Allocator, id: i32, name: []const u8, vertices: ArrayList(ModelVertex), indices: ArrayList(u32), textures: ArrayList(*Texture)) !*ModelMesh {
         const model_mesh = try allocator.create(ModelMesh);
         model_mesh.* = ModelMesh{
             .allocator = allocator,
@@ -68,7 +68,8 @@ pub const ModelMesh = struct {
             .ebo = 0,
         };
 
-        setupMesh(model_mesh);
+        std.debug.print("ModelMesh: setting up mesh, name: {s}\n", .{name});
+        model_mesh.setupMesh();
         return model_mesh;
     }
 
@@ -114,6 +115,8 @@ pub const ModelMesh = struct {
     }
 
     pub fn setupMesh(self: *ModelMesh) void {
+        std.debug.print("ModelMesh: calling opengl\n", .{});
+
         var vao: gl.Uint = undefined;
         var vbo: gl.Uint = undefined;
         var ebo: gl.Uint = undefined;
@@ -124,7 +127,6 @@ pub const ModelMesh = struct {
         self.vao = vao;
         self.vbo = vbo;
         self.ebo = ebo;
-        
 
         // load vertex data into vertex buffers
         gl.bindVertexArray(self.vao);

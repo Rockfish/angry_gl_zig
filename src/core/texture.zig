@@ -3,12 +3,19 @@ const zstbi = @import("zstbi");
 const zopengl = @import("zopengl");
 const gl = @import("zopengl").bindings;
 
+const Allocator = std.mem.Allocator;
+
 pub const Texture = struct {
     id: u32,
     texture_path: []const u8,
     texture_type: TextureType,
     width: u32,
     height: u32,
+    allocator: std.mem.Allocator,
+
+    pub fn deinit(self: *Texture) void {
+        self.allocator.destroy(self);
+    }
 
     pub const TextureFilter = enum {
         Linear,
@@ -62,7 +69,7 @@ pub const Texture = struct {
 
         zstbi.setFlipVerticallyOnLoad(texture_config.flip_v);
 
-        const c_path:[:0]const u8 = try allocator.dupeZ(u8, path);
+        const c_path: [:0]const u8 = try allocator.dupeZ(u8, path);
         defer allocator.free(c_path);
 
         std.debug.print("loading image\n", .{});
@@ -78,10 +85,10 @@ pub const Texture = struct {
 
         var texture_id: gl.Uint = undefined;
 
-        std.debug.print("generating a texture\n", .{});
+        std.debug.print("Texture: generating a texture\n", .{});
         gl.genTextures(1, &texture_id);
 
-        std.debug.print("binding a texture\n", .{});
+        std.debug.print("Texture: binding a texture\n", .{});
         gl.bindTexture(gl.TEXTURE_2D, texture_id);
 
         const width: c_int = @intCast(image.width);
@@ -115,17 +122,14 @@ pub const Texture = struct {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         }
 
-        return Texture {
+        std.debug.print("Texture: returning texture\n", .{});
+        return Texture{
             .id = texture_id,
             .texture_path = path,
             .texture_type = TextureType.Diffuse,
             .width = image.width,
             .height = image.height,
+            .allocator = allocator,
         };
-    }
-
-    pub fn deinit(self: *Texture) void {
-        // TODO
-        _ = self;
     }
 };

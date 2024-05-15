@@ -49,7 +49,7 @@ pub fn main() !void {
 
     // loadModelTest();
     // createMesh();
-    std.debug.print("\n", .{});
+    std.debug.print("Window created and zopengl initialized.\n", .{});
     try builderTest(allocator);
 
     // run(arena, window);
@@ -102,21 +102,32 @@ pub fn createMesh() void {
     Model.print_model_mesh(m);
 }
 
-// test "model_builder test" {
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer _ = gpa.deinit();
-    // const allocator = gpa.allocator();
 pub fn builderTest(allocator: std.mem.Allocator) !void {
+    var texture_cache = std.ArrayList(*Texture).init(allocator);
+
+    const texture_config: Texture.TextureConfig = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
+    const texture = try allocator.create(Texture);
+    texture.* = try Texture.new(allocator, "angrygl_assets/bullet/burn_mark.png", texture_config);
+    try texture_cache.append(texture);
+
     const file = "/Users/john/Dev/Dev_Rust/small_gl_core/examples/sample_animation/vampire/dancing_vampire.dae";
-    var builder = ModelBuilder.init(allocator, "Player", file);
+
+    var builder = ModelBuilder.init(allocator, texture_cache, "Player", file);
 
     var model = try builder.flipv().build();
 
-    // std.debug.print("model number of meshes: {d}\n", .{model.meshes.items.len});
+    for (texture_cache.items) |_texture| {
+        std.debug.print("model texture: {s}\n", .{_texture.texture_path});
+    }
 
     std.debug.print("\nmodel builder test completed.\n\n", .{});
 
+
     model.deinit();
+    for (texture_cache.items) |_texture| {
+        _texture.deinit();
+    }
+    texture_cache.deinit();
 }
 
 pub fn loadModelTest() void {
