@@ -4,15 +4,10 @@ const gl = @import("zopengl").bindings;
 const Texture = @import("texture.zig").Texture;
 const Shader = @import("shader.zig").Shader;
 
-const MAX_BONE_INFLUENCE: usize = 4;
+const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
 
-// const OFFSET_OF_POSITION = @as(?*anyopaque, @ptrFromInt(0));
-// const OFFSET_OF_NORMAL = @as(?*anyopaque, @ptrFromInt(@offsetOf(ModelVertex, "normal")));
-// const OFFSET_OF_TEXCOORDS = @as(?*anyopaque, @ptrFromInt(@offsetOf(ModelVertex, "uv")));
-// const OFFSET_OF_TANGENT = @as(?*anyopaque, @ptrFromInt(@offsetOf(ModelVertex, "tangent")));
-// const OFFSET_OF_BITANGENT = @as(?*anyopaque, @ptrFromInt(@offsetOf(ModelVertex, "bi_tangent")));
-// const OFFSET_OF_BONE_IDS = @as(?*anyopaque, @ptrFromInt(@offsetOf(ModelVertex, "bone_ids")));
-// const OFFSET_OF_WEIGHTS = @as(?*anyopaque, @ptrFromInt(@offsetOf(ModelVertex, "bone_weights")));
+const MAX_BONE_INFLUENCE: usize = 4;
 
 pub const ModelVertex = extern struct {
     position: zm.Vec3,
@@ -47,20 +42,21 @@ const OFFSET_OF_BONE_IDS = @offsetOf(ModelVertex, "bone_ids");
 const OFFSET_OF_WEIGHTS = @offsetOf(ModelVertex, "bone_weights");
 
 pub const ModelMesh = struct {
-    allocator: std.mem.Allocator, 
+    allocator: Allocator, 
     id: i32,
     name: []const u8,
-    vertices: std.ArrayList(ModelVertex),
-    indices: std.ArrayList(u32),
-    textures: std.ArrayList(Texture),
+    vertices: ArrayList(ModelVertex),
+    indices: ArrayList(u32),
+    textures: ArrayList(Texture),
     vao: c_uint,
     vbo: c_uint,
     ebo: c_uint,
 
     const Self = @This();
 
-    pub fn init(allocator: std.mem.Allocator, id: i32, name: []const u8, vertices: std.ArrayList(ModelVertex), indices: std.ArrayList(u32), textures: std.ArrayList(Texture)) ModelMesh {
-        var model_mesh = ModelMesh{
+    pub fn init(allocator: Allocator, id: i32, name: []const u8, vertices: ArrayList(ModelVertex), indices: ArrayList(u32), textures: ArrayList(Texture)) !*ModelMesh {
+        const model_mesh = try allocator.create(ModelMesh);
+        model_mesh.* = ModelMesh{
             .allocator = allocator,
             .id = id,
             .name = name,
@@ -72,8 +68,18 @@ pub const ModelMesh = struct {
             .ebo = 0,
         };
 
-        setupMesh(&model_mesh);
+        setupMesh(model_mesh);
         return model_mesh;
+    }
+
+    pub fn deinit(self: *ModelMesh) void {
+        gl.deleteVertexArrays(1, &self.vao);
+        gl.deleteBuffers(1, &self.vbo);
+        gl.deleteBuffers(1, &self.ebo);
+        self.vertices.deinit();
+        self.indices.deinit();
+        self.textures.deinit();
+        self.allocator.destroy(self);
     }
 
     pub fn render(self: *ModelMesh, shader: *Shader) void {
@@ -218,14 +224,7 @@ pub const ModelMesh = struct {
         gl.bindVertexArray(0);
     }
 
-    pub fn deinit(self: ModelMesh) void {
-        gl.deleteVertexArrays(1, &self.vao);
-        gl.deleteBuffers(1, &self.vbo);
-        gl.deleteBuffers(1, &self.ebo);
-        self.allocator.free(self.vertices);
-        self.allocator.free(self.indices);
-        self.allocator.free(self.textures);
-    }
+
 };
 
 pub fn print_model_mesh(mesh: ModelVertex) void {

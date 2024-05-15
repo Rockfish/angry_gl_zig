@@ -50,7 +50,7 @@ pub fn main() !void {
     // loadModelTest();
     // createMesh();
     std.debug.print("\n", .{});
-    builderTest(allocator);
+    try builderTest(allocator);
 
     // run(arena, window);
     _ = arena;
@@ -106,10 +106,11 @@ pub fn createMesh() void {
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // defer _ = gpa.deinit();
     // const allocator = gpa.allocator();
-pub fn builderTest(allocator: std.mem.Allocator) void {
-    var builder = ModelBuilder.init(allocator, "Player", "assets/Models/Player/Player.fbx");
+pub fn builderTest(allocator: std.mem.Allocator) !void {
+    const file = "/Users/john/Dev/Dev_Rust/small_gl_core/examples/sample_animation/vampire/dancing_vampire.dae";
+    var builder = ModelBuilder.init(allocator, "Player", file);
 
-    var model = builder.flipv().build();
+    var model = try builder.flipv().build();
 
     // std.debug.print("model number of meshes: {d}\n", .{model.meshes.items.len});
 
@@ -119,8 +120,8 @@ pub fn builderTest(allocator: std.mem.Allocator) void {
 }
 
 pub fn loadModelTest() void {
-    const file = "assets/Models/Player/Player.fbx";
-    // const file = "/Users/john/Dev/Dev_Rust/russimp_glam/models/OBJ/cube.obj";
+    // const file = "assets/Models/Player/Player.fbx";
+    const file = "/Users/john/Dev/Dev_Rust/small_gl_core/examples/sample_animation/vampire/dancing_vampire.dae";
 
     std.debug.print("\nZig example with math\nLoading model: {s}\n", .{file});
 

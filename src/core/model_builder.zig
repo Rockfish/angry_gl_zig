@@ -8,9 +8,12 @@ const Model = @import("model.zig").Model;
 const Animator = @import("animator.zig").Animator;
 const Assimp = @import("assimp.zig").Assimp;
 
+const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
+
 pub const ModelBuilder = struct {
     name: []const u8,
-    meshes: std.ArrayList(ModelMesh),
+    meshes: ArrayList(*ModelMesh),
     // bone_data_map: RefCell<HashMap<BoneName, BoneData>>,
     bone_count: i32,
     filepath: []const u8,
@@ -19,10 +22,10 @@ pub const ModelBuilder = struct {
     flip_v: bool,
     flip_h: bool,
     load_textures: bool,
-    textures_cache: std.ArrayList(Texture),
-    added_textures: std.ArrayList(AddedTexture),
+    textures_cache: ArrayList(Texture),
+    added_textures: ArrayList(AddedTexture),
     mesh_count: i32,
-    allocator: std.mem.Allocator,
+    allocator: Allocator,
 
     const Self = @This();
 
@@ -32,10 +35,10 @@ pub const ModelBuilder = struct {
         texture_filename: []const u8,
     };
 
-    pub fn init(allocator: std.mem.Allocator, name: []const u8, path: []const u8) Self {
+    pub fn init(allocator: Allocator, name: []const u8, path: []const u8) Self {
         const builder = ModelBuilder{
             .name = name,
-            .meshes = std.ArrayList(ModelMesh).init(allocator),
+            .meshes = ArrayList(*ModelMesh).init(allocator),
             .mesh_count = 0,
             .bone_count = 0,
             .filepath = path,
@@ -44,8 +47,8 @@ pub const ModelBuilder = struct {
             .flip_v = false,
             .flip_h = false,
             .load_textures = true,
-            .added_textures = std.ArrayList(AddedTexture).init(allocator),
-            .textures_cache = std.ArrayList(Texture).init(allocator),
+            .added_textures = ArrayList(AddedTexture).init(allocator),
+            .textures_cache = ArrayList(Texture).init(allocator),
             .allocator = allocator,
         };
 
@@ -73,25 +76,26 @@ pub const ModelBuilder = struct {
         self.load_textures = false;
     }
 
-    pub fn build(self: *Self) Model {
-        // const model = Model{ .name = self.name, .meshes = self.meshes, .animator = undefined };
-        // return model;
-        self.loadScene(self.filepath);
-        std.debug.print("number of meshes: {}\n", .{self.meshes.items.len});
+    pub fn build(self: *Self) !*Model {
+        std.debug.print("loading scene. number of meshes: {}\n", .{self.meshes.items.len});
+        try self.loadScene(self.filepath);
 
-        const model = Model {
+        const model = try self.allocator.create(Model);
+        model.* = Model {
             .allocator = self.allocator,
             .name = self.name,
             .meshes = self.meshes,
             .animator = undefined,
         };
+
+        self.added_textures.deinit();
+        self.textures_cache.deinit();
+
         return model;
     }
 
-    fn loadScene(self: *Self, file_path: []const u8) void {
-        const c_path: [:0]const u8 = self.allocator.dupeZ(u8, file_path) catch {
-            @panic("Allocator dupeZ error.\n");
-        };
+    fn loadScene(self: *Self, file_path: []const u8) !void {
+        const c_path: [:0]const u8 = try self.allocator.dupeZ(u8, file_path);
         defer self.allocator.free(c_path);
 
         const aiScene = Assimp.aiImportFile(c_path, Assimp.aiProcess_CalcTangentSpace |
@@ -101,31 +105,29 @@ pub const ModelBuilder = struct {
 
         printSceneInfo(aiScene[0]);
 
-        self.processNode(aiScene[0].mRootNode[0], aiScene[0]);
+        try self.processNode(aiScene[0].mRootNode[0], aiScene[0]);
     }
 
-    fn processNode(self: *Self, node: Assimp.aiNode, aiScene: Assimp.aiScene) void {
+    fn processNode(self: *Self, node: Assimp.aiNode, aiScene: Assimp.aiScene) !void {
         const c_name = node.mName.data[0 .. node.mName.length + 1];
         std.debug.print("node name: '{s}'  num meshes: {d}\n", .{ c_name, node.mNumMeshes });
+
         const num_mesh: u32 = node.mNumMeshes;
         for (0..num_mesh) |i| {
             const aiMesh = aiScene.mMeshes[node.mMeshes[i]][0];
-            const model_mesh = self.processMesh(aiMesh, aiScene);
-            self.meshes.append(model_mesh) catch {
-                @panic("Allocator append error.\n");
-            };
+            const model_mesh = try self.processMesh(aiMesh, aiScene);
+            try self.meshes.append(model_mesh);
         }
 
         for (0..node.mNumChildren) |i| {
-            self.processNode(node.mChildren[i][0], aiScene);
+            try self.processNode(node.mChildren[i][0], aiScene);
         }
     }
 
-    fn processMesh(self: *Self, aiMesh: Assimp.aiMesh, aiScene: Assimp.aiScene) ModelMesh {
-        _ = aiScene;
-        var vertices = std.ArrayList(ModelVertex).init(self.allocator);
-        const indices = std.ArrayList(u32).init(self.allocator);
-        const textures = std.ArrayList(Texture).init(self.allocator);
+    fn processMesh(self: *Self, aiMesh: Assimp.aiMesh, aiScene: Assimp.aiScene) !*ModelMesh {
+        var vertices = ArrayList(ModelVertex).init(self.allocator);
+        var indices = ArrayList(u32).init(self.allocator);
+        const textures = ArrayList(Texture).init(self.allocator);
 
         for (0..aiMesh.mNumVertices) |i| {
             var model_vertex = ModelVertex.init();
@@ -141,33 +143,51 @@ pub const ModelBuilder = struct {
                 model_vertex.tangent = vec3FromVector3D(aiMesh.mTangents[i]);
                 model_vertex.bi_tangent = vec3FromVector3D(aiMesh.mBitangents[i]);
             }
-            vertices.append(model_vertex) catch {
-                @panic("ArrayList error appending model_vertex\n");
-            };
+            try vertices.append(model_vertex);
         }
 
+        for (0..aiMesh.mNumFaces) |i| {
+            const face = aiMesh.mFaces[i];
+            for (0..face.mNumIndices) |j| {
+                try indices.append(face.mIndices[j]);
+            }
+        }
 
+        var material = aiScene.mMaterials[aiMesh.mMaterialIndex][0];
+        std.debug.print("processMesh material: {any}\n", .{material});
 
-
-
+        const material_textures = try self.loadMaterialTextures(&material, Texture.TextureType.Diffuse);
+        std.debug.print("processMesh material_textures: {any}\n", .{material_textures});
 
 
         const c_name = aiMesh.mName.data[0 .. aiMesh.mName.length + 1];
-        // const mesh = ModelMesh.init(self.allocator, self.mesh_count, c_name, vertices, indices, textures);
-        var model_mesh = ModelMesh{
-            .allocator = self.allocator,
-            .id = self.mesh_count,
-            .name = c_name,
-            .vertices = vertices,
-            .indices = indices,
-            .textures = textures,
-            .vao = 0,
-            .vbo = 0,
-            .ebo = 0,
-        };
-        model_mesh.setupMesh();
+        const model_mesh = try ModelMesh.init(
+            self.allocator, 
+            self.mesh_count, 
+            c_name, 
+            vertices, 
+            indices, 
+            textures);
         self.mesh_count += 1;
         return model_mesh;
+    }
+
+    fn loadMaterialTextures(self: *Self, material: *Assimp.aiMaterial, texture_type: Texture.TextureType) !ArrayList(Texture) {
+        const material_textures = ArrayList(Texture).init(self.allocator);
+        const texture_count = Assimp.aiGetMaterialTextureCount(material, @intFromEnum(texture_type));
+
+        for (0..texture_count) |i| {
+            const ai_str = try self.allocator.create(Assimp.aiString);
+            defer self.allocator.destroy(ai_str);
+            // Assimp.aiGetMaterialTexture
+            
+            const ai_return = GetMaterialTexture(material, texture_type, @intCast(i), ai_str);
+            const str: []const u8 = ai_str.data[0..ai_str.length + 1];
+            std.debug.print("ai_str: {s}\n", .{str});
+            std.debug.print("ai_return: {d}\n", .{ai_return});
+
+        } 
+        return material_textures;
     }
 
     fn printSceneInfo(aiScene: Assimp.aiScene) void {
@@ -194,4 +214,13 @@ inline fn vec2FromVector2D(aiVec: Assimp.aiVector2D) zm.Vec2 {
 
 inline fn vec3FromVector3D(aiVec: Assimp.aiVector3D) zm.Vec3 {
     return .{ aiVec.x, aiVec.y, aiVec.z };
+}
+
+inline fn GetMaterialTexture(
+    material: *Assimp.aiMaterial,
+    texture_type: Texture.TextureType,
+    index: u32,
+    path: *Assimp.aiString,
+) Assimp.aiReturn {
+    return Assimp.aiGetMaterialTexture(material, @intFromEnum(texture_type),index,path, null, null, null, null, null, null);
 }
