@@ -105,10 +105,10 @@ pub fn createMesh() void {
 pub fn builderTest(allocator: std.mem.Allocator) !void {
     var texture_cache = std.ArrayList(*Texture).init(allocator);
 
-    const texture_config: Texture.TextureConfig = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
-    const texture = try allocator.create(Texture);
-    texture.* = try Texture.new(allocator, "angrygl_assets/bullet/burn_mark.png", texture_config);
-    try texture_cache.append(texture);
+    // const texture_config: Texture.TextureConfig = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
+    // const texture = try allocator.create(Texture);
+    // texture.* = try Texture.new(allocator, "angrygl_assets/bullet/burn_mark.png", texture_config);
+    // try texture_cache.append(texture);
 
     const file = "/Users/john/Dev/Dev_Rust/small_gl_core/examples/sample_animation/vampire/dancing_vampire.dae";
 
@@ -120,10 +120,11 @@ pub fn builderTest(allocator: std.mem.Allocator) !void {
         std.debug.print("model texture: {s}\n", .{_texture.texture_path});
     }
 
+    std.debug.print("\ntexture_cache: {any}\n", .{texture_cache});
     std.debug.print("\nmodel builder test completed.\n\n", .{});
 
-
     model.deinit();
+
     for (texture_cache.items) |_texture| {
         _texture.deinit();
     }

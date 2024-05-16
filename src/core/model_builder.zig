@@ -85,6 +85,7 @@ pub const ModelBuilder = struct {
         std.debug.print("loading scene. number of meshes: {}\n", .{self.meshes.items.len});
         try self.loadScene(self.filepath);
 
+        std.debug.print("Builder: allocating Model\n", .{});
         const model = try self.allocator.create(Model);
         model.* = Model{
             .allocator = self.allocator,
@@ -93,8 +94,9 @@ pub const ModelBuilder = struct {
             .animator = undefined,
         };
 
+        std.debug.print("Builder: finishing up\n", .{});
         self.added_textures.deinit();
-        self.texture_cache.deinit();
+        // self.texture_cache.deinit();
 
         return model;
     }
@@ -110,13 +112,17 @@ pub const ModelBuilder = struct {
 
         printSceneInfo(aiScene[0]);
 
-        try self.processNode(aiScene[0].mRootNode[0], aiScene[0]);
+        try self.processNode(aiScene.*.mRootNode, aiScene[0]);
+        std.debug.print("Builder: finished loadScene\n", .{});
     }
 
-    fn processNode(self: *Self, node: Assimp.aiNode, aiScene: Assimp.aiScene) !void {
-        if (node.mName.length > 2) {
+    fn processNode(self: *Self, node: *const Assimp.aiNode, aiScene: Assimp.aiScene) !void {
+        // std.debug.print("Builder: processing node: {any}\n", .{node});
+        if (node.mName.length < 1024) {
             const c_name = node.mName.data[0..@min(1024, node.mName.length + 1)];
-            std.debug.print("node name: '{s}'  num meshes: {d}\n", .{ c_name, node.mNumMeshes });
+            std.debug.print("Builder: node name: '{s}'  num children: {d}\n", .{ c_name, node.mNumChildren });
+        } else {
+            std.debug.print("Builder: node error\n", .{ });
         }
 
         const num_mesh: u32 = node.mNumMeshes;
@@ -126,10 +132,14 @@ pub const ModelBuilder = struct {
             try self.meshes.append(model_mesh);
         }
 
-        std.debug.print("Builder: processing childern\n", .{});
-        for (0..node.mNumChildren) |i| {
-            try self.processNode(node.mChildren[0][i], aiScene);
+        const c_name = node.mName.data[0..@min(1024, node.mName.length + 1)];
+
+        const num_children: u32 = node.mNumChildren;
+        for (node.mChildren[0..num_children]) |child| {
+            std.debug.print("Builder: parent calling child, parent name: '{s}'\n", .{ c_name});
+            try self.processNode(child, aiScene);
         }
+        std.debug.print("Builder: finished node name: '{s}'  num chidern: {d}\n", .{ c_name, node.mNumChildren });
     }
 
     fn processMesh(self: *Self, aiMesh: Assimp.aiMesh, aiScene: Assimp.aiScene) !*ModelMesh {
