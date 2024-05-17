@@ -112,9 +112,10 @@ pub fn builderTest(allocator: std.mem.Allocator) !void {
 
     const file = "/Users/john/Dev/Dev_Rust/small_gl_core/examples/sample_animation/vampire/dancing_vampire.dae";
 
-    var builder = ModelBuilder.init(allocator, texture_cache, "Player", file);
+    var builder = try ModelBuilder.init(allocator, &texture_cache, "Player", file);
 
     var model = try builder.flipv().build();
+    builder.deinit();
 
     for (texture_cache.items) |_texture| {
         std.debug.print("model texture: {s}\n", .{_texture.texture_path});

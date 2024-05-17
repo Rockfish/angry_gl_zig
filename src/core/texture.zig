@@ -12,8 +12,10 @@ pub const Texture = struct {
     width: u32,
     height: u32,
     allocator: std.mem.Allocator,
+    const Self = @This();
 
     pub fn deinit(self: *Texture) void {
+        self.allocator.free(self.texture_path);
         self.allocator.destroy(self);
     }
 
@@ -125,7 +127,7 @@ pub const Texture = struct {
         std.debug.print("Texture: returning texture\n", .{});
         return Texture{
             .id = texture_id,
-            .texture_path = path,
+            .texture_path = try allocator.dupe(u8, path),
             .texture_type = TextureType.Diffuse,
             .width = image.width,
             .height = image.height,

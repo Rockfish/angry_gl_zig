@@ -7,15 +7,19 @@ const ModelMesh = @import("model_mesh.zig").ModelMesh;
 const Model = @import("model.zig").Model;
 const Animator = @import("animator.zig").Animator;
 const Assimp = @import("assimp.zig").Assimp;
+const BoneData = @import("model_animation.zig").BoneData;
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
+const StringHashMap = std.StringHashMap;
 const Path = std.fs.path;
 
 pub const ModelBuilder = struct {
     name: []const u8,
-    meshes: ArrayList(*ModelMesh),
-    // bone_data_map: RefCell<HashMap<BoneName, BoneData>>,
+    meshes: *ArrayList(*ModelMesh),
+    texture_cache: *ArrayList(*Texture),
+    added_textures: ArrayList(AddedTexture),
+    bone_data_map: *StringHashMap(BoneData),
     bone_count: i32,
     filepath: []const u8,
     directory: []const u8,
@@ -23,8 +27,6 @@ pub const ModelBuilder = struct {
     flip_v: bool,
     flip_h: bool,
     load_textures: bool,
-    texture_cache: ArrayList(*Texture),
-    added_textures: ArrayList(AddedTexture),
     mesh_count: i32,
     allocator: Allocator,
 
@@ -36,24 +38,40 @@ pub const ModelBuilder = struct {
         texture_filename: []const u8,
     };
 
-    pub fn init(allocator: Allocator, texture_cache: ArrayList(*Texture), name: []const u8, path: []const u8) Self {
-        const builder = ModelBuilder{
-            .name = name,
-            .meshes = ArrayList(*ModelMesh).init(allocator),
+    pub fn init(allocator: Allocator, texture_cache: *ArrayList(*Texture), name: []const u8, path: []const u8) !*Self {
+        const meshes = try allocator.create(ArrayList(*ModelMesh));
+        meshes.* = ArrayList(*ModelMesh).init(allocator);
+
+        const bone_data_map = try allocator.create(StringHashMap(BoneData));
+        bone_data_map.* = StringHashMap(BoneData).init(allocator);
+
+        const builder = try allocator.create(Self);
+        builder.* = ModelBuilder{
+            .name = try allocator.dupe(u8, name),
+            .filepath = try allocator.dupe(u8, path),
+            .directory = try allocator.dupe(u8, Path.dirname(path) orelse ""),
+            .texture_cache = texture_cache,
+            .added_textures = ArrayList(AddedTexture).init(allocator),
+            .meshes = meshes,
             .mesh_count = 0,
+            .bone_data_map = bone_data_map,
             .bone_count = 0,
-            .filepath = path,
-            .directory = Path.dirname(path) orelse "",
             .gamma_correction = false,
             .flip_v = false,
             .flip_h = false,
             .load_textures = true,
-            .added_textures = ArrayList(AddedTexture).init(allocator),
-            .texture_cache = texture_cache,
             .allocator = allocator,
         };
 
         return builder;
+    }
+
+    pub fn deinit(self: *Self) void {
+        self.allocator.free(self.name);
+        self.allocator.free(self.filepath);
+        self.allocator.free(self.directory);
+        self.added_textures.deinit();
+        self.allocator.destroy(self);
     }
 
     pub fn flipv(self: *Self) *Self {
@@ -78,56 +96,52 @@ pub const ModelBuilder = struct {
     }
 
     pub fn build(self: *Self) !*Model {
-        for (self.texture_cache.items) |_texture| {
-            std.debug.print("builder texture_cache: {s}\n", .{_texture.texture_path});
-        }
+        const aiScene = try self.loadScene(self.filepath);
 
-        std.debug.print("loading scene. number of meshes: {}\n", .{self.meshes.items.len});
-        try self.loadScene(self.filepath);
+        try self.load_model(aiScene);
+        const animator = try Animator.init(self.allocator, aiScene, self.bone_data_map);
 
-        std.debug.print("Builder: allocating Model\n", .{});
         const model = try self.allocator.create(Model);
         model.* = Model{
             .allocator = self.allocator,
-            .name = self.name,
+            .name = try self.allocator.dupe(u8, self.name),
             .meshes = self.meshes,
-            .animator = undefined,
+            .animator = animator,
         };
 
         std.debug.print("Builder: finishing up\n", .{});
-        self.added_textures.deinit();
-        // self.texture_cache.deinit();
-
         return model;
     }
 
-    fn loadScene(self: *Self, file_path: []const u8) !void {
+    fn loadScene(self: *Self, file_path: []const u8) ![*c]const Assimp.aiScene {
         const c_path: [:0]const u8 = try self.allocator.dupeZ(u8, file_path);
         defer self.allocator.free(c_path);
 
-        const aiScene = Assimp.aiImportFile(c_path, Assimp.aiProcess_CalcTangentSpace |
+        const aiScene: [*c]const Assimp.aiScene = Assimp.aiImportFile(c_path, Assimp.aiProcess_CalcTangentSpace |
             Assimp.aiProcess_Triangulate |
             Assimp.aiProcess_JoinIdenticalVertices |
             Assimp.aiProcess_SortByPType);
 
         printSceneInfo(aiScene[0]);
-
-        try self.processNode(aiScene.*.mRootNode, aiScene[0]);
-        std.debug.print("Builder: finished loadScene\n", .{});
+        return aiScene;
     }
 
-    fn processNode(self: *Self, node: *const Assimp.aiNode, aiScene: Assimp.aiScene) !void {
+    fn load_model(self: *Self, aiScene: [*]const Assimp.aiScene) !void {
+        try self.processNode(aiScene[0].mRootNode, aiScene);
+    }
+
+    fn processNode(self: *Self, node: *const Assimp.aiNode, aiScene: [*c]const Assimp.aiScene) !void {
         // std.debug.print("Builder: processing node: {any}\n", .{node});
         if (node.mName.length < 1024) {
             const c_name = node.mName.data[0..@min(1024, node.mName.length + 1)];
             std.debug.print("Builder: node name: '{s}'  num children: {d}\n", .{ c_name, node.mNumChildren });
         } else {
-            std.debug.print("Builder: node error\n", .{ });
+            std.debug.print("Builder: node error\n", .{});
         }
 
         const num_mesh: u32 = node.mNumMeshes;
         for (0..num_mesh) |i| {
-            const aiMesh = aiScene.mMeshes[node.mMeshes[i]][0];
+            const aiMesh = aiScene[0].mMeshes[node.mMeshes[i]][0];
             const model_mesh = try self.processMesh(aiMesh, aiScene);
             try self.meshes.append(model_mesh);
         }
@@ -136,13 +150,13 @@ pub const ModelBuilder = struct {
 
         const num_children: u32 = node.mNumChildren;
         for (node.mChildren[0..num_children]) |child| {
-            std.debug.print("Builder: parent calling child, parent name: '{s}'\n", .{ c_name});
+            std.debug.print("Builder: parent calling child, parent name: '{s}'\n", .{c_name});
             try self.processNode(child, aiScene);
         }
         std.debug.print("Builder: finished node name: '{s}'  num chidern: {d}\n", .{ c_name, node.mNumChildren });
     }
 
-    fn processMesh(self: *Self, aiMesh: Assimp.aiMesh, aiScene: Assimp.aiScene) !*ModelMesh {
+    fn processMesh(self: *Self, aiMesh: Assimp.aiMesh, aiScene: [*c]const Assimp.aiScene) !*ModelMesh {
         var vertices = ArrayList(ModelVertex).init(self.allocator);
         var indices = ArrayList(u32).init(self.allocator);
         var textures = ArrayList(*Texture).init(self.allocator);
@@ -171,7 +185,7 @@ pub const ModelBuilder = struct {
             }
         }
 
-        var material = aiScene.mMaterials[aiMesh.mMaterialIndex][0];
+        var material = aiScene[0].mMaterials[aiMesh.mMaterialIndex][0];
         // std.debug.print("processMesh material: {any}\n", .{material});
 
         const material_textures = try self.loadMaterialTextures(&material, Texture.TextureType.Diffuse);
