@@ -8,11 +8,13 @@ const Model = @import("model.zig").Model;
 const Animator = @import("animator.zig").Animator;
 const Assimp = @import("assimp.zig").Assimp;
 const BoneData = @import("model_animation.zig").BoneData;
+const Transform = @import("transform.zig").Transform;
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 const Path = std.fs.path;
+const TextureType = Texture.TextureType;
 
 pub const ModelBuilder = struct {
     name: []const u8,
@@ -133,8 +135,8 @@ pub const ModelBuilder = struct {
     fn processNode(self: *Self, node: *const Assimp.aiNode, aiScene: [*c]const Assimp.aiScene) !void {
         // std.debug.print("Builder: processing node: {any}\n", .{node});
         if (node.mName.length < 1024) {
-            const c_name = node.mName.data[0..@min(1024, node.mName.length + 1)];
-            std.debug.print("Builder: node name: '{s}'  num children: {d}\n", .{ c_name, node.mNumChildren });
+            const name = node.mName.data[0..@min(1024, node.mName.length)];
+            std.debug.print("Builder: node name: '{s}'  num children: {d}\n", .{ name, node.mNumChildren });
         } else {
             std.debug.print("Builder: node error\n", .{});
         }
@@ -146,20 +148,21 @@ pub const ModelBuilder = struct {
             try self.meshes.append(model_mesh);
         }
 
-        const c_name = node.mName.data[0..@min(1024, node.mName.length + 1)];
+        const name = node.mName.data[0..@min(1024, node.mName.length)];
 
         const num_children: u32 = node.mNumChildren;
         for (node.mChildren[0..num_children]) |child| {
-            std.debug.print("Builder: parent calling child, parent name: '{s}'\n", .{c_name});
+            std.debug.print("Builder: parent calling child, parent name: '{s}'\n", .{name});
             try self.processNode(child, aiScene);
         }
-        std.debug.print("Builder: finished node name: '{s}'  num chidern: {d}\n", .{ c_name, node.mNumChildren });
+        std.debug.print("Builder: finished node name: '{s}'  num chidern: {d}\n", .{ name, node.mNumChildren });
     }
 
     fn processMesh(self: *Self, aiMesh: Assimp.aiMesh, aiScene: [*c]const Assimp.aiScene) !*ModelMesh {
-        var vertices = ArrayList(ModelVertex).init(self.allocator);
-        var indices = ArrayList(u32).init(self.allocator);
-        var textures = ArrayList(*Texture).init(self.allocator);
+        var vertices = try self.allocator.create(ArrayList(ModelVertex));
+        vertices.* = ArrayList(ModelVertex).init(self.allocator);
+        var indices = try self.allocator.create(ArrayList(u32));
+        indices.* = ArrayList(u32).init(self.allocator);
 
         for (0..aiMesh.mNumVertices) |i| {
             var model_vertex = ModelVertex.init();
@@ -185,40 +188,38 @@ pub const ModelBuilder = struct {
             }
         }
 
+        const texture_types = [_]TextureType{ TextureType.Diffuse, TextureType.Specular, TextureType.Emissive, TextureType.Normals };
         var material = aiScene[0].mMaterials[aiMesh.mMaterialIndex][0];
-        // std.debug.print("processMesh material: {any}\n", .{material});
+        const textures = try self.loadMaterialTextures(&material, texture_types[0..]);
 
-        const material_textures = try self.loadMaterialTextures(&material, Texture.TextureType.Diffuse);
-        // std.debug.print("processMesh material_textures: {any}\n", .{material_textures});
+        try self.extract_bone_weights_for_vertices(vertices, aiMesh);
 
-        try textures.appendSlice(material_textures.items);
-        material_textures.deinit();
+        const name = aiMesh.mName.data[0 .. aiMesh.mName.length];
+        const model_mesh = try ModelMesh.init(self.allocator, self.mesh_count, name, vertices, indices, textures);
 
-        const c_name = aiMesh.mName.data[0 .. aiMesh.mName.length + 1];
-        std.debug.print("Builder: creating a mesh with name: {s}\n", .{c_name});
-        const model_mesh = try ModelMesh.init(self.allocator, self.mesh_count, c_name, vertices, indices, textures);
-        std.debug.print("Builder: meshed created. name: {s}\n", .{c_name});
         self.mesh_count += 1;
         return model_mesh;
     }
 
-    fn loadMaterialTextures(self: *Self, material: *Assimp.aiMaterial, texture_type: Texture.TextureType) !ArrayList(*Texture) {
-        var material_textures = ArrayList(*Texture).init(self.allocator);
-        const texture_count = Assimp.aiGetMaterialTextureCount(material, @intFromEnum(texture_type));
+    fn loadMaterialTextures(self: *Self, material: *Assimp.aiMaterial, texture_types: []const TextureType) !*ArrayList(*Texture) {
+        var material_textures = try self.allocator.create(ArrayList(*Texture));
+        material_textures.* = ArrayList(*Texture).init(self.allocator);
 
-        for (0..texture_count) |i| {
-            const ai_str = try self.allocator.create(Assimp.aiString);
-            defer self.allocator.destroy(ai_str);
-            // Assimp.aiGetMaterialTexture
+        for (texture_types) |texture_type| {
+            const texture_count = Assimp.aiGetMaterialTextureCount(material, @intFromEnum(texture_type));
 
-            const ai_return = GetMaterialTexture(material, texture_type, @intCast(i), ai_str);
-            if (ai_return == Assimp.AI_SUCCESS) {
-                const path: []const u8 = ai_str.data[0 .. ai_str.length + 1];
-                const full_path = try Path.join(self.allocator, &.{ self.directory, path });
-                defer self.allocator.free(full_path);
-                // std.debug.print("full path path: {s}\n", .{full_path});
-                const texture = try self.loadTexture(texture_type, full_path);
-                try material_textures.append(texture);
+            for (0..texture_count) |i| {
+                const path = try self.allocator.create(Assimp.aiString);
+                defer self.allocator.destroy(path);
+
+                const ai_return = GetMaterialTexture(material, texture_type, @intCast(i), path);
+                if (ai_return == Assimp.AI_SUCCESS) {
+                    const full_path = try Path.join(self.allocator, &.{ self.directory, path.data[0 .. path.length] });
+                    defer self.allocator.free(full_path);
+
+                    const texture = try self.loadTexture(texture_type, full_path);
+                    try material_textures.append(texture);
+                }
             }
         }
         return material_textures;
@@ -236,25 +237,37 @@ pub const ModelBuilder = struct {
         const texture = try self.allocator.create(Texture);
         texture.* = try Texture.new(self.allocator, file_path, texture_config);
         try self.texture_cache.append(texture);
+
         std.debug.print("Builder: created a new texture: {s}\n", .{texture.texture_path});
         return texture;
     }
 
-    fn printSceneInfo(aiScene: Assimp.aiScene) void {
-        // if (aiScene != null) {
-        // std.debug.print("name: {s}\n", .{aiScene[0].mName.data});
-        std.debug.print("number of meshes: {d}\n", .{aiScene.mNumMeshes});
-        std.debug.print("number of materials: {d}\n", .{aiScene.mNumMaterials});
-        std.debug.print("number of mNumTextures: {d}\n", .{aiScene.mNumTextures});
-        std.debug.print("number of mNumAnimations: {d}\n", .{aiScene.mNumAnimations});
-        std.debug.print("number of mNumLights: {d}\n", .{aiScene.mNumLights});
-        std.debug.print("number of mNumCameras: {d}\n", .{aiScene.mNumCameras});
-        std.debug.print("number of mNumSkeletons: {d}\n", .{aiScene.mNumSkeletons});
-        // } else {
-        // std.debug.print("aiScene is null.\n", .{});
-        // const error_string = assimp.aiGetErrorString();
-        // std.debug.print("Import error: {s}\n", .{error_string});
-        // }
+    fn extract_bone_weights_for_vertices(self: *Self, vertices: *ArrayList(ModelVertex), aiMesh: Assimp.aiMesh) !void {
+         
+        for (aiMesh.mBones[0..aiMesh.mNumBones]) |bone| {
+            var bone_id: i32 = undefined;
+            const bone_name = bone.*.mName.data[0..bone.*.mName.length];
+
+            const result = try self.bone_data_map.getOrPut(bone_name);
+            if (result.found_existing) {
+                bone_id = result.value_ptr.*.bone_index;
+            } else {
+                result.value_ptr.* = BoneData {
+                    .name = try self.allocator.dupe(u8, bone_name),
+                    .bone_index = self.bone_count,
+                    .offset_transform = Transform.from_aiMatrix(bone.*.mOffsetMatrix),
+                    .allocator = self.allocator,
+                };
+                bone_id = self.bone_count;
+                self.bone_count += 1;
+            }
+
+            for (bone.*.mWeights[0..bone.*.mNumWeights]) |bone_weight| {
+                const vertex_id: u32 = bone_weight.mVertexId;
+                const weight: f32 = bone_weight.mWeight;
+                vertices.items[vertex_id].set_bone_data(bone_id, weight);
+            }
+        }
     }
 };
 
@@ -273,4 +286,14 @@ inline fn GetMaterialTexture(
     path: *Assimp.aiString,
 ) Assimp.aiReturn {
     return Assimp.aiGetMaterialTexture(material, @intFromEnum(texture_type), index, path, null, null, null, null, null, null);
+}
+
+fn printSceneInfo(aiScene: Assimp.aiScene) void {
+    std.debug.print("number of meshes: {d}\n", .{aiScene.mNumMeshes});
+    std.debug.print("number of materials: {d}\n", .{aiScene.mNumMaterials});
+    std.debug.print("number of mNumTextures: {d}\n", .{aiScene.mNumTextures});
+    std.debug.print("number of mNumAnimations: {d}\n", .{aiScene.mNumAnimations});
+    std.debug.print("number of mNumLights: {d}\n", .{aiScene.mNumLights});
+    std.debug.print("number of mNumCameras: {d}\n", .{aiScene.mNumCameras});
+    std.debug.print("number of mNumSkeletons: {d}\n", .{aiScene.mNumSkeletons});
 }

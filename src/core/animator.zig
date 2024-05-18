@@ -92,6 +92,10 @@ pub const Animator = struct {
     }
 
     pub fn deinit(self: *Self) void {
+        const iterator = self.bone_data_map.valueIterator();
+        for (iterator.items[0..iterator.len]) |bone_data| {
+            bone_data.deinit();
+        }
         self.bone_data_map.deinit();
         self.allocator.destroy(self.bone_data_map);
         self.allocator.destroy(self);

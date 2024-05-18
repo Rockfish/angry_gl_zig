@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ZLSSettings">
+    <option name="zlsPath" value="$USER_HOME$/Library/Application Support/Code/User/globalStorage/ziglang.vscode-zig/zls_install/zls" />
+    <option name="highlightGlobalVarDeclarations" value="true" />
+  </component>
+  <component name="ZigProjectSettings">
+    <option name="explicitPathToStd" value="Users/john/Dev/Zig/bin/lib/std" />
+    <option name="toolchainHomeDirectory" value="$PROJECT_DIR$/../../bin" />
+  </component>
+</project>

@@ -21,15 +21,26 @@ pub const ModelVertex = extern struct {
     const Self = @This();
 
     pub fn init() Self {
-        return Self {
+        return Self{
             .position = undefined,
             .normal = undefined,
             .uv = undefined,
             .tangent = undefined,
             .bi_tangent = undefined,
-            .bone_ids = undefined,
-            .bone_weights = undefined,
+            .bone_ids = [_]i32 {-1, -1, -1, -1},
+            .bone_weights = [_]f32 {0.0, 0.0, 0.0, 0.0},
         };
+    }
+
+    pub fn set_bone_data(self: *Self, bone_id: i32, weight: f32) void {
+        //set first available free spot if there is any
+        for (0..MAX_BONE_INFLUENCE) |i| {
+            if (self.bone_ids[i] < 0) {
+                self.bone_ids[i] = bone_id;
+                self.bone_weights[i] = weight;
+                break;
+            }
+        }
     }
 };
 
@@ -42,24 +53,24 @@ const OFFSET_OF_BONE_IDS = @offsetOf(ModelVertex, "bone_ids");
 const OFFSET_OF_WEIGHTS = @offsetOf(ModelVertex, "bone_weights");
 
 pub const ModelMesh = struct {
-    allocator: Allocator, 
+    allocator: Allocator,
     id: i32,
     name: []const u8,
-    vertices: ArrayList(ModelVertex),
-    indices: ArrayList(u32),
-    textures: ArrayList(*Texture),
+    vertices: *ArrayList(ModelVertex),
+    indices: *ArrayList(u32),
+    textures: *ArrayList(*Texture),
     vao: c_uint,
     vbo: c_uint,
     ebo: c_uint,
 
     const Self = @This();
 
-    pub fn init(allocator: Allocator, id: i32, name: []const u8, vertices: ArrayList(ModelVertex), indices: ArrayList(u32), textures: ArrayList(*Texture)) !*ModelMesh {
+    pub fn init(allocator: Allocator, id: i32, name: []const u8, vertices: *ArrayList(ModelVertex), indices: *ArrayList(u32), textures: *ArrayList(*Texture)) !*ModelMesh {
         const model_mesh = try allocator.create(ModelMesh);
         model_mesh.* = ModelMesh{
             .allocator = allocator,
             .id = id,
-            .name = name,
+            .name = try allocator.dupe(u8, name),
             .vertices = vertices,
             .indices = indices,
             .textures = textures,
@@ -78,8 +89,12 @@ pub const ModelMesh = struct {
         gl.deleteBuffers(1, &self.vbo);
         gl.deleteBuffers(1, &self.ebo);
         self.vertices.deinit();
+        self.allocator.destroy(self.vertices);
         self.indices.deinit();
+        self.allocator.destroy(self.indices);
         self.textures.deinit();
+        self.allocator.destroy(self.textures);
+        self.allocator.free(self.name);
         self.allocator.destroy(self);
     }
 
@@ -225,8 +240,6 @@ pub const ModelMesh = struct {
 
         gl.bindVertexArray(0);
     }
-
-
 };
 
 pub fn print_model_mesh(mesh: ModelVertex) void {
