@@ -9,6 +9,7 @@ const Animator = @import("animator.zig").Animator;
 const Assimp = @import("assimp.zig").Assimp;
 const BoneData = @import("model_animation.zig").BoneData;
 const Transform = @import("transform.zig").Transform;
+const panic = @import("std").debug.panic;
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
@@ -21,7 +22,7 @@ pub const ModelBuilder = struct {
     meshes: *ArrayList(*ModelMesh),
     texture_cache: *ArrayList(*Texture),
     added_textures: ArrayList(AddedTexture),
-    bone_data_map: *StringHashMap(BoneData),
+    bone_data_map: *StringHashMap(*BoneData),
     bone_count: i32,
     filepath: []const u8,
     directory: []const u8,
@@ -36,7 +37,7 @@ pub const ModelBuilder = struct {
 
     const AddedTexture = struct {
         mesh_name: []const u8,
-        texture_type: Texture.TextureType,
+        texture_config: Texture.TextureConfig,
         texture_filename: []const u8,
     };
 
@@ -44,8 +45,8 @@ pub const ModelBuilder = struct {
         const meshes = try allocator.create(ArrayList(*ModelMesh));
         meshes.* = ArrayList(*ModelMesh).init(allocator);
 
-        const bone_data_map = try allocator.create(StringHashMap(BoneData));
-        bone_data_map.* = StringHashMap(BoneData).init(allocator);
+        const bone_data_map = try allocator.create(StringHashMap(*BoneData));
+        bone_data_map.* = StringHashMap(*BoneData).init(allocator);
 
         const builder = try allocator.create(Self);
         builder.* = ModelBuilder{
@@ -72,6 +73,10 @@ pub const ModelBuilder = struct {
         self.allocator.free(self.name);
         self.allocator.free(self.filepath);
         self.allocator.free(self.directory);
+        for (self.added_textures.items) |added| {
+            self.allocator.free(added.mesh_name);
+            self.allocator.free(added.texture_filename);
+        }
         self.added_textures.deinit();
         self.allocator.destroy(self);
     }
@@ -81,16 +86,14 @@ pub const ModelBuilder = struct {
         return self;
     }
 
-    pub fn addTexture(self: *Self, mesh_name: []const u8, texture_type: Texture.TextureType, texture_filename: []const u8) *Self {
+    pub fn addTexture(self: *Self, mesh_name: []const u8, texture_config: Texture.TextureConfig, texture_filename: []const u8) !void { // !*Self {
         const added = AddedTexture{
-            .mesh_name = mesh_name,
-            .texture_type = texture_type,
-            .texture_filename = texture_filename,
+            .mesh_name = try self.allocator.dupe(u8, mesh_name),
+            .texture_config = texture_config,
+            .texture_filename = try self.allocator.dupe(u8, texture_filename),
         };
-        self.added_textures.append(added) catch {
-            @panic("ArrayList append error\n");
-        };
-        return self;
+        try self.added_textures.append(added);
+        // return self;
     }
 
     pub fn skip_textures(self: *Self) *Self {
@@ -101,6 +104,8 @@ pub const ModelBuilder = struct {
         const aiScene = try self.loadScene(self.filepath);
 
         try self.load_model(aiScene);
+        try self.add_textures();
+
         const animator = try Animator.init(self.allocator, aiScene, self.bone_data_map);
 
         const model = try self.allocator.create(Model);
@@ -217,7 +222,7 @@ pub const ModelBuilder = struct {
                     const full_path = try Path.join(self.allocator, &.{ self.directory, path.data[0 .. path.length] });
                     defer self.allocator.free(full_path);
 
-                    const texture = try self.loadTexture(texture_type, full_path);
+                    const texture = try self.loadTexture(Texture.TextureConfig.new(texture_type), full_path);
                     try material_textures.append(texture);
                 }
             }
@@ -225,14 +230,38 @@ pub const ModelBuilder = struct {
         return material_textures;
     }
 
-    fn loadTexture(self: *Self, texture_type: Texture.TextureType, file_path: []u8) !*Texture {
+    fn add_textures(self: *Self) !void {
+        for (self.added_textures.items) |added_texture| {
+            const full_path = try Path.join(self.allocator, &.{ self.directory, added_texture.texture_filename});
+            defer self.allocator.free(full_path);
+
+            const mesh: *ModelMesh = for (self.meshes.items) |_mesh| {
+                if (std.mem.eql(u8,_mesh.*.name, added_texture.mesh_name)) {
+                    break _mesh;
+                }
+            } else {
+                panic("add_texture mesh: {s} not found.", .{full_path});
+            };
+
+            const has_texture = for (mesh.*.textures.items) |mesh_texture| {
+                if (std.mem.eql(u8, mesh_texture.*.texture_path, full_path)) {
+                    break true;
+                }
+            } else false;
+
+            if (!has_texture) {
+                const texture = try self.loadTexture(added_texture.texture_config, full_path);
+                try mesh.*.textures.append(texture);
+            }
+        }
+    }
+
+    fn loadTexture(self: *Self, texture_config: Texture.TextureConfig, file_path: []u8) !*Texture {
         for (self.texture_cache.items) |cached_texture| {
             if (std.mem.eql(u8, cached_texture.texture_path, file_path)) {
                 return cached_texture;
             }
         }
-
-        const texture_config: Texture.TextureConfig = .{ .texture_type = texture_type, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Repeat };
 
         const texture = try self.allocator.create(Texture);
         texture.* = try Texture.new(self.allocator, file_path, texture_config);
@@ -252,12 +281,14 @@ pub const ModelBuilder = struct {
             if (result.found_existing) {
                 bone_id = result.value_ptr.*.bone_index;
             } else {
-                result.value_ptr.* = BoneData {
+                const bone_data = try self.allocator.create(BoneData);
+                bone_data.* = BoneData {
                     .name = try self.allocator.dupe(u8, bone_name),
                     .bone_index = self.bone_count,
                     .offset_transform = Transform.from_aiMatrix(bone.*.mOffsetMatrix),
                     .allocator = self.allocator,
                 };
+                result.value_ptr.* = bone_data;
                 bone_id = self.bone_count;
                 self.bone_count += 1;
             }

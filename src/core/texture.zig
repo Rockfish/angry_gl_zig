@@ -62,6 +62,16 @@ pub const Texture = struct {
         flip_v: bool,
         // flip_h: bool,
         gamma_correction: bool,
+
+        pub fn new(texture_type: TextureType) TextureConfig {
+            return .{
+                .texture_type = texture_type,
+                .filter = .Linear,
+                .flip_v = true,
+                .gamma_correction = false,
+                .wrap = .Clamp
+            };
+        }
     };
 
     pub fn new(allocator: std.mem.Allocator, path: []const u8, texture_config: TextureConfig) !Texture {

@@ -56,7 +56,7 @@ pub const Animator = struct {
     allocator: Allocator,
     root_node: NodeData,
     global_inverse_transform: zm.Mat4,
-    bone_data_map: *StringHashMap(BoneData),
+    bone_data_map: *StringHashMap(*BoneData),
 
     model_animation: ModelAnimation, // maybe should be vec?
 
@@ -71,7 +71,7 @@ pub const Animator = struct {
 
     const Self = @This();
 
-    pub fn init(allocator: Allocator, aiScene: [*c]const Assimp.aiScene, bone_data_map: *StringHashMap(BoneData)) !*Self {
+    pub fn init(allocator: Allocator, aiScene: [*c]const Assimp.aiScene, bone_data_map: *StringHashMap(*BoneData)) !*Self {
         _ = aiScene;
 
         const animator = try allocator.create(Animator);
@@ -92,9 +92,9 @@ pub const Animator = struct {
     }
 
     pub fn deinit(self: *Self) void {
-        const iterator = self.bone_data_map.valueIterator();
-        for (iterator.items[0..iterator.len]) |bone_data| {
-            bone_data.deinit();
+        var iterator = self.bone_data_map.valueIterator();
+        while (iterator.next()) |bone_data| {
+            bone_data.*.deinit();
         }
         self.bone_data_map.deinit();
         self.allocator.destroy(self.bone_data_map);

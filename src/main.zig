@@ -69,6 +69,16 @@ pub fn builderTest(allocator: std.mem.Allocator) !void {
 
     var builder = try ModelBuilder.init(allocator, &texture_cache, "Player", file);
 
+    const texture_type = .{
+        .texture_type = Texture.TextureType.Normals,
+        .filter = .Linear,
+        .flip_v = true,
+        .gamma_correction = false,
+        .wrap = .Clamp
+    };
+
+    try builder.addTexture("Vampire-lib", texture_type, "textures/Vampire_normal.png");
+
     var model = try builder.flipv().build();
     builder.deinit();
 
