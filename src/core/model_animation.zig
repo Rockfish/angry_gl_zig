@@ -20,7 +20,7 @@ pub const NodeData = struct {
         const node_data = try allocator.create(BoneData);
         node_data.* = NodeData{
             .name = try allocator.dupe(u8, name),
-            .transform = Transform.from_matrix(),
+            .transform = Transform.from_matrix(), // todo: from what matrix?
             .childern = ArrayList(*NodeData).init(allocator),
             .meshes = ArrayList(u32).init(allocator),
             .allocator = allocator,
@@ -66,20 +66,49 @@ pub const BoneData = struct {
 pub const ModelAnimation = struct {
     duration: f32,
     ticks_per_second: f32,
-    node_animations: ArrayList(*NodeAnimation),
+    node_animations: *ArrayList(*NodeAnimation),
+    allocator: Allocator,
 
     const Self = @This();
 
-    pub fn init(allocator: Allocator, aiScene: Assimp.aiScene) !*Self {
-
-        _ = aiScene;
+    pub fn init(allocator: Allocator, aiScene: [*c]const Assimp.aiScene) !*Self {
+        const node_animations = try allocator.create(ArrayList(*NodeAnimation));
+        node_animations.* = ArrayList(*NodeAnimation).init(allocator);
 
         const model_animation = try allocator.create(ModelAnimation);
-        model_animation.* = ModelAnimation{
-            .duration = 0,
-            .ticks_per_second = 0,
-            .node_animations = ArrayList(*NodeData).init(allocator),
+        model_animation.* = .{
+            .duration = 0.0,
+            .ticks_per_second = 0.0,
+            .node_animations = node_animations,
+            .allocator = allocator,
         };
+
+        const num_animations = aiScene[0].mNumAnimations;
+        if (num_animations == 0) {
+            return model_animation;
+        }
+
+        // only handling the first animation
+        const animation = aiScene[0].mAnimations[0..num_animations][0];
+        model_animation.*.duration = @as(f32, @floatCast(animation.*.mDuration));
+        model_animation.*.ticks_per_second = @as(f32, @floatCast(animation.*.mTicksPerSecond));
+
+        const num_channels = animation.*.mNumChannels;
+        for (animation.*.mChannels[0..num_channels]) |channel| {
+            const name = channel[0].mNodeName.data[0..channel[0].mNodeName.length];
+            const node_animation = try NodeAnimation.new(allocator, name, channel);
+            try model_animation.node_animations.append(node_animation);
+        }
+
         return model_animation;
+    }
+
+    pub fn deinit(self: *Self) void {
+        for (self.node_animations.items) |node_animation| {
+            node_animation.deinit();
+        }
+        self.node_animations.deinit();
+        self.allocator.destroy(self.node_animations);
+        self.allocator.destroy(self);
     }
 };
