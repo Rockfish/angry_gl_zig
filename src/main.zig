@@ -7,8 +7,38 @@ const zstbi = @import("zstbi");
 const Assimp = @import("core/assimp.zig");
 const Model = @import("core/model_mesh.zig");
 const ModelBuilder = @import("core/model_builder.zig").ModelBuilder;
-
 const Texture = @import("core/texture.zig").Texture;
+const Camera = @import("core/camera.zig").Camera;
+const Shader = @import("core/shader.zig").Shader;
+const String = @import("core/string.zig");
+
+const Vec2 = zm.Vec2;
+const Vec3 = zm.Vec3;
+const Mat4 = zm.Mat4;
+const vec2 = zm.vec2;
+const vec3 = zm.vec3;
+// const mat4 = zm.mat4;
+
+const SCR_WIDTH: f32 = 800.0;
+const SCR_HEIGHT: f32 = 800.0;
+
+// Lighting
+const LIGHT_FACTOR: f32 = 1.0;
+const NON_BLUE: f32 = 0.9;
+
+const FLOOR_LIGHT_FACTOR: f32 = 0.35;
+const FLOOR_NON_BLUE: f32 = 0.7;
+
+// Struct for passing state between the window loop and the event handler.
+const State = struct {
+    camera: Camera,
+    lightPos: zm.Vec3,
+    deltaTime: f32,
+    lastFrame: f32,
+    firstMouse: bool,
+    lastX: f32,
+    lastY: f32,
+};
 
 const content_dir = "angrygl_assets";
 
@@ -17,9 +47,11 @@ pub fn main() !void {
     defer _ = gpa.deinit();
 
     const allocator = gpa.allocator();
-    var arena_state = std.heap.ArenaAllocator.init(allocator);
-    defer arena_state.deinit();
-    const arena = arena_state.allocator();
+    String.init(allocator);
+
+    // var arena_state = std.heap.ArenaAllocator.init(allocator);
+    // defer arena_state.deinit();
+    // const arena = arena_state.allocator();
 
     try glfw.init();
     defer glfw.terminate();
@@ -41,26 +73,9 @@ pub fn main() !void {
 
     try zopengl.loadCoreProfile(glfw.getProcAddress, gl_major, gl_minor);
 
-    try builderTest(allocator);
+    // try builderTest(allocator);
 
-    // run(arena, window);
-    _ = arena;
-}
-
-pub fn run(arena: std.mem.Allocator, window: *glfw.Window) !void {
-    _ = arena;
-
-    // --- event loop
-    while (!window.shouldClose()) {
-        glfw.pollEvents();
-        if (window.getKey(glfw.Key.escape) == glfw.Action.press) {
-            window.setShouldClose(true);
-        }
-
-        gl.clearBufferfv(gl.COLOR, 0, &[_]f32{ 0.2, 0.6, 0.4, 1.0 });
-
-        window.swapBuffers();
-    }
+    try run(allocator, window);
 }
 
 pub fn builderTest(allocator: std.mem.Allocator) !void {
@@ -69,13 +84,7 @@ pub fn builderTest(allocator: std.mem.Allocator) !void {
 
     var builder = try ModelBuilder.init(allocator, &texture_cache, "Player", file);
 
-    const texture_type = .{
-        .texture_type = Texture.TextureType.Normals,
-        .filter = .Linear,
-        .flip_v = true,
-        .gamma_correction = false,
-        .wrap = .Clamp
-    };
+    const texture_type = .{ .texture_type = .Normals, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
 
     try builder.addTexture("Vampire-lib", texture_type, "textures/Vampire_normal.png");
 
@@ -100,4 +109,47 @@ pub fn builderTest(allocator: std.mem.Allocator) !void {
         _texture.deinit();
     }
     texture_cache.deinit();
+}
+
+pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
+    var buffer: [1024]u8 = undefined;
+    const root_path = std.fs.selfExeDirPath(buffer[0..]) catch ".";
+
+    const camera = try Camera.camera_vec3(allocator, vec3(0.0, 40.0, 120.0));
+
+    // Initialize the world state
+    const state = State{
+        .camera = camera,
+        .lightPos = vec3(1.2, 1.0, 2.0),
+        .deltaTime = 0.0,
+        .lastFrame = 0.0,
+        .firstMouse = true,
+        .lastX = SCR_WIDTH / 2.0,
+        .lastY = SCR_HEIGHT / 2.0,
+    };
+
+    gl.enable(gl.DEPTH_TEST);
+
+    const shader = Shader.new(
+        allocator,
+            "examples/sample_animation/player_shader.vert",
+            "examples/sample_animation/player_shader.frag",
+    );
+
+    _ = state;
+    _ = root_path;
+
+    std.debug.print("Shader id: {d}\n", .{shader.id});
+
+    // --- event loop
+    while (!window.shouldClose()) {
+        glfw.pollEvents();
+        if (window.getKey(glfw.Key.escape) == glfw.Action.press) {
+            window.setShouldClose(true);
+        }
+
+        gl.clearBufferfv(gl.COLOR, 0, &[_]f32{ 0.2, 0.6, 0.4, 1.0 });
+
+        window.swapBuffers();
+    }
 }

@@ -17,6 +17,10 @@ pub const Transform = struct {
         };
     }
 
+    pub fn default() Transform {
+        return from_matrix(zm.identity());
+    }
+
     pub fn from_aiMatrix(m: Assimp.aiMatrix4x4) Transform {
         // todo!
         _ = m;

@@ -9,6 +9,7 @@ const Animator = @import("animator.zig").Animator;
 const Assimp = @import("assimp.zig").Assimp;
 const BoneData = @import("model_animation.zig").BoneData;
 const Transform = @import("transform.zig").Transform;
+const String = @import("string.zig").String;
 const panic = @import("std").debug.panic;
 
 const Allocator = std.mem.Allocator;
@@ -283,7 +284,7 @@ pub const ModelBuilder = struct {
             } else {
                 const bone_data = try self.allocator.create(BoneData);
                 bone_data.* = BoneData {
-                    .name = try self.allocator.dupe(u8, bone_name),
+                    .name = try String.new(bone_name),
                     .bone_index = self.bone_count,
                     .offset_transform = Transform.from_aiMatrix(bone.*.mOffsetMatrix),
                     .allocator = self.allocator,

@@ -3,12 +3,13 @@ const zm = @import("zmath");
 const Assimp = @import("assimp.zig").Assimp;
 const Transform = @import("transform.zig").Transform;
 const NodeAnimation = @import("node_animation.zig").NodeAnimation;
+const String = @import("string.zig").String;
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
 pub const NodeData = struct {
-    name: []const u8,
+    name: String,
     transform: Transform,
     childern: ArrayList(*NodeData),
     meshes: ArrayList(u32),
@@ -16,50 +17,50 @@ pub const NodeData = struct {
 
     const Self = @This();
 
+    pub fn deinit(self: *Self) void {
+        for (self.chidern) |child| {
+            child.deinit();
+        }
+        self.name.deinit();
+        self.allocator.destroy(self);
+    }
+
     pub fn init(allocator: Allocator, name: []const u8) !*NodeData {
-        const node_data = try allocator.create(BoneData);
-        node_data.* = NodeData{
-            .name = try allocator.dupe(u8, name),
-            .transform = Transform.from_matrix(), // todo: from what matrix?
+        const node_data = try allocator.create(NodeData);
+        node_data.* = NodeData {
+            .name = String.new(name),
+            .transform = Transform.default(),
             .childern = ArrayList(*NodeData).init(allocator),
             .meshes = ArrayList(u32).init(allocator),
             .allocator = allocator,
         };
         return node_data;
     }
-
-    pub fn deinit(self: *Self) void {
-        for (self.chidern) |child| {
-            child.deinit();
-        }
-        self.allocator.free(self.name);
-        self.allocator.destroy(self);
-    }
 };
 
 pub const BoneData = struct {
-    name: []const u8,
+    name: *String,
     bone_index: i32,
     offset_transform: Transform,
     allocator: Allocator,
 
     const Self = @This();
 
+    pub fn deinit(self: *Self) void {
+        self.name.deinit();
+        self.allocator.destroy(self);
+    }
+
     pub fn init(allocator: Allocator, name: []const u8, id: i32, offset: zm.Mat4) !*BoneData {
         const bone_data = try allocator.create(BoneData);
         bone_data.* = BoneData{
-            .name = try allocator.dupe(u8, name),
+            .name = String.new(name),
             .bone_index = id,
             .offset_transform = Transform.from_matrix(offset),
             .allocator = allocator,
         };
 
         return bone_data;
-    }
-
-    pub fn deinit(self: *Self) void {
-        self.allocator.free(self.name);
-        self.allocator.destroy(self);
     }
 };
 
@@ -70,6 +71,15 @@ pub const ModelAnimation = struct {
     allocator: Allocator,
 
     const Self = @This();
+
+    pub fn deinit(self: *Self) void {
+        for (self.node_animations.items) |node_animation| {
+            node_animation.deinit();
+        }
+        self.node_animations.deinit();
+        self.allocator.destroy(self.node_animations);
+        self.allocator.destroy(self);
+    }
 
     pub fn init(allocator: Allocator, aiScene: [*c]const Assimp.aiScene) !*Self {
         const node_animations = try allocator.create(ArrayList(*NodeAnimation));
@@ -95,20 +105,10 @@ pub const ModelAnimation = struct {
 
         const num_channels = animation.*.mNumChannels;
         for (animation.*.mChannels[0..num_channels]) |channel| {
-            const name = channel[0].mNodeName.data[0..channel[0].mNodeName.length];
-            const node_animation = try NodeAnimation.new(allocator, name, channel);
+            const node_animation = try NodeAnimation.new(allocator, channel[0].mNodeName, channel);
             try model_animation.node_animations.append(node_animation);
         }
 
         return model_animation;
-    }
-
-    pub fn deinit(self: *Self) void {
-        for (self.node_animations.items) |node_animation| {
-            node_animation.deinit();
-        }
-        self.node_animations.deinit();
-        self.allocator.destroy(self.node_animations);
-        self.allocator.destroy(self);
     }
 };

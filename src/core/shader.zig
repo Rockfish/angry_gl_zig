@@ -1,16 +1,84 @@
+const std = @import("std");
 const gl = @import("zopengl").bindings;
 const zm = @import("zmath");
+
+const Allocator = std.mem.Allocator;
 
 pub const Shader = struct {
     id: u32,
     vert_file: []const u8,
     frag_file: []const u8,
     geom_file: ?[]const u8,
-    // allocator: std.mem.Allocator,
+    allocator: Allocator,
 
-    // pub fn new(vert_file: []const u8, frag_file: []const u8) !*Shader {}
+    pub fn new(allocator: Allocator, vert_file_path: []const u8, frag_file_path: []const u8) !*Shader {
+        return new_with_geom(allocator, vert_file_path, frag_file_path, null);
+    }
 
-    // pub fn new_with_geom(tor: std.mem.Allocator, vert_file: []const u8, frag_file: []const u8, geom_file: ?[]const u8) !*Shader {}
+    pub fn new_with_geom(allocator: Allocator, vert_file_path: []const u8, frag_file_path: []const u8, optional_geom_file: ?[]const u8) !*Shader {
+
+        const vert_file = try std.fs.openFileAbsolute(vert_file_path, .{});
+        defer vert_file.close();
+        const vert_code = vert_file.reader().readAllAlloc(allocator, 256 * 1024);
+
+        const frag_file = try std.fs.openFileAbsolute(frag_file_path, .{});
+        defer frag_file.close();
+        const frag_code = frag_file.reader().readAllAlloc(allocator, 256 * 1024);
+
+        const geom_code: ?[]u8 = null;
+        if (optional_geom_file) |geom_file_path| {
+            const geom_file = try std.fs.openFileAbsolute(geom_file_path, .{});
+            defer geom_file.close();
+            geom_code = geom_file.reader().readAllAlloc(allocator, 256 * 1024);
+        }
+
+        const vertex_shader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertex_shader, 1, *vert_code.ptr, 0);
+        gl.compileShader(vertex_shader);
+        // check_for_compile_errors(vertex_shader, "VERTEX");
+
+        const frag_shader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(frag_shader, 1, *frag_code.ptr, 0);
+        gl.compileShader(frag_shader);
+        // check_for_compile_errors(vertex_shader, "VERTEX");
+
+        const geom_shader: ?u32 = null;
+        if (geom_code != null) {
+            geom_shader = gl.createShader(gl.GEOMETRY_SHADER);
+            gl.shaderSource(geom_shader, 1, *geom_code.ptr, 0);
+            gl.compileShader(geom_shader);
+            // check_for_compile_errors(vertex_shader, "VERTEX");
+        }
+
+        const shader_id = gl.CreateProgram();
+        // link the first program object
+        gl.AttachShader(shader_id, vertex_shader);
+        gl.AttachShader(shader_id, frag_shader);
+        if (geom_shader != null) {
+            gl.AttachShader(shader_id, geom_shader);
+        }
+        gl.LinkProgram(shader_id);
+
+        // check_compile_errors(shader.id, "PROGRAM")?;
+
+        // delete the shaders as they're linked into our program now and no longer necessary
+        gl.DeleteShader(vertex_shader);
+        gl.DeleteShader(frag_shader);
+        if (geom_code != null) {
+            gl.DeleteShader(geom_shader);
+        }
+
+        const shader = try allocator.create(Shader);
+        shader.* = Shader {
+            .id = shader_id,
+            .vert_file = try allocator.dupe(u8, vert_file_path),
+            .frag_file = try allocator.dupe(u8, frag_file_path),
+            .geom_file = try allocator.dupe(u8, optional_geom_file),
+            .allocator = allocator
+        };
+
+        return shader;
+    }
 
     pub fn use_shader(self: *Shader) void {
         gl.UseProgram(self.id);
