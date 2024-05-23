@@ -11,69 +11,88 @@ pub const Shader = struct {
     geom_file: ?[]const u8,
     allocator: Allocator,
 
+    const Self = @This();
+
+    pub fn deinit(self: *Self) void {
+        self.allocator.free(self.vert_file);
+        self.allocator.free(self.frag_file);
+        if (self.geom_file != null) {
+            self.allocator.free(self.geom_file.?);
+        }
+        gl.deleteShader(self.id);
+        self.allocator.destroy(self);
+    }
+
     pub fn new(allocator: Allocator, vert_file_path: []const u8, frag_file_path: []const u8) !*Shader {
         return new_with_geom(allocator, vert_file_path, frag_file_path, null);
     }
 
     pub fn new_with_geom(allocator: Allocator, vert_file_path: []const u8, frag_file_path: []const u8, optional_geom_file: ?[]const u8) !*Shader {
 
-        const vert_file = try std.fs.openFileAbsolute(vert_file_path, .{});
+        const vert_file = try std.fs.cwd().openFile(vert_file_path, .{});
         defer vert_file.close();
-        const vert_code = vert_file.reader().readAllAlloc(allocator, 256 * 1024);
+        const vert_code = try vert_file.reader().readAllAlloc(allocator, 256 * 1024);
+        defer allocator.free(vert_code);
 
-        const frag_file = try std.fs.openFileAbsolute(frag_file_path, .{});
+        const frag_file = try std.fs.cwd().openFile(frag_file_path, .{});
         defer frag_file.close();
-        const frag_code = frag_file.reader().readAllAlloc(allocator, 256 * 1024);
+        const frag_code = try frag_file.reader().readAllAlloc(allocator, 256 * 1024);
+        defer allocator.free(frag_code);
 
-        const geom_code: ?[]u8 = null;
+        var geom_code: ?[]u8 = null;
         if (optional_geom_file) |geom_file_path| {
-            const geom_file = try std.fs.openFileAbsolute(geom_file_path, .{});
+            const geom_file = try std.fs.cwd().openFile(geom_file_path, .{});
             defer geom_file.close();
-            geom_code = geom_file.reader().readAllAlloc(allocator, 256 * 1024);
+            geom_code = try geom_file.reader().readAllAlloc(allocator, 256 * 1024);
+            defer allocator.free(geom_code.?);
         }
 
         const vertex_shader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vertex_shader, 1, *vert_code.ptr, 0);
+        gl.shaderSource(vertex_shader, 1, &vert_code.ptr, 0);
         gl.compileShader(vertex_shader);
         // check_for_compile_errors(vertex_shader, "VERTEX");
 
         const frag_shader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(frag_shader, 1, *frag_code.ptr, 0);
+        gl.shaderSource(frag_shader, 1, &frag_code.ptr, 0);
         gl.compileShader(frag_shader);
         // check_for_compile_errors(vertex_shader, "VERTEX");
 
-        const geom_shader: ?u32 = null;
+        var geom_shader: ?u32 = null;
         if (geom_code != null) {
             geom_shader = gl.createShader(gl.GEOMETRY_SHADER);
-            gl.shaderSource(geom_shader, 1, *geom_code.ptr, 0);
-            gl.compileShader(geom_shader);
+            gl.shaderSource(geom_shader.?, 1, &geom_code.?.ptr, 0);
+            gl.compileShader(geom_shader.?);
             // check_for_compile_errors(vertex_shader, "VERTEX");
         }
 
-        const shader_id = gl.CreateProgram();
+        const shader_id = gl.createProgram();
         // link the first program object
-        gl.AttachShader(shader_id, vertex_shader);
-        gl.AttachShader(shader_id, frag_shader);
+        gl.attachShader(shader_id, vertex_shader);
+        gl.attachShader(shader_id, frag_shader);
         if (geom_shader != null) {
-            gl.AttachShader(shader_id, geom_shader);
+            gl.attachShader(shader_id, geom_shader.?);
         }
-        gl.LinkProgram(shader_id);
+        gl.linkProgram(shader_id);
 
         // check_compile_errors(shader.id, "PROGRAM")?;
 
         // delete the shaders as they're linked into our program now and no longer necessary
-        gl.DeleteShader(vertex_shader);
-        gl.DeleteShader(frag_shader);
+        gl.deleteShader(vertex_shader);
+        gl.deleteShader(frag_shader);
         if (geom_code != null) {
-            gl.DeleteShader(geom_shader);
+            gl.deleteShader(geom_shader.?);
         }
+
+        const geom_file = if (optional_geom_file != null) blk: {
+            break :blk try allocator.dupe(u8, optional_geom_file.?);
+        } else null;
 
         const shader = try allocator.create(Shader);
         shader.* = Shader {
             .id = shader_id,
             .vert_file = try allocator.dupe(u8, vert_file_path),
             .frag_file = try allocator.dupe(u8, frag_file_path),
-            .geom_file = try allocator.dupe(u8, optional_geom_file),
+            .geom_file = geom_file,
             .allocator = allocator
         };
 

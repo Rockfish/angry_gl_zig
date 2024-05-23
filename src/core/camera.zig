@@ -1,8 +1,14 @@
 const std = @import("std");
 const zm = @import("zmath");
+const math = @import("../math/main.zig");
 
-const Vec3 = zm.Vec3;
 const Allocator = std.mem.Allocator;
+
+const Vec2 = math.Vec2;
+const Vec3 = math.Vec3;
+const Mat4 = math.Mat4x4;
+const vec2 = math.vec2;
+const vec3 = math.vec3;
 
 // Default camera values
 pub const YAW: f32 = -90.0;
@@ -40,14 +46,18 @@ pub const Camera = struct {
 
     const Self = @This();
 
+    pub fn deinit(self: *Self) void {
+        self.allocator.destroy(self);
+    }
+
     pub fn new(allocator: Allocator) !*Camera {
         const camera = try allocator.create(Camera);
         camera.* = Camera {
-            .position = zm.vec3(0.0, 0.0, 3.0),
-            .front = zm.vec3(0.0, 0.0, -1.0),
-            .world_up = zm.vec3(0.0, 1.0, 0.0),
-            .up = zm.vec3(0.0, 1.0, 0.0),
-            .right = zm.vec3(0.0, 1.0, 0.0),
+            .position = vec3(0.0, 0.0, 3.0),
+            .front = vec3(0.0, 0.0, -1.0),
+            .world_up = vec3(0.0, 1.0, 0.0),
+            .up = vec3(0.0, 1.0, 0.0),
+            .right = vec3(0.0, 1.0, 0.0),
             .yaw = YAW,
             .pitch = PITCH,
             .movement_speed = SPEED,
@@ -77,8 +87,8 @@ pub const Camera = struct {
 
     pub fn camera_scalar(pos_x: f32, pos_y: f32, pos_z: f32, up_x: f32, up_y: f32, up_z: f32, yaw: f32, pitch: f32) !*Camera {
         var camera = try Camera.new();
-        camera.position = zm.vec3(pos_x, pos_y, pos_z);
-        camera.world_up = zm.vec3(up_x, up_y, up_z);
+        camera.position = vec3(pos_x, pos_y, pos_z);
+        camera.world_up = vec3(up_x, up_y, up_z);
         camera.yaw = yaw;
         camera.pitch = pitch;
         camera.update_camera_vectors();
@@ -88,23 +98,23 @@ pub const Camera = struct {
     // calculates the front vector from the Camera's (updated) Euler Angles
     fn update_camera_vectors(self: *Self) void {
         // calculate the new Front vector
-        const front = zm.vec3(
+        const front = vec3(
             zm.cos(toRadians(self.yaw)) * zm.cos(toRadians(self.pitch)),
                 zm.sin(toRadians(self.pitch)),
                 zm.sin(toRadians(self.yaw)) * zm.cos(toRadians(self.pitch)),
         );
 
-        self.front = zm.normalize2(front);
+        self.front = front.normalize(0.000001);
 
         // also re-calculate the Right and Up vector
         // normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
-        self.right = self.front.cross(self.world_up).normalize_or_zero();
-        self.up = self.right.cross(self.front).normalize_or_zero();
+        self.right = self.front.cross(&self.world_up).normalize(0.000001);
+        self.up = self.right.cross(&self.front).normalize(0.000001);
     }
 
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
-    pub fn get_view_matrix(self: *Self) zm.Mat4 {
-        return zm.Mat4.look_to_rh(self.position, self.front, self.up);
+    pub fn get_view_matrix(self: *Self) Mat4 {
+        return Mat4.look_to_rh(self.position, self.front, self.up);
     }
 
     // processes input received from any keyboard-like input system. Accepts input parameter

@@ -4,6 +4,7 @@ const zopengl = @import("zopengl");
 const gl = @import("zopengl").bindings;
 const zm = @import("zmath");
 const zstbi = @import("zstbi");
+const math = @import("math/main.zig");
 const Assimp = @import("core/assimp.zig");
 const Model = @import("core/model_mesh.zig");
 const ModelBuilder = @import("core/model_builder.zig").ModelBuilder;
@@ -12,11 +13,11 @@ const Camera = @import("core/camera.zig").Camera;
 const Shader = @import("core/shader.zig").Shader;
 const String = @import("core/string.zig");
 
-const Vec2 = zm.Vec2;
-const Vec3 = zm.Vec3;
-const Mat4 = zm.Mat4;
-const vec2 = zm.vec2;
-const vec3 = zm.vec3;
+const Vec2 = math.Vec2;
+const Vec3 = math.Vec3;
+const Mat4 = math.Mat4x4;
+const vec2 = math.vec2;
+const vec3 = math.vec3;
 // const mat4 = zm.mat4;
 
 const SCR_WIDTH: f32 = 800.0;
@@ -31,8 +32,8 @@ const FLOOR_NON_BLUE: f32 = 0.7;
 
 // Struct for passing state between the window loop and the event handler.
 const State = struct {
-    camera: Camera,
-    lightPos: zm.Vec3,
+    camera: *Camera,
+    lightPos: Vec3,
     deltaTime: f32,
     lastFrame: f32,
     firstMouse: bool,
@@ -130,7 +131,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     gl.enable(gl.DEPTH_TEST);
 
-    const shader = Shader.new(
+    const shader = try Shader.new(
         allocator,
             "examples/sample_animation/player_shader.vert",
             "examples/sample_animation/player_shader.frag",
@@ -152,4 +153,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         window.swapBuffers();
     }
+
+    shader.deinit();
+    camera.deinit();
 }
