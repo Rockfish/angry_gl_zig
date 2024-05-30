@@ -226,7 +226,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             window.setShouldClose(true);
         }
 
-        // model.upated_animation(state.deltaTime);
+        // model.update_animation(state.deltaTime);
 
         gl.clearColor(0.05, 0.1, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -247,8 +247,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         modelTransform.translate(vec3(0.0, -10.4, -400.0));
         modelTransform.scale(vec3(1.0, 1.0, 1.0));
 
-        std.debug.print("fov: {any}\nwidth: {any}\nheight: {any}\nprojection: {any}\nview: {any}\nmodel: {any}\n\n",
-        .{toRadians(state.camera.zoom), SCR_WIDTH, SCR_HEIGHT, projection, view, modelTransform});
+        // std.debug.print("fov: {any}\nwidth: {any}\nheight: {any}\nprojection: {any}\nview: {any}\nmodel: {any}\n\n",
+        // .{toRadians(state.camera.zoom), SCR_WIDTH, SCR_HEIGHT, projection, view, modelTransform});
+        // std.debug.print("Matrix identity: {any}\n", .{Matrix.identity().toArray()});
 
         shader.set_matrix("projection", &projection);
         shader.set_matrix("view", &view);

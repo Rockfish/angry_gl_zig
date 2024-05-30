@@ -6,6 +6,7 @@ pub const Vec3 = zm.Vec3;
 pub const Vec4 = zm.Vec4;
 pub const vec2 = zm.vec2;
 pub const vec3 = zm.vec3;
+pub const vec4 = zm.vec4;
 pub const Mat4 = zm.Mat4;
 
 pub const Matrix = struct {
@@ -19,18 +20,22 @@ pub const Matrix = struct {
         };
     }
 
+    pub fn toArray(self: *const Self) [16]f32 {
+        return zm.matToArr(self.data);
+    }
+
     pub fn asPtr(self: *const Self) [*]const f32 {
-        return @as([*]const f32, @ptrCast(&self.data));
+        return @as([*]const f32, @ptrCast(&zm.matToArr(self.data)));
     }
 
     pub fn translate(self: *Self, translation: zm.Vec3) void {
-        const _t = zm.translationV(zm.loadArr3(translation));
-        self.data = zm.mul(self.data, _t);
+        const t = zm.translationV(zm.loadArr3(translation));
+        self.data = zm.mul(self.data, t);
     }
 
     pub fn scale(self: *Self, scaling: zm.Vec3) void {
-        const _s = zm.scalingV(zm.loadArr3(scaling));
-        self.data = zm.mul(self.data, _s);
+        const s = zm.scalingV(zm.loadArr3(scaling));
+        self.data = zm.mul(self.data, s);
     }
 
     pub fn multiplyWithVec3(self: *Self, vec: zm.Vec3) void {
@@ -55,34 +60,61 @@ pub const Matrix = struct {
         };
     }
 
-    pub fn lookToLh(eyepos: Vec3, eyedir: Vec3, updir: Vec3) Self {
+    pub fn lookToLh3(eyepos: Vec3, eyedir: Vec3, updir: Vec3) Self {
         const result = zm.lookToRh(zm.loadArr3(eyepos), zm.loadArr3(eyedir), zm.loadArr3(updir));
         return Matrix {
             .data = result
         };
     }
 
-    pub fn lookToRh(eyepos: Vec3, eyedir: Vec3, updir: Vec3) Self {
+    pub fn lookToRh3(eyepos: Vec3, eyedir: Vec3, updir: Vec3) Self {
         const result = zm.lookToRh(zm.loadArr3(eyepos), zm.loadArr3(eyedir), zm.loadArr3(updir));
         return Matrix {
             .data = result
         };
     }
 
-    pub fn lookAtLh(eyepos: Vec3, target: Vec3, updir: Vec3) Self {
+    pub fn lookAtLh3(eyepos: Vec3, target: Vec3, updir: Vec3) Self {
         const result = zm.lookAtLh(zm.loadArr3(eyepos), zm.loadArr3(target), zm.loadArr3(updir));
         return Matrix {
             .data = result
         };
     }
 
-    pub fn lookAtRh(eyepos: Vec3, target: Vec3, updir: Vec3) Self {
+    pub fn lookAtRh3(eyepos: Vec3, target: Vec3, updir: Vec3) Self {
         const result = zm.lookAtRh(zm.loadArr3(eyepos), zm.loadArr3(target), zm.loadArr3(updir));
         return Matrix {
             .data = result
         };
     }
 
+    pub fn lookToLh4(eyepos: Vec4, eyedir: Vec4, updir: Vec4) Self {
+        const result = zm.lookToRh(eyepos, eyedir,updir);
+        return Matrix {
+            .data = result
+        };
+    }
+
+    pub fn lookToRh4(eyepos: Vec4, eyedir: Vec4, updir: Vec4) Self {
+        const result = zm.lookToRh(eyepos, eyedir, updir);
+        return Matrix {
+            .data = result
+        };
+    }
+
+    pub fn lookAtLh4(eyepos: Vec4, target: Vec4, updir: Vec4) Self {
+        const result = zm.lookAtLh(eyepos, target, updir);
+        return Matrix {
+            .data = result
+        };
+    }
+
+    pub fn lookAtRh4(eyepos: Vec4, target: Vec4, updir: Vec4) Self {
+        const result = zm.lookAtRh(eyepos, target, updir);
+        return Matrix {
+            .data = result
+        };
+    }
 };
 
 // qmul(q0: Quat, q1: Quat) Quat

@@ -3,18 +3,45 @@ const zm = @import("zmath");
 const gl = @import("zopengl").bindings;
 const Texture = @import("texture.zig").Texture;
 const Shader = @import("shader.zig").Shader;
+const utils = @import("utils.zig");
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
 const MAX_BONE_INFLUENCE: usize = 4;
 
+pub const CVec2 = extern struct {
+    x: f32,
+    y: f32,
+
+    pub fn new(x: f32, y: f32) CVec2 {
+        return CVec2 {
+            .x = x,
+            .y = y,
+        };
+    }
+};
+
+pub const CVec3 = extern struct {
+    x: f32,
+    y: f32,
+    z: f32,
+
+    pub fn new(x: f32, y: f32, z: f32) CVec3 {
+        return CVec3 {
+            .x = x,
+            .y = y,
+            .z = z
+        };
+    }
+};
+
 pub const ModelVertex = extern struct {
-    position: zm.Vec3,
-    normal: zm.Vec3,
-    uv: zm.Vec2,
-    tangent: zm.Vec3,
-    bi_tangent: zm.Vec3,
+    position: CVec3,
+    normal: CVec3,
+    uv: CVec2,
+    tangent: CVec3,
+    bi_tangent: CVec3,
     bone_ids: [MAX_BONE_INFLUENCE]i32, //  align(1),
     bone_weights: [MAX_BONE_INFLUENCE]f32,
 
@@ -81,6 +108,9 @@ pub const ModelMesh = struct {
 
         std.debug.print("ModelMesh: setting up mesh, name: {s}\n", .{name});
         model_mesh.setupMesh();
+
+        print_model_mesh(model_mesh);
+
         return model_mesh;
     }
 
@@ -99,14 +129,16 @@ pub const ModelMesh = struct {
     }
 
     pub fn render(self: *ModelMesh, shader: *const Shader) void {
+        var buf: [50]u8 = undefined;
         for (self.*.textures.items, 0..) |texture, i| {
             const texture_unit = @as(u32, @intCast(i));
 
             gl.activeTexture(gl.TEXTURE0 + texture_unit);
             gl.bindTexture(gl.TEXTURE_2D, texture.id);
 
-            const uniform_name = texture.texture_type.toString();
-            shader.set_int(uniform_name, @as(i32, @intCast(texture_unit)));
+            const uniform = texture.texture_type.toString();
+            const c_uniform = utils.bufCopyZ(&buf,uniform);
+            shader.set_int(c_uniform, @as(i32, @intCast(texture_unit)));
         }
 
         gl.bindVertexArray(self.vao);
@@ -243,11 +275,9 @@ pub const ModelMesh = struct {
     }
 };
 
-pub fn print_model_mesh(mesh: ModelVertex) void {
-    _ = mesh;
-    // std.debug.print("mesh: {:#?}", mesh);
+pub fn print_model_mesh(mesh: *ModelMesh) void {
+    // _ = mesh;
 
-    std.debug.print("size vertex: {d}\n", .{@sizeOf(ModelVertex)});
     std.debug.print("OFFSET_OF_POSITION: {any}\n", .{OFFSET_OF_POSITION});
     std.debug.print("OFFSET_OF_NORMAL: {any}\n", .{OFFSET_OF_NORMAL});
     std.debug.print("OFFSET_OF_TEXCOORDS: {any}\n", .{OFFSET_OF_TEXCOORDS});
@@ -256,10 +286,17 @@ pub fn print_model_mesh(mesh: ModelVertex) void {
     std.debug.print("OFFSET_OF_BONE_IDS: {any}\n", .{OFFSET_OF_BONE_IDS});
     std.debug.print("OFFSET_OF_WEIGHTS: {any}\n", .{OFFSET_OF_WEIGHTS});
 
-    std.debug.print("size of Vec2: {d}\n", .{@sizeOf(zm.Vec2)});
-    std.debug.print("size of Vec3: {d}\n", .{@sizeOf(zm.Vec3)});
+    std.debug.print("size of CVec2: {d}\n", .{@sizeOf(CVec2)});
+    std.debug.print("size of CVec3: {d}\n", .{@sizeOf(CVec3)});
     std.debug.print("size of [4]i32: {d}\n", .{@sizeOf([4]i32)});
     std.debug.print("size of [4]f32: {d}\n", .{@sizeOf([4]f32)});
 
-    std.debug.print("size of vertex parts: {d}\n", .{@sizeOf(zm.Vec3) * 4 + @sizeOf(zm.Vec2) + @sizeOf([4]i32) + @sizeOf([4]f32)});
+    std.debug.print("size vertex: {d}\n", .{@sizeOf(ModelVertex)});
+    std.debug.print("size of vertex parts: {d}\n",
+        .{@sizeOf(CVec3) * 4 + @sizeOf(CVec2) + @sizeOf([4]i32) + @sizeOf([4]f32)});
+
+    std.debug.print("mesh.id: {any}\n", .{mesh.id});
+    std.debug.print("mesh.vertex[0]: {any}\n", .{mesh.vertices.items[0]});
+    std.debug.print("mesh.indices[0]: {any}\n", .{mesh.indices.items[0]});
+    std.debug.print("\n", .{});
 }

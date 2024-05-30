@@ -1,5 +1,5 @@
 const std = @import("std");
-// const math = @import("zmath");
+const zm = @import("zmath");
 // const math = @import("../math/main.zig");
 
 const Allocator = std.mem.Allocator;
@@ -11,6 +11,7 @@ const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
 const vec2 = math.vec2;
 const vec3 = math.vec3;
+const vec4 = math.vec4;
 const Mat4 = math.Mat4;
 const Matrix = math.Matrix;
 
@@ -36,11 +37,11 @@ pub const CameraMovement = enum {
 
 pub const Camera = struct {
     // camera Attributes
-    position: Vec3,
-    front: Vec3,
-    world_up: Vec3,
-    up: Vec3,
-    right: Vec3,
+    position: Vec4,
+    front: Vec4,
+    world_up: Vec4,
+    up: Vec4,
+    right: Vec4,
     // euler Angles
     yaw: f32,
     pitch: f32,
@@ -59,11 +60,11 @@ pub const Camera = struct {
     pub fn new(allocator: Allocator) !*Camera {
         const camera = try allocator.create(Camera);
         camera.* = Camera {
-            .position = vec3(0.0, 0.0, 3.0),
-            .front = vec3(0.0, 0.0, -1.0),
-            .world_up = vec3(0.0, 1.0, 0.0),
-            .up = vec3(0.0, 1.0, 0.0),
-            .right = vec3(0.0, 1.0, 0.0),
+            .position = vec4(0.0, 0.0, 3.0, 0.0),
+            .front = vec4(0.0, 0.0, -1.0, 0.0),
+            .world_up = vec4(0.0, 1.0, 0.0, 0.0),
+            .up = vec4(0.0, 1.0, 0.0, 0.0),
+            .right = vec4(0.0, 0.0, 0.0, 0.0),
             .yaw = YAW,
             .pitch = PITCH,
             .movement_speed = SPEED,
@@ -76,15 +77,15 @@ pub const Camera = struct {
 
     pub fn camera_vec3(allocator: Allocator, position: Vec3) !*Camera {
         var camera = try Camera.new(allocator);
-        camera.position = position;
+        camera.position = zm.loadArr3(position);
         camera.update_camera_vectors();
         return camera;
     }
 
     pub fn camera_vec3_up_yaw_pitch(position: Vec3, world_up: Vec3, yaw: f32, pitch: f32) !*Camera {
         var camera = try Camera.new();
-        camera.position = position;
-        camera.world_up = world_up;
+        camera.position = zm.loadArr3(position);
+        camera.world_up = zm.loadArr3(world_up);
         camera.yaw = yaw;
         camera.pitch = pitch;
         camera.update_camera_vectors();
@@ -93,8 +94,8 @@ pub const Camera = struct {
 
     pub fn camera_scalar(pos_x: f32, pos_y: f32, pos_z: f32, up_x: f32, up_y: f32, up_z: f32, yaw: f32, pitch: f32) !*Camera {
         var camera = try Camera.new();
-        camera.position = vec3(pos_x, pos_y, pos_z);
-        camera.world_up = vec3(up_x, up_y, up_z);
+        camera.position = vec4(pos_x, pos_y, pos_z, 0.0);
+        camera.world_up = vec4(up_x, up_y, up_z, 0.0);
         camera.yaw = yaw;
         camera.pitch = pitch;
         camera.update_camera_vectors();
@@ -104,26 +105,36 @@ pub const Camera = struct {
     // calculates the front vector from the Camera's (updated) Euler Angles
     fn update_camera_vectors(self: *Self) void {
         // calculate the new Front vector
-        const front = vec3(
+        const front = vec4(
             std.math.cos(toRadians(self.yaw)) * std.math.cos(toRadians(self.pitch)),
                 std.math.sin(toRadians(self.pitch)),
                 std.math.sin(toRadians(self.yaw)) * std.math.cos(toRadians(self.pitch)),
+            0.0,
         );
 
-        self.front = front;
-        // self.front = math.normalize3(front);
+        std.debug.print("front: {any}\n", .{front});
+        self.front = zm.normalize3(front);
         // self.front = front.normalize(0.000001);
 
         // also re-calculate the Right and Up vector
         // normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
-        // self.right = math.cross3(v0: Vec4, v1: Vec4) self.front.cross(&self.world_up).normalize(0.000001);
-        // self.up = self.right.cross(&self.front).normalize(0.000001);
+        // self.right = self.front.cross(self.world_up).normalize_or_zero();
+        // self.up = self.right.cross(self.front).normalize_or_zero();
+        const right = zm.cross3(self.front, self.world_up);
+        self.right = zm.normalize3(right);
+        std.debug.print("right: {any}\n", .{right});
 
+        const up = zm.cross3(self.right, self.front);
+        self.up = zm.normalize3(up);
+        std.debug.print("up: {any}\n", .{up});
+
+        std.debug.print("front: {any}\nright: {any}\nup: {any}\n", .{self.front, self.right, self.up});
+        std.debug.print("\n", .{});
     }
 
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
     pub fn get_view_matrix(self: *Self) Matrix {
-        const viewTransform = Matrix.lookToRh(self.position, self.front, self.up);
+        const viewTransform = Matrix.lookToRh4(self.position, self.front, self.up);
         return viewTransform;
     }
 

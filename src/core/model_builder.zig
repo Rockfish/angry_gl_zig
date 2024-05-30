@@ -3,20 +3,24 @@ const zm = @import("zmath");
 const gl = @import("zopengl").bindings;
 const Texture = @import("texture.zig").Texture;
 const ModelVertex = @import("model_mesh.zig").ModelVertex;
-const ModelMesh = @import("model_mesh.zig").ModelMesh;
 const Model = @import("model.zig").Model;
 const Animator = @import("animator.zig").Animator;
 const Assimp = @import("assimp.zig").Assimp;
 const BoneData = @import("model_animation.zig").BoneData;
 const Transform = @import("transform.zig").Transform;
 const String = @import("string.zig").String;
+const Model_Mesh = @import("model_mesh.zig");
 const panic = @import("std").debug.panic;
+
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 const Path = std.fs.path;
 const TextureType = Texture.TextureType;
+const ModelMesh = Model_Mesh.ModelMesh;
+const CVec2 = Model_Mesh.CVec2;
+const CVec3 = Model_Mesh.CVec3;
 
 pub const ModelBuilder = struct {
     name: []const u8,
@@ -180,7 +184,7 @@ pub const ModelBuilder = struct {
 
             if (aiMesh.mTextureCoords[0] != null) {
                 const tex_coords = aiMesh.mTextureCoords[0];
-                model_vertex.uv = .{ tex_coords[i].x, tex_coords[i].y };
+                model_vertex.uv = CVec2.new(tex_coords[i].x, tex_coords[i].y);
                 model_vertex.tangent = vec3FromVector3D(aiMesh.mTangents[i]);
                 model_vertex.bi_tangent = vec3FromVector3D(aiMesh.mBitangents[i]);
             }
@@ -257,7 +261,16 @@ pub const ModelBuilder = struct {
     fn loadTexture(self: *Self, texture_config: Texture.TextureConfig, file_path: []const u8) !*Texture {
         for (self.texture_cache.items) |cached_texture| {
             if (std.mem.eql(u8, cached_texture.texture_path, file_path)) {
-                return cached_texture;
+                const texture = try self.allocator.create(Texture);
+                texture.* = .{
+                    .id = cached_texture.id,
+                    .texture_path = try cached_texture.allocator.dupe(u8, cached_texture.texture_path),
+                    .texture_type = texture_config.texture_type,
+                    .height = cached_texture.height,
+                    .width = cached_texture.width,
+                    .allocator = cached_texture.allocator,
+                };
+                return texture;
             }
         }
 
@@ -304,12 +317,12 @@ pub const ModelBuilder = struct {
     }
 };
 
-inline fn vec2FromVector2D(aiVec: Assimp.aiVector2D) zm.Vec2 {
-    return .{ aiVec.x, aiVec.y };
+inline fn vec2FromVector2D(aiVec: Assimp.aiVector2D) CVec2 {
+    return CVec2.new(aiVec.x, aiVec.y);
 }
 
-inline fn vec3FromVector3D(aiVec: Assimp.aiVector3D) zm.Vec3 {
-    return .{ aiVec.x, aiVec.y, aiVec.z };
+inline fn vec3FromVector3D(aiVec: Assimp.aiVector3D) CVec3 {
+    return CVec3.new(aiVec.x, aiVec.y, aiVec.z);
 }
 
 inline fn GetMaterialTexture(
