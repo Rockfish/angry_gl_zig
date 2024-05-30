@@ -1,9 +1,15 @@
 const std = @import("std");
 const ModelMesh = @import("model_mesh.zig").ModelMesh;
-const Animator = @import("animator.zig").Animator;
+const AnimatorPackage = @import("animator.zig");
+const AnimationClip = @import("animator.zig").AnimationClip;
+const Shader = @import("shader.zig").Shader;
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
+
+const Animator = AnimatorPackage.Animator;
+const MAX_BONES = AnimatorPackage.MAX_BONES;
+const MAX_NODES = AnimatorPackage.MAX_NODES;
 
 pub const Model = struct {
     allocator: Allocator, 
@@ -34,6 +40,45 @@ pub const Model = struct {
         self.allocator.free(self.name);
         self.animator.deinit();
         self.allocator.destroy(self);
+    }
+
+    pub fn playClip(self: *Self, clip: AnimationClip) void {
+        self.animator.play_clip(clip);
+    }
+
+    pub fn render(self: *Self, shader: *const Shader) !void {
+        var buf: [256:0]u8 = undefined;
+        const final_bones = self.animator.final_bone_matrices;
+        const final_nodes = self.animator.final_node_matrices;
+
+        // for (i, bone_transform) in final_bones.iter().enumerate() {
+        for (0..MAX_BONES) |i| {
+            const bone_transform = final_bones[i];
+            const uniform = try std.fmt.bufPrintZ(&buf, "finalBonesMatrices[{d}]", .{i});
+            shader.set_mat4(uniform, &bone_transform);
+        }
+
+        for (self.meshes.items) |mesh| {
+            shader.set_mat4("nodeTransform", &final_nodes[@intCast(mesh.id)]);
+            mesh.render(shader);
+        }
+    }
+
+    pub fn set_shader_bones_for_mesh(self: *Self, shader: *const Shader, mesh: *ModelMesh) !void {
+        var buf: [256:0]u8 = undefined;
+        const final_bones = self.animator.final_bone_matrices.borrow();
+        const final_nodes = self.animator.final_node_matrices.borrow();
+
+        for (0..MAX_BONES) |i| {
+            const bone_transform = final_bones[i];
+            const uniform = try std.fmt.bufPrintZ(&buf, "finalBonesMatrices[{d}]", .{i});
+            shader.set_mat4(uniform, &bone_transform);
+        }
+        shader.set_mat4("nodeTransform", &final_nodes[@intCast(mesh.id)]);
+    }
+
+    pub fn update_animation(self: *Self, delta_time: f32) void {
+        self.animator.update_animation(delta_time);
     }
 };
 

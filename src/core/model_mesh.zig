@@ -98,20 +98,21 @@ pub const ModelMesh = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn render(self: *ModelMesh, shader: *Shader) void {
-        for (self.*.textures, 0..) |texture, i| {
-            const texture_unit = @as(i32, @intCast(i));
-            gl.ActiveTexture(gl.TEXTURE0 + texture_unit);
-            gl.BindTexture(gl.TEXTURE_2D, texture.id);
+    pub fn render(self: *ModelMesh, shader: *const Shader) void {
+        for (self.*.textures.items, 0..) |texture, i| {
+            const texture_unit = @as(u32, @intCast(i));
 
-            const uniform_name = texture.texture_type.to_string();
-            shader.set_int(&uniform_name, texture_unit);
+            gl.activeTexture(gl.TEXTURE0 + texture_unit);
+            gl.bindTexture(gl.TEXTURE_2D, texture.id);
+
+            const uniform_name = texture.texture_type.toString();
+            shader.set_int(uniform_name, @as(i32, @intCast(texture_unit)));
         }
 
         gl.bindVertexArray(self.vao);
         gl.drawElements(
             gl.TRIANGLES,
-            self.indices.items.len,
+            @as(c_int, @intCast(self.indices.items.len)),
             gl.UNSIGNED_INT,
             null,
         );

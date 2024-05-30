@@ -53,6 +53,35 @@ pub const Texture = struct {
         ClearCoat = 20,
         Transmission = 21,
         Force32bit = 2147483647,
+
+        pub fn toString(self: *TextureType) []const u8 {
+            const name = switch (self.*) {
+                TextureType.Diffuse => "texture_diffuse",
+                TextureType.Specular => "texture_specular",
+                TextureType.Ambient => "texture_ambient",
+                TextureType.Emissive => "texture_emissive",
+                TextureType.Normals => "texture_normal",
+                TextureType.Height => "texture_height",
+                TextureType.Shininess => "texture_shininess",
+                TextureType.Opacity => "texture_opacity",
+                TextureType.Displacement => "texture_displacement",
+                TextureType.Lightmap => "texture_lightmap",
+                TextureType.Reflection => "texture_reflection",
+                TextureType.BaseColor => "texture_basecolor",
+                TextureType.Unknown => "texture_unknown",
+                TextureType.None => "texture_none",
+                TextureType.NormalCamera => "texture_normalcamera",
+                TextureType.EmissionColor => "texture_emissioncolor",
+                TextureType.Metalness => "texture_metalness",
+                TextureType.DiffuseRoughness => "texture_roughness",
+                TextureType.AmbientOcclusion => "texture_ambientocclusion",
+                TextureType.Sheen => "texture_sheen",
+                TextureType.ClearCoat => "texture_clearcoat",
+                TextureType.Transmission => "texture_transmission",
+                TextureType.Force32bit => "texture_force32bit",
+            };
+            return name;
+        }
     };
 
     pub const TextureConfig = struct {

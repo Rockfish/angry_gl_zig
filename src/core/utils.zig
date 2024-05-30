@@ -3,6 +3,12 @@ const std = @import("std");
 const zm = @import("zmath");
 const Assimp = @import("assimp.zig").Assimp;
 
+pub fn bufCopyZ(buf: []u8, source: []const u8) [:0]const u8 {
+    std.mem.copyForwards(u8, buf, source);
+    buf[source.len] = 0;
+    return buf[0 .. source.len :0];
+}
+
 pub fn mat4_from_aiMatrix(aiMatrix: Assimp.aiMatrix4x4) zm.Mat4 {
     // todo: implement mat4_from_aiMatrix
     _ = aiMatrix;

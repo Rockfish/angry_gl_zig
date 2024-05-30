@@ -233,31 +233,28 @@ pub const ModelBuilder = struct {
 
     fn add_textures(self: *Self) !void {
         for (self.added_textures.items) |added_texture| {
-            const full_path = try Path.join(self.allocator, &.{ self.directory, added_texture.texture_filename});
-            defer self.allocator.free(full_path);
-
             const mesh: *ModelMesh = for (self.meshes.items) |_mesh| {
                 if (std.mem.eql(u8,_mesh.*.name, added_texture.mesh_name)) {
                     break _mesh;
                 }
             } else {
-                panic("add_texture mesh: {s} not found.", .{full_path});
+                panic("add_texture mesh: {s} not found.", .{added_texture.mesh_name});
             };
 
             const has_texture = for (mesh.*.textures.items) |mesh_texture| {
-                if (std.mem.eql(u8, mesh_texture.*.texture_path, full_path)) {
+                if (std.mem.eql(u8, mesh_texture.*.texture_path, added_texture.texture_filename)) {
                     break true;
                 }
             } else false;
 
             if (!has_texture) {
-                const texture = try self.loadTexture(added_texture.texture_config, full_path);
+                const texture = try self.loadTexture(added_texture.texture_config, added_texture.texture_filename);
                 try mesh.*.textures.append(texture);
             }
         }
     }
 
-    fn loadTexture(self: *Self, texture_config: Texture.TextureConfig, file_path: []u8) !*Texture {
+    fn loadTexture(self: *Self, texture_config: Texture.TextureConfig, file_path: []const u8) !*Texture {
         for (self.texture_cache.items) |cached_texture| {
             if (std.mem.eql(u8, cached_texture.texture_path, file_path)) {
                 return cached_texture;
@@ -273,6 +270,10 @@ pub const ModelBuilder = struct {
     }
 
     fn extract_bone_weights_for_vertices(self: *Self, vertices: *ArrayList(ModelVertex), aiMesh: Assimp.aiMesh) !void {
+
+        if (aiMesh.mNumBones == 0) {
+            return;
+        }
          
         for (aiMesh.mBones[0..aiMesh.mNumBones]) |bone| {
             var bone_id: i32 = undefined;

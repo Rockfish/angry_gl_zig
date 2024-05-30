@@ -1,14 +1,20 @@
 const std = @import("std");
-const zm = @import("zmath");
-const math = @import("../math/main.zig");
+// const math = @import("zmath");
+// const math = @import("../math/main.zig");
 
 const Allocator = std.mem.Allocator;
 
+const math = @import("math.zig");
+
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
-const Mat4 = math.Mat4x4;
+const Vec4 = math.Vec4;
 const vec2 = math.vec2;
 const vec3 = math.vec3;
+const Mat4 = math.Mat4;
+const Matrix = math.Matrix;
+
+const muzzlePointLightColor = vec3(1.0, 0.2, 0.0);
 
 // Default camera values
 pub const YAW: f32 = -90.0;
@@ -99,22 +105,26 @@ pub const Camera = struct {
     fn update_camera_vectors(self: *Self) void {
         // calculate the new Front vector
         const front = vec3(
-            zm.cos(toRadians(self.yaw)) * zm.cos(toRadians(self.pitch)),
-                zm.sin(toRadians(self.pitch)),
-                zm.sin(toRadians(self.yaw)) * zm.cos(toRadians(self.pitch)),
+            std.math.cos(toRadians(self.yaw)) * std.math.cos(toRadians(self.pitch)),
+                std.math.sin(toRadians(self.pitch)),
+                std.math.sin(toRadians(self.yaw)) * std.math.cos(toRadians(self.pitch)),
         );
 
-        self.front = front.normalize(0.000001);
+        self.front = front;
+        // self.front = math.normalize3(front);
+        // self.front = front.normalize(0.000001);
 
         // also re-calculate the Right and Up vector
         // normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
-        self.right = self.front.cross(&self.world_up).normalize(0.000001);
-        self.up = self.right.cross(&self.front).normalize(0.000001);
+        // self.right = math.cross3(v0: Vec4, v1: Vec4) self.front.cross(&self.world_up).normalize(0.000001);
+        // self.up = self.right.cross(&self.front).normalize(0.000001);
+
     }
 
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
-    pub fn get_view_matrix(self: *Self) Mat4 {
-        return Mat4.look_to_rh(self.position, self.front, self.up);
+    pub fn get_view_matrix(self: *Self) Matrix {
+        const viewTransform = Matrix.lookToRh(self.position, self.front, self.up);
+        return viewTransform;
     }
 
     // processes input received from any keyboard-like input system. Accepts input parameter

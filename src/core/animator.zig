@@ -14,13 +14,19 @@ const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 
-const MAX_BONES: usize = 100;
-const MAX_NODES: usize = 50;
+pub const MAX_BONES: usize = 100;
+pub const MAX_NODES: usize = 50;
 
-pub const AnimationRepeat = union {
-    Once: u32,
-    Count: u32,
-    Forever: u32,
+// pub const AnimationRepeat = union {
+//     Once: void,
+//     Count: u32,
+//     Forever: void,
+// };
+
+pub const AnimationRepeat = enum {
+    Once,
+    Count,
+    Forever,
 };
 
 pub const AnimationClip = struct {
@@ -151,7 +157,7 @@ pub const Animator = struct {
         const animation_clip = AnimationClip{
             .start_tick = 0.0,
             .end_tick = model_animation.duration,
-            .repeat = .{ .Forever = 0 },
+            .repeat = .Forever,
         };
 
         const current_animation = PlayingAnimation{

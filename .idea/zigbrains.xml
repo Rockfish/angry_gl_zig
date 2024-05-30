@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ZLSSettings">
-    <option name="zlsPath" value="$PROJECT_DIR$/../../bin/zls" />
+    <option name="zlsPath" value="$USER_HOME$/Zig/bin/zls" />
     <option name="increaseTimeouts" value="true" />
     <option name="highlightGlobalVarDeclarations" value="true" />
   </component>
   <component name="ZigProjectSettings">
-    <option name="explicitPathToStd" value="Users/john/Dev/Zig/bin/lib/std" />
-    <option name="toolchainHomeDirectory" value="$PROJECT_DIR$/../../bin" />
+    <option name="explicitPathToStd" value="Users/john/zig/zig-macos-aarch64-0.13.0-dev.46+3648d7df1/lib/std" />
+    <option name="toolchainHomeDirectory" value="$USER_HOME$/Zig/bin" />
   </component>
 </project>
