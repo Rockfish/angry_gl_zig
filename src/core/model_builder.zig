@@ -270,6 +270,7 @@ pub const ModelBuilder = struct {
                     .width = cached_texture.width,
                     .allocator = cached_texture.allocator,
                 };
+                std.debug.print("ModelBuilder loadTexture- id: {d}  type: {any}  path: {s}\n", .{texture.id, texture.texture_type, texture.texture_path});
                 return texture;
             }
         }

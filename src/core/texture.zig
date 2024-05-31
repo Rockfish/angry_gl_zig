@@ -132,20 +132,19 @@ pub const Texture = struct {
         std.debug.print("Texture: binding a texture\n", .{});
         gl.bindTexture(gl.TEXTURE_2D, texture_id);
 
-        const width: c_int = @intCast(image.width);
-        const height: c_int = @intCast(image.height);
-
         gl.texImage2D(
             gl.TEXTURE_2D,
             0,
             format,
-            width,
-            height,
+            @intCast(image.width),
+            @intCast(image.height),
             0,
             format,
             gl.UNSIGNED_BYTE,
             image.data.ptr,
         );
+
+        gl.generateMipmap(gl.TEXTURE_2D);
 
         const wrap_param: i32 = switch (texture_config.wrap) {
             TextureWrap.Clamp => gl.CLAMP_TO_EDGE,
@@ -167,7 +166,7 @@ pub const Texture = struct {
         return Texture{
             .id = texture_id,
             .texture_path = try allocator.dupe(u8, path),
-            .texture_type = TextureType.Diffuse,
+            .texture_type = texture_config.texture_type,
             .width = image.width,
             .height = image.height,
             .allocator = allocator,

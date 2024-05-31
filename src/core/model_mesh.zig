@@ -108,9 +108,7 @@ pub const ModelMesh = struct {
 
         std.debug.print("ModelMesh: setting up mesh, name: {s}\n", .{name});
         model_mesh.setupMesh();
-
-        print_model_mesh(model_mesh);
-
+        // print_model_mesh(model_mesh);
         return model_mesh;
     }
 
@@ -138,13 +136,15 @@ pub const ModelMesh = struct {
 
             const uniform = texture.texture_type.toString();
             const c_uniform = utils.bufCopyZ(&buf,uniform);
+
+            // std.debug.print("ModelMesh render- uniform: {s}  texture_unit: {d}  texture: {any}  path: {s}\n", .{c_uniform, @as(i32, @intCast(texture_unit)), texture.texture_type, texture.texture_path});
             shader.set_int(c_uniform, @as(i32, @intCast(texture_unit)));
         }
 
         gl.bindVertexArray(self.vao);
         gl.drawElements(
             gl.TRIANGLES,
-            @as(c_int, @intCast(self.indices.items.len)),
+            @intCast(self.indices.items.len),
             gl.UNSIGNED_INT,
             null,
         );

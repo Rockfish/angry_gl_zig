@@ -33,39 +33,52 @@ pub const Shader = struct {
     pub fn new_with_geom(allocator: Allocator, vert_file_path: []const u8, frag_file_path: []const u8, optional_geom_file: ?[]const u8) !*Shader {
 
         const vert_file = try std.fs.cwd().openFile(vert_file_path, .{});
+        const vert_code = try vert_file.readToEndAlloc(allocator, 256 * 1024);
+        const c_vert_code: [:0]const u8 = try allocator.dupeZ(u8, vert_code);
+
         defer vert_file.close();
-        const vert_code = try vert_file.reader().readAllAlloc(allocator, 256 * 1024);
         defer allocator.free(vert_code);
+        defer allocator.free(c_vert_code);
 
-        const frag_file = try std.fs.cwd().openFile(frag_file_path, .{});
-        defer frag_file.close();
-        const frag_code = try frag_file.reader().readAllAlloc(allocator, 256 * 1024);
-        defer allocator.free(frag_code);
-
-        var geom_code: ?[]u8 = null;
-        if (optional_geom_file) |geom_file_path| {
-            const geom_file = try std.fs.cwd().openFile(geom_file_path, .{});
-            defer geom_file.close();
-            geom_code = try geom_file.reader().readAllAlloc(allocator, 256 * 1024);
-            defer allocator.free(geom_code.?);
-        }
+        std.debug.print("vert_code: {s}\n", .{c_vert_code});
 
         const vertex_shader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vertex_shader, 1, &vert_code.ptr, 0);
+        gl.shaderSource(vertex_shader, 1,  &[_][*c]const u8{c_vert_code.ptr}, 0);
         gl.compileShader(vertex_shader);
-        // check_for_compile_errors(vertex_shader, "VERTEX");
+
+        try check_compile_errors(allocator, vertex_shader, "VERTEX");
+
+        const frag_file = try std.fs.cwd().openFile(frag_file_path, .{});
+        const frag_code = try frag_file.readToEndAlloc(allocator, 256 * 1024);
+        const c_frag_code: [:0]const u8 = try allocator.dupeZ(u8, frag_code);
+
+        defer frag_file.close();
+        defer allocator.free(frag_code);
+        defer allocator.free(c_frag_code);
+
+        std.debug.print("frag_code: {s}\n", .{c_frag_code});
 
         const frag_shader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(frag_shader, 1, &frag_code.ptr, 0);
+        gl.shaderSource(frag_shader, 1, &[_][*c]const u8{c_frag_code.ptr}, 0);
         gl.compileShader(frag_shader);
-        // check_for_compile_errors(vertex_shader, "VERTEX");
 
-        var geom_shader: ?u32 = null;
-        if (geom_code != null) {
+        try check_compile_errors(allocator, vertex_shader, "VERTEX");
+
+        var geom_shader: ?c_uint = null;
+        if (optional_geom_file) |geom_file_path| {
+            const geom_file = try std.fs.cwd().openFile(geom_file_path, .{});
+            const geom_code = try geom_file.readToEndAlloc(allocator, 256 * 1024);
+            const c_geom_code: [:0]const u8 = try allocator.dupeZ(u8, frag_code);
+
+            defer geom_file.close();
+            defer allocator.free(geom_code);
+            defer allocator.free(c_geom_code);
+
             geom_shader = gl.createShader(gl.GEOMETRY_SHADER);
-            gl.shaderSource(geom_shader.?, 1, &geom_code.?.ptr, 0);
+            gl.shaderSource(geom_shader.?, 1, &[_][*c]const u8{c_geom_code.ptr}, 0);
             gl.compileShader(geom_shader.?);
-            // check_for_compile_errors(vertex_shader, "VERTEX");
+
+            try check_compile_errors(allocator, vertex_shader, "VERTEX");
         }
 
         const shader_id = gl.createProgram();
@@ -77,12 +90,12 @@ pub const Shader = struct {
         }
         gl.linkProgram(shader_id);
 
-        // check_compile_errors(shader.id, "PROGRAM")?;
+        // check_compile_errors(allocator, shader.id, "PROGRAM")?;
 
         // delete the shaders as they're linked into our program now and no longer necessary
         gl.deleteShader(vertex_shader);
         gl.deleteShader(frag_shader);
-        if (geom_code != null) {
+        if (geom_shader != null) {
             gl.deleteShader(geom_shader.?);
         }
 
@@ -194,7 +207,8 @@ pub const Shader = struct {
     // ------------------------------------------------------------------------
     pub fn set_matrix(self: *const Shader, uniform: [:0]const u8, matrix: *const Matrix) void {
         const location = gl.getUniformLocation(self.id, uniform);
-        gl.uniformMatrix4fv(location, 1, gl.FALSE, matrix.asPtr());
+        // std.debug.print("shader-  uniform: {s}  matrix: {any}\n", .{uniform, &matrix.toArray()});
+        gl.uniformMatrix4fv(location, 1, gl.FALSE, &matrix.toArray());
     }
 
     // ------------------------------------------------------------------------
@@ -204,3 +218,27 @@ pub const Shader = struct {
         gl.bindTexture(gl.TEXTURE_2D, texture_id);
     }
 };
+
+fn check_compile_errors(allocator: Allocator, id: u32, check_type: []const u8) !void {
+    _ = allocator;
+    var infoLog: [1024]u8 = undefined;
+    var successful: c_int = undefined;
+    _ = check_type; // compile or link
+    gl.getShaderiv(id, gl.COMPILE_STATUS, &successful);
+    if (successful != gl.TRUE) {
+        var infoLogLen: c_int = undefined;
+        gl.getShaderiv(id, gl.INFO_LOG_LENGTH, &infoLogLen);
+
+        // const infoLog = allocator.allocSentinel(u8, @as(usize, @intCast(infoLogLen)), 0) catch {
+            // std.debug.print("Could not get info log: out of memory\n", .{});
+            // return error.CompileError;
+        // };
+        // defer allocator.free(infoLog);
+
+        gl.getShaderInfoLog(id, infoLogLen, null, &infoLog);
+        // infoLog[@intCast(infoLogLen)] = 0;
+        std.debug.print("shader compile error: {s}\n", .{infoLog[0..@intCast(infoLogLen)]});
+
+        return error.CompileError;
+    }
+}
