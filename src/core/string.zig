@@ -39,7 +39,7 @@ pub const String = struct {
         return try String.new(self.str);
     }
 
-    pub fn equal(self: *Self, other: *String) bool {
+    pub fn equals(self: *Self, other: *String) bool {
         return std.mem.eql(u8, self.str, other.str);
     }
 };

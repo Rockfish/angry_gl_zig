@@ -1,7 +1,7 @@
 const std = @import("std");
 const zm = @import("zmath");
 const Assimp = @import("assimp.zig").Assimp;
-const Utils = @import("utils.zig");
+const utils = @import("utils.zig");
 const Transform = @import("transform.zig").Transform;
 const String = @import("string.zig").String;
 
@@ -9,7 +9,7 @@ const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
 pub const KeyPosition = struct {
-    position: zm.Vec3,
+    position: zm.Vec4,
     time_stamp: f32,
 };
 
@@ -19,7 +19,7 @@ pub const KeyRotation = struct {
 };
 
 pub const KeyScale = struct {
-    scale: zm.Vec3,
+    scale: zm.Vec4,
     time_stamp: f32,
 };
 
@@ -48,7 +48,7 @@ pub const NodeAnimation = struct {
         for (aiNodeAnim[0].mPositionKeys[0..num_positions]) |positionKey| {
             const time_stamp: f32 = @floatCast(positionKey.mTime);
             const key = KeyPosition{
-                .position = Utils.vec3_from_aiVector3D(positionKey.mValue),
+                .position = utils.vec4_from_aiVector3D(positionKey.mValue),
                 .time_stamp = time_stamp,
             };
             try positions.append(key);
@@ -57,7 +57,7 @@ pub const NodeAnimation = struct {
         for (aiNodeAnim[0].mRotationKeys[0..num_rotations]) |rotationKey| {
             const time_stamp: f32 = @floatCast(rotationKey.mTime);
             const key = KeyRotation{
-                .orientation = Utils.quat_from_aiQuaternion(rotationKey.mValue),
+                .orientation = utils.quat_from_aiQuaternion(rotationKey.mValue),
                 .time_stamp = time_stamp,
             };
             try rotations.append(key);
@@ -66,7 +66,7 @@ pub const NodeAnimation = struct {
         for (aiNodeAnim[0].mScalingKeys[0..num_scales]) |scaleKey| {
             const time_stamp: f32 = @floatCast(scaleKey.mTime);
             const key = KeyScale{
-                .scale = Utils.vec3_from_aiVector3D(scaleKey.mValue),
+                .scale = utils.vec4_from_aiVector3D(scaleKey.mValue),
                 .time_stamp = time_stamp,
             };
             try scales.append(key);
@@ -103,29 +103,27 @@ pub const NodeAnimation = struct {
         };
     }
 
-    fn interpolate_position(self: *Self, animation_time: f32) zm.Vec3 {
-        if (self.positions.len() == 1) {
-            return self.positions[0].position;
+    fn interpolate_position(self: *Self, animation_time: f32) zm.Vec4 {
+        if (self.positions.items.len == 1) {
+            return self.positions.items[0].position;
         }
 
         const p0_index = self.get_position_index(animation_time);
         const p1_index = p0_index + 1;
 
         const scale_factor = self.get_scale_factor(
-            self.positions[p0_index].time_stamp,
-            self.positions[p1_index].time_stamp,
+            self.positions.items[p0_index].time_stamp,
+            self.positions.items[p1_index].time_stamp,
             animation_time,
         );
 
         // final_position
-        return self.positions[p0_index]
-            .position
-            .lerp(self.positions[p1_index].position, scale_factor);
+        return zm.lerp(self.positions.items[p0_index].position, self.positions.items[p1_index].position, scale_factor);
     }
 
     fn interpolate_rotation(self: *Self, animation_time: f32) zm.Quat {
-        if (self.rotations.len() == 1) {
-            const rotation = self.rotations[0].orientation.normalize();
+        if (self.rotations.items.len == 1) {
+            const rotation = zm.normalize3(self.rotations.items[0].orientation);
             return rotation;
         }
 
@@ -133,34 +131,32 @@ pub const NodeAnimation = struct {
         const p1_index = p0_index + 1;
 
         const scale_factor = self.get_scale_factor(
-            self.rotations[p0_index].time_stamp,
-            self.rotations[p1_index].time_stamp,
+            self.rotations.items[p0_index].time_stamp,
+            self.rotations.items[p1_index].time_stamp,
             animation_time,
         );
 
         // final_rotation
-        return self.rotations[p0_index]
-            .orientation
-            .slerp(self.rotations[p1_index].orientation, scale_factor);
+        return zm.slerp(self.rotations.items[p0_index].orientation, self.rotations.items[p1_index].orientation, scale_factor);
     }
 
-    fn interpolate_scaling(self: *Self, animation_time: f32) zm.Vec3 {
-        if (self.scales.len() == 1) {
-            return self.scales[0].scale;
+    fn interpolate_scaling(self: *Self, animation_time: f32) zm.Vec4 {
+        if (self.scales.items.len == 1) {
+            return self.scales.items[0].scale;
         }
 
         const p0_index = self.get_scale_index(animation_time);
         const p1_index = p0_index + 1;
 
-        const scale_factor = self.get_scale_factor(self.scales[p0_index].time_stamp, self.scales[p1_index].time_stamp, animation_time);
+        const scale_factor = self.get_scale_factor(self.scales.items[p0_index].time_stamp, self.scales.items[p1_index].time_stamp, animation_time);
 
         // final_scale
-        return self.scales[p0_index].scale.lerp(self.scales[p1_index].scale, scale_factor);
+        return zm.lerp(self.scales.items[p0_index].scale, self.scales.items[p1_index].scale, scale_factor);
     }
 
     fn get_position_index(self: *Self, animation_time: f32) usize {
-        for (0..self.positions.len() - 1) |index| {
-            if (animation_time < self.positions[index + 1].time_stamp) {
+        for (0..self.positions.items.len - 1) |index| {
+            if (animation_time < self.positions.items[index + 1].time_stamp) {
                 return index;
             }
         }
@@ -168,8 +164,8 @@ pub const NodeAnimation = struct {
     }
 
     fn get_rotation_index(self: *Self, animation_time: f32) usize {
-        for (0..self.rotations.len() - 1) |index| {
-            if (animation_time < self.rotations[index + 1].time_stamp) {
+        for (0..self.rotations.items.len - 1) |index| {
+            if (animation_time < self.rotations.items[index + 1].time_stamp) {
                 return index;
             }
         }
@@ -177,8 +173,8 @@ pub const NodeAnimation = struct {
     }
 
     fn get_scale_index(self: *Self, animation_time: f32) usize {
-        for (0..self.scales.len() - 1) |index| {
-            if (animation_time < self.scales[index + 1].time_stamp) {
+        for (0..self.scales.items.len - 1) |index| {
+            if (animation_time < self.scales.items[index + 1].time_stamp) {
                 return index;
             }
         }

@@ -9,10 +9,10 @@ const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
 pub const NodeData = struct {
-    name: String,
+    name: *String,
     transform: Transform,
-    childern: ArrayList(*NodeData),
-    meshes: ArrayList(u32),
+    childern: *ArrayList(*NodeData),
+    meshes: *ArrayList(u32),
     allocator: Allocator,
 
     const Self = @This();
@@ -25,15 +25,17 @@ pub const NodeData = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, name: []const u8) !*NodeData {
+    pub fn init(allocator: Allocator, name: *String) !*NodeData {
         const node_data = try allocator.create(NodeData);
         node_data.* = NodeData {
-            .name = String.new(name),
+            .name = name,
             .transform = Transform.default(),
-            .childern = ArrayList(*NodeData).init(allocator),
-            .meshes = ArrayList(u32).init(allocator),
+            .childern = try allocator.create(ArrayList(*NodeData)),
+            .meshes = try allocator.create(ArrayList(u32)),
             .allocator = allocator,
         };
+        node_data.childern.* = ArrayList(*NodeData).init(allocator);
+        node_data.meshes.* = ArrayList(u32).init(allocator);
         return node_data;
     }
 };

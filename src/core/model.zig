@@ -42,8 +42,8 @@ pub const Model = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn playClip(self: *Self, clip: AnimationClip) void {
-        self.animator.play_clip(clip);
+    pub fn playClip(self: *Self, clip: AnimationClip) !void {
+        try self.animator.play_clip(clip);
     }
 
     pub fn render(self: *Self, shader: *const Shader) !void {
@@ -77,8 +77,8 @@ pub const Model = struct {
         shader.set_mat4("nodeTransform", &final_nodes[@intCast(mesh.id)]);
     }
 
-    pub fn update_animation(self: *Self, delta_time: f32) void {
-        self.animator.update_animation(delta_time);
+    pub fn update_animation(self: *Self, delta_time: f32) !void {
+        try self.animator.update_animation(delta_time);
     }
 };
 

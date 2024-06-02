@@ -10,6 +10,7 @@ const BoneData = @import("model_animation.zig").BoneData;
 const Transform = @import("transform.zig").Transform;
 const String = @import("string.zig").String;
 const Model_Mesh = @import("model_mesh.zig");
+const utils = @import("utils.zig");
 const panic = @import("std").debug.panic;
 
 
@@ -294,6 +295,7 @@ pub const ModelBuilder = struct {
             const bone_name = bone.*.mName.data[0..bone.*.mName.length];
 
             const result = try self.bone_data_map.getOrPut(bone_name);
+
             if (result.found_existing) {
                 bone_id = result.value_ptr.*.bone_index;
             } else {
@@ -301,7 +303,7 @@ pub const ModelBuilder = struct {
                 bone_data.* = BoneData {
                     .name = try String.new(bone_name),
                     .bone_index = self.bone_count,
-                    .offset_transform = Transform.from_aiMatrix(bone.*.mOffsetMatrix),
+                    .offset_transform = utils.transfrom_from_aiMatrix(bone.*.mOffsetMatrix),
                     .allocator = self.allocator,
                 };
                 result.value_ptr.* = bone_data;

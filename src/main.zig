@@ -210,7 +210,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // const dying = AnimationClip.new(234.0, 293.0, AnimationRepeat.Once);
 
     std.debug.print("Main: playClip\n", .{});
-    model.playClip(idle);
+    try model.playClip(idle);
     // dancing_model.play_clip_with_transition(&forward, Duration.from_secs(6));
 
     // --- event loop
@@ -226,11 +226,13 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             window.setShouldClose(true);
         }
 
-        // model.update_animation(state.deltaTime);
+        std.debug.print("Main: update_animation\n", .{});
+        try model.update_animation(state.deltaTime);
 
         gl.clearColor(0.05, 0.1, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+        std.debug.print("Main: use_shader\n", .{});
         shader.use_shader();
 
         // fov: 0.7853982
@@ -262,6 +264,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         shader.set_matrix("aimRot", &identity);
         shader.set_matrix("lightSpaceMatrix", &identity);
 
+        std.debug.print("Main: render\n", .{});
         try model.render(shader);
 
         window.swapBuffers();

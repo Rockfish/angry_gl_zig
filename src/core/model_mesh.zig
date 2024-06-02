@@ -129,7 +129,7 @@ pub const ModelMesh = struct {
     pub fn render(self: *ModelMesh, shader: *const Shader) void {
         var buf: [50]u8 = undefined;
         for (self.*.textures.items, 0..) |texture, i| {
-            const texture_unit = @as(u32, @intCast(i));
+            const texture_unit: u32 = @intCast(i);
 
             gl.activeTexture(gl.TEXTURE0 + texture_unit);
             gl.bindTexture(gl.TEXTURE_2D, texture.id);
@@ -203,7 +203,7 @@ pub const ModelMesh = struct {
             gl.FLOAT,
             gl.FALSE,
             @sizeOf(ModelVertex),
-            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_POSITION)),
+            @ptrFromInt(OFFSET_OF_POSITION),
         );
 
         // vertex normals
@@ -214,7 +214,7 @@ pub const ModelMesh = struct {
             gl.FLOAT,
             gl.FALSE,
             @sizeOf(ModelVertex),
-            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_NORMAL)),
+            @ptrFromInt(OFFSET_OF_NORMAL),
         );
 
         // vertex texture coordinates
@@ -225,7 +225,7 @@ pub const ModelMesh = struct {
             gl.FLOAT,
             gl.FALSE,
             @sizeOf(ModelVertex),
-            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_TEXCOORDS)),
+            @ptrFromInt(OFFSET_OF_TEXCOORDS),
         );
 
         // vertex tangent
@@ -236,7 +236,7 @@ pub const ModelMesh = struct {
             gl.FLOAT,
             gl.FALSE,
             @sizeOf(ModelVertex),
-            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_TANGENT)),
+            @ptrFromInt(OFFSET_OF_TANGENT),
         );
 
         // vertex bitangent
@@ -247,7 +247,7 @@ pub const ModelMesh = struct {
             gl.FLOAT,
             gl.FALSE,
             @sizeOf(ModelVertex),
-            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_BITANGENT)),
+            @ptrFromInt(OFFSET_OF_BITANGENT),
         );
 
         // bone ids
@@ -257,7 +257,7 @@ pub const ModelMesh = struct {
             4,
             gl.INT,
             @sizeOf(ModelVertex),
-            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_BONE_IDS)),
+            @ptrFromInt(OFFSET_OF_BONE_IDS),
         );
 
         // weights
@@ -268,7 +268,7 @@ pub const ModelMesh = struct {
             gl.FLOAT,
             gl.FALSE,
             @sizeOf(ModelVertex),
-            @as(?*anyopaque, @ptrFromInt(OFFSET_OF_WEIGHTS)),
+            @ptrFromInt(OFFSET_OF_WEIGHTS),
         );
 
         gl.bindVertexArray(0);

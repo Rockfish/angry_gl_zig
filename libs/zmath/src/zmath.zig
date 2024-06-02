@@ -303,6 +303,9 @@ pub inline fn vec3(e0: f32, e1: f32, e2: f32) F32x3 {
 pub inline fn vec4(e0: f32, e1: f32, e2: f32, e3: f32) F32x4 {
     return .{ e0, e1, e2, e3 };
 }
+pub inline fn quat4(e0: f32, e1: f32, e2: f32, e3: f32) F32x4 {
+    return .{ e0, e1, e2, e3 };
+}
 pub inline fn f32x2(e0: f32, e1: f32) F32x2 {
     return .{ e0, e1 };
 }
@@ -2127,10 +2130,10 @@ fn mulRetType(comptime Ta: type, comptime Tb: type) type {
         return Mat4;
     } else if ((Ta == f32 and Tb == Mat4) or (Ta == Mat4 and Tb == f32)) {
         return Mat4;
-    } else if ((Ta == Vec4 and Tb == Mat4) or (Ta == Mat4 and Tb == Vec4)) {
+    } else if ((Ta == Vec4 and Tb == Mat4) or (Ta == Mat4 and Tb == Vec4) or (Ta == Vec4 and Tb == f32)) {
         return Vec4;
     }
-    @compileError("zmath.mul() not implemented for types: " ++ @typeName(Ta) ++ @typeName(Tb));
+    @compileError("zmath.mul() not implemented for types: " ++ @typeName(Ta) ++ ", " ++ @typeName(Tb));
 }
 
 pub fn mul(a: anytype, b: anytype) mulRetType(@TypeOf(a), @TypeOf(b)) {
@@ -2148,6 +2151,8 @@ pub fn mul(a: anytype, b: anytype) mulRetType(@TypeOf(a), @TypeOf(b)) {
         return vecMulMat(a, b);
     } else if (Ta == Mat4 and Tb == Vec4) {
         return matMulVec(a, b);
+    } else if (Ta == Vec4 and Tb == f32) {
+        return f32x4(a[0] * b, a[1] * b, a[2] * b, a[3] * b);
     } else {
         @compileError("zmath.mul() not implemented for types: " ++ @typeName(Ta) ++ ", " ++ @typeName(Tb));
     }

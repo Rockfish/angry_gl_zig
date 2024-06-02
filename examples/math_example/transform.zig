@@ -12,6 +12,7 @@ const vec4 = zm.vec4;
 const Mat4 = zm.Mat4;
 const Quat = zm.Quat;
 
+
 pub const Transform = struct {
     translation: zm.Vec4,
     rotation: zm.Quat,
@@ -20,7 +21,7 @@ pub const Transform = struct {
     const Self = @This();
 
     pub fn from_matrix(m: zm.Mat4) Transform {
-        return Transform{
+        return Transform {
             .translation = zm.util.getTranslationVec(m),
             .rotation = zm.util.getRotationQuat(m),
             .scale = zm.util.getScaleVec(m),
@@ -46,7 +47,7 @@ pub const Transform = struct {
         const translation = self.transform_point(transform.translation);
         const rotation = zm.qmul(self.rotation, transform.rotation);
         const scale = self.scale * transform.scale;
-        return Transform{
+        return Transform {
             .translation = translation,
             .rotation = rotation,
             .scale = scale,
@@ -63,6 +64,7 @@ pub const Transform = struct {
     pub fn compute_matrix(self: Self) zm.Mat4 {
         return from_scale_rotation_translation(self.scale, self.rotation, self.translation);
     }
+
 };
 
 pub fn from_scale_rotation_translation(scale: Vec4, rotation: Quat, translation: Vec4) zm.Mat4 {
@@ -99,5 +101,5 @@ fn quat_to_axes(rotation: zm.Quat) [3]zm.Vec4 {
     const x_axis = vec4(1.0 - (yy + zz), xy + wz, xz - wy, 0.0);
     const y_axis = vec4(xy - wz, 1.0 - (xx + zz), yz + wx, 0.0);
     const z_axis = vec4(xz + wy, yz - wx, 1.0 - (xx + yy), 0.0);
-    return .{ x_axis, y_axis, z_axis };
+    return .{x_axis, y_axis, z_axis};
 }

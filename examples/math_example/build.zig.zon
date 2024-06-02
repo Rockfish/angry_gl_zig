@@ -1,0 +1,12 @@
+.{
+    .name = "math_example",
+    .version = "0.0.0",
+
+    .dependencies = .{
+        .zmath = .{ .path = "../../libs/zmath" },
+    },
+
+    .paths = .{
+        "",
+    },
+}

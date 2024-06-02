@@ -69,4 +69,51 @@ pub fn build(b: *std.Build) void {
 
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
+
+
+    const math_example = b.addExecutable(.{
+        .name = "math_example",
+        .root_source_file = .{ .path = "examples/math_example/main.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+
+    math_example.root_module.addImport("zmath", zmath.module("root"));
+    math_example.linkLibrary(lib);
+
+    b.installArtifact(math_example);
+
+    // const options = Options{
+    //     .optimize = optimize,
+    //     .target = target,
+    // };
+
+    // buildAndInstallExamples(b, options, examples_list);
+}
+
+pub const Options = struct {
+    optimize: std.builtin.Mode,
+    target: std.Build.ResolvedTarget,
+};
+
+const examples_list = struct {
+    pub const math_example = @import("examples/math_example/main.zig");
+};
+
+fn buildAndInstallExamples(b: *std.Build, options: Options, comptime examples: type) void {
+    inline for (comptime std.meta.declarations(examples)) |d| {
+        const exe = @field(examples, d.name).build(b, options);
+
+        if (exe.root_module.optimize == .ReleaseFast) {
+            exe.root_module.strip = true;
+        }
+
+        const install_exe = b.addInstallArtifact(exe, .{});
+        b.getInstallStep().dependOn(&install_exe.step);
+        b.step(d.name, "Build '" ++ d.name ++ "' demo").dependOn(&install_exe.step);
+
+        const run_cmd = b.addRunArtifact(exe);
+        run_cmd.step.dependOn(&install_exe.step);
+        b.step(d.name ++ "-run", "Run '" ++ d.name ++ "' demo").dependOn(&run_cmd.step);
+    }
 }
