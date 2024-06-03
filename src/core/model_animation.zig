@@ -18,10 +18,14 @@ pub const NodeData = struct {
     const Self = @This();
 
     pub fn deinit(self: *Self) void {
-        for (self.chidern) |child| {
+        for (self.childern.items) |child| {
             child.deinit();
         }
+        self.childern.deinit();
         self.name.deinit();
+        self.meshes.deinit();
+        self.allocator.destroy(self.childern);
+        self.allocator.destroy(self.meshes);
         self.allocator.destroy(self);
     }
 

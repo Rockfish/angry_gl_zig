@@ -1,12 +1,13 @@
 const std = @import("std");
 const zm = @import("zmath");
-const Assimp = @import("assimp.zig").Assimp;
+const assimp = @import("assimp.zig");
 const utils = @import("utils.zig");
 const Transform = @import("transform.zig").Transform;
 const String = @import("string.zig").String;
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
+const Assimp = assimp.Assimp;
 
 pub const KeyPosition = struct {
     position: zm.Vec4,
@@ -48,7 +49,7 @@ pub const NodeAnimation = struct {
         for (aiNodeAnim[0].mPositionKeys[0..num_positions]) |positionKey| {
             const time_stamp: f32 = @floatCast(positionKey.mTime);
             const key = KeyPosition{
-                .position = utils.vec4_from_aiVector3D(positionKey.mValue),
+                .position = assimp.vec4_from_aiVector3D(positionKey.mValue),
                 .time_stamp = time_stamp,
             };
             try positions.append(key);
@@ -57,7 +58,7 @@ pub const NodeAnimation = struct {
         for (aiNodeAnim[0].mRotationKeys[0..num_rotations]) |rotationKey| {
             const time_stamp: f32 = @floatCast(rotationKey.mTime);
             const key = KeyRotation{
-                .orientation = utils.quat_from_aiQuaternion(rotationKey.mValue),
+                .orientation = assimp.quat_from_aiQuaternion(rotationKey.mValue),
                 .time_stamp = time_stamp,
             };
             try rotations.append(key);
@@ -66,7 +67,7 @@ pub const NodeAnimation = struct {
         for (aiNodeAnim[0].mScalingKeys[0..num_scales]) |scaleKey| {
             const time_stamp: f32 = @floatCast(scaleKey.mTime);
             const key = KeyScale{
-                .scale = utils.vec4_from_aiVector3D(scaleKey.mValue),
+                .scale = assimp.vec4_from_aiVector3D(scaleKey.mValue),
                 .time_stamp = time_stamp,
             };
             try scales.append(key);
