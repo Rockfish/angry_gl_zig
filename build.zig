@@ -10,6 +10,10 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const cglmlib = cglm.artifact("cglm");
+    cglmlib.addIncludePath(cglm.path("include"));
+    b.installArtifact(cglmlib);
+
     const zglfw = b.dependency("zglfw", .{
         .target = target,
         .optimize = optimize,
@@ -34,7 +38,6 @@ pub fn build(b: *std.Build) void {
     });
 
     const lib = assimp.artifact("assimp");
-
     lib.addIncludePath(assimp.path("include"));
     b.installArtifact(lib);
 
@@ -53,11 +56,12 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addImport("zstbi", zstbi.module("root"));
     exe.root_module.addImport("assimp", assimp.module("root"));
 
+    exe.linkLibrary(cglm.artifact("cglm"));
     exe.linkLibrary(zstbi.artifact("zstbi"));
     exe.linkLibrary(zglfw.artifact("glfw"));
     exe.linkLibrary(assimp.artifact("assimp"));
 
-    exe.addIncludePath(.{ .path = "include" });
+    exe.addIncludePath(.{ .path = "src/include" });
 
     b.installArtifact(exe);
 
@@ -73,24 +77,18 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&run_cmd.step);
 
 
-    const math_example = b.addExecutable(.{
-        .name = "math_example",
-        .root_source_file = .{ .path = "examples/math_example/main.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
-
-    math_example.root_module.addImport("cglm", cglm.module("root"));
-    math_example.linkLibrary(lib);
-
-    b.installArtifact(math_example);
-
-    // const options = Options{
-    //     .optimize = optimize,
+    // const math_example = b.addExecutable(.{
+    //     .name = "math_example",
+    //     .root_source_file = .{ .path = "examples/math_example/main.zig" },
     //     .target = target,
-    // };
+    //     .optimize = optimize,
+    // });
+    //
+    // math_example.root_module.addImport("cglm", cglm.module("root"));
+    // math_example.linkLibrary(lib);
+    //
+    // b.installArtifact(math_example);
 
-    // buildAndInstallExamples(b, options, examples_list);
 }
 
 pub const Options = struct {

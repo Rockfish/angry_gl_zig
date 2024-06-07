@@ -1,15 +1,11 @@
 
 const std = @import("std");
-const zm = @import("zmath");
-const Transform = @import("transform.zig").Transform;
 
 pub fn bufCopyZ(buf: []u8, source: []const u8) [:0]const u8 {
     std.mem.copyForwards(u8, buf, source);
     buf[source.len] = 0;
     return buf[0 .. source.len :0];
 }
-
-
 
 pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a: *T) bool, allocator: std.mem.Allocator) !void {
     const length = list.items.len;
@@ -37,6 +33,7 @@ pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a:
                 list.items[i] = null;
 
                 if (delete != null) {
+                    // delete.?.deinit();
                     allocator.destroy(delete.?);
                 }
                 f += 1;
@@ -51,6 +48,7 @@ pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a:
                 list.items[i] = null;
 
                 if (delete != null) {
+                    // delete.?.deinit();
                     allocator.destroy(delete.?);
                 }
                 f += 1;

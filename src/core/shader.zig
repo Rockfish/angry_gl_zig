@@ -1,9 +1,14 @@
 const std = @import("std");
 const gl = @import("zopengl").bindings;
-const zm = @import("zmath");
 const math = @import("math.zig");
 
-const Matrix = math.Matrix;
+const Vec2 = math.Vec2;
+const Vec3 = math.Vec3;
+const Vec4 = math.Vec4;
+const vec2 = math.vec2;
+const vec3 = math.vec3;
+const vec4 = math.vec4;
+const Mat4 = math.Mat4;
 
 const Allocator = std.mem.Allocator;
 
@@ -40,7 +45,7 @@ pub const Shader = struct {
         defer allocator.free(vert_code);
         defer allocator.free(c_vert_code);
 
-        std.debug.print("vert_code: {s}\n", .{c_vert_code});
+        // std.debug.print("vert_code: {s}\n", .{c_vert_code});
 
         const vertex_shader = gl.createShader(gl.VERTEX_SHADER);
         gl.shaderSource(vertex_shader, 1,  &[_][*c]const u8{c_vert_code.ptr}, 0);
@@ -56,7 +61,7 @@ pub const Shader = struct {
         defer allocator.free(frag_code);
         defer allocator.free(c_frag_code);
 
-        std.debug.print("frag_code: {s}\n", .{c_frag_code});
+        // std.debug.print("frag_code: {s}\n", .{c_frag_code});
 
         const frag_shader = gl.createShader(gl.FRAGMENT_SHADER);
         gl.shaderSource(frag_shader, 1, &[_][*c]const u8{c_frag_code.ptr}, 0);
@@ -119,7 +124,7 @@ pub const Shader = struct {
         gl.useProgram(self.id);
     }
 
-    pub fn use_shader_with(self: *Shader, projection: *zm.Mat4, view: *zm.Mat4) void {
+    pub fn use_shader_with(self: *Shader, projection: *Mat4, view: *Mat4) void {
         gl.useProgram(self.id);
         self.set_mat4("projection", projection);
         self.set_mat4("view", view);
@@ -151,7 +156,7 @@ pub const Shader = struct {
     }
 
     // ------------------------------------------------------------------------
-    pub fn set_vec2(self: *const Shader, uniform: [:0]const u8, value: *const zm.Vec2) void {
+    pub fn set_vec2(self: *const Shader, uniform: [:0]const u8, value: *const Vec2) void {
         const location = gl.getUniformLocation(self.id, uniform);
         gl.uniform2fv(location, 1, &value);
     }
@@ -163,9 +168,9 @@ pub const Shader = struct {
     }
 
     // ------------------------------------------------------------------------
-    pub fn set_vec3(self: *const Shader, uniform: [:0]const u8, value: *const zm.Vec3) void {
+    pub fn set_vec3(self: *const Shader, uniform: [:0]const u8, value: *const Vec3) void {
         const location = gl.getUniformLocation(self.id, uniform);
-        gl.uniform3fv(location, 1, @as(*const [3]f32, @ptrCast(value))); //zm.arr3Ptr(value));
+        gl.uniform3fv(location, 1, value);
     }
 
     // ------------------------------------------------------------------------
@@ -175,9 +180,9 @@ pub const Shader = struct {
     }
 
     // ------------------------------------------------------------------------
-    pub fn set_vec4(self: *const Shader, uniform: [:0]const u8, value: *const zm.Vec4) void {
+    pub fn set_vec4(self: *const Shader, uniform: [:0]const u8, value: *const Vec4) void {
         const location = gl.getUniformLocation(self.id, uniform);
-        gl.uniform4fv(location, 1, zm.arrNPtr(value));
+        gl.uniform4fv(location, 1, value);
     }
 
     // ------------------------------------------------------------------------
@@ -187,31 +192,31 @@ pub const Shader = struct {
     }
 
     // ------------------------------------------------------------------------
-    pub fn set_mat2(self: *const Shader, uniform: [:0]const u8, mat: *const zm.Mat2) void {
-        const location = gl.getUniformLocation(self.id, uniform);
-        gl.uniformMatrix2fv(location, 1, gl.FALSE, &mat);
-    }
+    // pub fn set_mat2(self: *const Shader, uniform: [:0]const u8, mat: *const zm.Mat2) void {
+    //     const location = gl.getUniformLocation(self.id, uniform);
+    //     gl.uniformMatrix2fv(location, 1, gl.FALSE, &mat);
+    // }
 
     // ------------------------------------------------------------------------
-    pub fn set_mat3(self: *const Shader, uniform: [:0]const u8, mat: *const zm.Mat3) void {
-        const location = gl.getUniformLocation(self.id, uniform);
-        gl.uniformMatrix3fv(location, 1, gl.FALSE, &mat);
-    }
+    // pub fn set_mat3(self: *const Shader, uniform: [:0]const u8, mat: *const zm.Mat3) void {
+    //     const location = gl.getUniformLocation(self.id, uniform);
+    //     gl.uniformMatrix3fv(location, 1, gl.FALSE, &mat);
+    // }
 
     // ------------------------------------------------------------------------
-    pub fn set_mat4(self: *const Shader, uniform: [:0]const u8, mat4: *const zm.Mat4) void {
-        const location = gl.getUniformLocation(self.id, uniform);
-        const mat4Array: [16]f32 = zm.matToArr(mat4.*);
-
-        std.debug.print("{d} - {s} = {any}\n",.{location, uniform, mat4Array});
-        gl.uniformMatrix4fv(location, 1, gl.FALSE, @ptrCast(&mat4Array));
-    }
+    // pub fn set_mat4(self: *const Shader, uniform: [:0]const u8, mat4: *const Mat4) void {
+    //     const location = gl.getUniformLocation(self.id, uniform);
+    //     const mat4Array: [16]f32 = zm.matToArr(mat4.*);
+    //
+    //     std.debug.print("{d} - {s} = {any}\n",.{location, uniform, mat4Array});
+    //     gl.uniformMatrix4fv(location, 1, gl.FALSE, @ptrCast(&mat4Array));
+    // }
 
     // ------------------------------------------------------------------------
-    pub fn set_matrix(self: *const Shader, uniform: [:0]const u8, matrix: *const Matrix) void {
+    pub fn set_mat4(self: *const Shader, uniform: [:0]const u8, mat: *const Mat4) void {
         const location = gl.getUniformLocation(self.id, uniform);
         // std.debug.print("shader-  uniform: {s}  matrix: {any}\n", .{uniform, &matrix.toArray()});
-        gl.uniformMatrix4fv(location, 1, gl.FALSE, &matrix.toArray());
+        gl.uniformMatrix4fv(location, 1, gl.FALSE, &mat.toArray());
     }
 
     // ------------------------------------------------------------------------

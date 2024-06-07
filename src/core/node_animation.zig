@@ -1,5 +1,5 @@
 const std = @import("std");
-const zm = @import("zmath");
+const math = @import("math.zig");
 const assimp = @import("assimp.zig");
 const utils = @import("utils.zig");
 const Transform = @import("transform.zig").Transform;
@@ -9,18 +9,31 @@ const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const Assimp = assimp.Assimp;
 
+const Vec2 = math.Vec2;
+const Vec3 = math.Vec3;
+const Vec4 = math.Vec4;
+const vec2 = math.vec2;
+const vec3 = math.vec3;
+const vec4 = math.vec4;
+const Mat4 = math.Mat4;
+const Quat = math.Quat;
+const vec3_normalize = math.vec3_normalize;
+const vec3_cross = math.vec3_cross;
+const vec3_lerp = math.vec3_lerp;
+const vec4_lerp = math.vec4_lerp;
+
 pub const KeyPosition = struct {
-    position: zm.Vec4,
+    position: Vec3,
     time_stamp: f32,
 };
 
 pub const KeyRotation = struct {
-    orientation: zm.Quat,
+    orientation: Quat,
     time_stamp: f32,
 };
 
 pub const KeyScale = struct {
-    scale: zm.Vec4,
+    scale: Vec3,
     time_stamp: f32,
 };
 
@@ -49,7 +62,7 @@ pub const NodeAnimation = struct {
         for (aiNodeAnim[0].mPositionKeys[0..num_positions]) |positionKey| {
             const time_stamp: f32 = @floatCast(positionKey.mTime);
             const key = KeyPosition{
-                .position = assimp.vec4_from_aiVector3D(positionKey.mValue),
+                .position = assimp.vec3_from_aiVector3D(positionKey.mValue),
                 .time_stamp = time_stamp,
             };
             try positions.append(key);
@@ -67,7 +80,7 @@ pub const NodeAnimation = struct {
         for (aiNodeAnim[0].mScalingKeys[0..num_scales]) |scaleKey| {
             const time_stamp: f32 = @floatCast(scaleKey.mTime);
             const key = KeyScale{
-                .scale = assimp.vec4_from_aiVector3D(scaleKey.mValue),
+                .scale = assimp.vec3_from_aiVector3D(scaleKey.mValue),
                 .time_stamp = time_stamp,
             };
             try scales.append(key);
@@ -103,7 +116,7 @@ pub const NodeAnimation = struct {
 
         // std.debug.print("looking for nan, translation = {any}  rotation = {any}  scale = {any}\n", .{translation, rotation, scale});
 
-        if (std.math.isNan(translation[0]) or std.math.isNan(rotation[0])) {
+        if (std.math.isNan(translation[0]) or std.math.isNan(rotation.data[0])) {
             std.debug.print("translation is Nan, translation = {any}  rotation = {any}  scale = {any}\n", .{translation, rotation, scale});
         }
 
@@ -114,7 +127,7 @@ pub const NodeAnimation = struct {
         };
     }
 
-    fn interpolate_position(self: *Self, animation_time: f32) zm.Vec4 {
+    fn interpolate_position(self: *Self, animation_time: f32) Vec3 {
         if (self.positions.items.len == 1) {
             return self.positions.items[0].position;
         }
@@ -129,17 +142,13 @@ pub const NodeAnimation = struct {
         );
 
         // final_position
-        return zm.lerp(self.positions.items[p0_index].position, self.positions.items[p1_index].position, scale_factor);
+        return vec3_lerp(&self.positions.items[p0_index].position, &self.positions.items[p1_index].position, scale_factor);
     }
 
-    fn interpolate_rotation(self: *Self, animation_time: f32) zm.Quat {
+    fn interpolate_rotation(self: *Self, animation_time: f32) Quat {
         if (self.rotations.items.len == 1) {
-            const rotation = zm.normalize4(self.rotations.items[0].orientation);
-            if (std.math.isNan(rotation[0])) {
-                const orientation = self.rotations.items[0].orientation;
-                const rot = zm.normalize4(orientation);
-                std.debug.print("rotation is Nan, orientation = {any}  rotation = {any}\n", .{orientation, rot});
-            }
+            var rotation = self.rotations.items[0].orientation.clone();
+            rotation.normalize();
             return rotation;
         }
 
@@ -153,14 +162,11 @@ pub const NodeAnimation = struct {
         );
 
         // final_rotation
-        const final_rotation =  zm.slerp(self.rotations.items[p0_index].orientation, self.rotations.items[p1_index].orientation, scale_factor);
-        if (std.math.isNan(final_rotation[0])) {
-            std.debug.print("rotation is Nan, rotation = {any}\n", .{final_rotation});
-        }
+        const final_rotation =  Quat.slerp(&self.rotations.items[p0_index].orientation, &self.rotations.items[p1_index].orientation, scale_factor);
         return final_rotation;
     }
 
-    fn interpolate_scaling(self: *Self, animation_time: f32) zm.Vec4 {
+    fn interpolate_scaling(self: *Self, animation_time: f32) Vec3 {
         if (self.scales.items.len == 1) {
             return self.scales.items[0].scale;
         }
@@ -171,7 +177,7 @@ pub const NodeAnimation = struct {
         const scale_factor = self.get_scale_factor(self.scales.items[p0_index].time_stamp, self.scales.items[p1_index].time_stamp, animation_time);
 
         // final_scale
-        return zm.lerp(self.scales.items[p0_index].scale, self.scales.items[p1_index].scale, scale_factor);
+        return vec3_lerp(&self.scales.items[p0_index].scale, &self.scales.items[p1_index].scale, scale_factor);
     }
 
     fn get_position_index(self: *Self, animation_time: f32) usize {

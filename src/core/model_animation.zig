@@ -1,5 +1,5 @@
 const std = @import("std");
-const zm = @import("zmath");
+const math = @import("math.zig");
 const Assimp = @import("assimp.zig").Assimp;
 const Transform = @import("transform.zig").Transform;
 const NodeAnimation = @import("node_animation.zig").NodeAnimation;
@@ -7,6 +7,8 @@ const String = @import("string.zig").String;
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
+
+const Mat4 = math.Mat4;
 
 pub const NodeData = struct {
     name: *String,
@@ -57,7 +59,7 @@ pub const BoneData = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, name: []const u8, id: i32, offset: zm.Mat4) !*BoneData {
+    pub fn init(allocator: Allocator, name: []const u8, id: i32, offset: Mat4) !*BoneData {
         const bone_data = try allocator.create(BoneData);
         bone_data.* = BoneData{
             .name = String.new(name),

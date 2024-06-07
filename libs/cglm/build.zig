@@ -60,19 +60,23 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
-    lib.addIncludePath(.{ .path = "include" });
-
     lib.addCSourceFiles(.{
         .root = .{ .path = "" },
         .files = cglm_sources,
         .flags = &.{ "-DCGLM_STATIC=ON" },
     });
 
-    lib.installHeadersDirectory(.{.path = "include" }, "", .{ .include_extensions = &.{ ".h", } });
+    // lib.addIncludePath(.{.path = "include"});
 
     _ = b.addModule("root", .{
         .root_source_file = .{ .path = "src/cglm.zig" },
     });
+
+    lib.installHeadersDirectory(
+        b.path("include"),
+        "",
+        .{ .include_extensions = &.{ ".h", } }
+    );
 
     b.installArtifact(lib);
 }

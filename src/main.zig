@@ -21,7 +21,6 @@ const Vec4 = math.Vec4;
 const vec2 = math.vec2;
 const vec3 = math.vec3;
 const Mat4 = math.Mat4;
-const Matrix = math.Matrix;
 
 const TextureType = Texture.TextureType;
 const Animator = Animation.Animator;
@@ -102,15 +101,15 @@ pub fn builderTest(allocator: std.mem.Allocator) !void {
 
     std.debug.print("", .{});
 
-    std.debug.print("mesh name: {s}\n", .{model.meshes.items[0].name});
-    std.debug.print("mesh num vertices: {any}\n", .{model.meshes.items[0].vertices.items.len});
-    std.debug.print("mesh num indices: {any}\n", .{model.meshes.items[0].indices.items.len});
+    // std.debug.print("mesh name: {s}\n", .{model.meshes.items[0].name});
+    // std.debug.print("mesh num vertices: {any}\n", .{model.meshes.items[0].vertices.items.len});
+    // std.debug.print("mesh num indices: {any}\n", .{model.meshes.items[0].indices.items.len});
 
-    for (model.meshes.items[0].textures.items) |_texture| {
-        std.debug.print("model texture: {s}\n", .{_texture.texture_path});
-    }
+    // for (model.meshes.items[0].textures.items) |_texture| {
+    //     std.debug.print("model texture: {s}\n", .{_texture.texture_path});
+    // }
 
-    std.debug.print("\nmodel builder test completed.\n\n", .{});
+    // std.debug.print("\nmodel builder test completed.\n\n", .{});
 
     model.deinit();
 
@@ -202,16 +201,16 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var model = try builder.build();
     builder.deinit();
 
-    const idle = AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever);
-    // const forward = AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever);
+    // const idle = AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever);
+    const forward = AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever);
     // const backwards = AnimationClip.new(159.0, 179.0, AnimationRepeat.Forever);
     // const right = AnimationClip.new(184.0, 204.0, AnimationRepeat.Forever);
     // const left = AnimationClip.new(209.0, 229.0, AnimationRepeat.Forever);
     // const dying = AnimationClip.new(234.0, 293.0, AnimationRepeat.Once);
 
     std.debug.print("Main: playClip\n", .{});
-    try model.playClip(idle);
-    // dancing_model.play_clip_with_transition(&forward, Duration.from_secs(6));
+    try model.playClip(forward);
+    // model.play_clip_with_transition(&forward, Duration.from_secs(6));
 
     // --- event loop
     state.lastFrame = @floatCast(glfw.getTime());
@@ -226,11 +225,11 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             window.setShouldClose(true);
         }
 
-        std.debug.print("Main: use_shader\n", .{});
+        // std.debug.print("Main: use_shader\n", .{});
         shader.use_shader();
 
-        std.debug.print("Main: update_animation\n", .{});
-        try model.update_animation(0.0); // state.deltaTime);
+        // std.debug.print("Main: update_animation\n", .{});
+        try model.update_animation(state.deltaTime);
 
         gl.clearColor(0.05, 0.1, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -242,10 +241,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // view: [[1, 0, 0.00000004371139, 0], [0, 1, -0, 0], [-0.00000004371139, 0, 1, 0], [0.0000052453665, -40, -120, 1]]
         // model: [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, -10.4, -400, 1]]
 
-        const projection = Matrix.perspectiveFovRhGl(toRadians(state.camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
+        const projection = Mat4.perspectiveRhGl(toRadians(state.camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
         const view = state.camera.get_view_matrix();
 
-        var modelTransform = Matrix.identity();
+        var modelTransform = Mat4.identity();
         modelTransform.translate(vec3(0.0, -10.4, -400.0));
         modelTransform.scale(vec3(1.0, 1.0, 1.0));
 
@@ -253,18 +252,18 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // .{toRadians(state.camera.zoom), SCR_WIDTH, SCR_HEIGHT, projection, view, modelTransform});
         // std.debug.print("Matrix identity: {any}\n", .{Matrix.identity().toArray()});
 
-        shader.set_matrix("projection", &projection);
-        shader.set_matrix("view", &view);
-        shader.set_matrix("model", &modelTransform);
+        shader.set_mat4("projection", &projection);
+        shader.set_mat4("view", &view);
+        shader.set_mat4("model", &modelTransform);
 
         shader.set_bool("useLight", true);
         shader.set_vec3("ambient", &ambientColor);
 
-        const identity = Matrix.identity();
-        shader.set_matrix("aimRot", &identity);
-        shader.set_matrix("lightSpaceMatrix", &identity);
+        const identity = Mat4.identity();
+        shader.set_mat4("aimRot", &identity);
+        shader.set_mat4("lightSpaceMatrix", &identity);
 
-        std.debug.print("Main: render\n", .{});
+        // std.debug.print("Main: render\n", .{});
         try model.render(shader);
 
         window.swapBuffers();

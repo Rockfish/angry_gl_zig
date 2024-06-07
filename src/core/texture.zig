@@ -104,7 +104,6 @@ pub const Texture = struct {
     };
 
     pub fn new(allocator: std.mem.Allocator, path: []const u8, texture_config: TextureConfig) !Texture {
-        std.debug.print("init zsbi\n", .{});
         zstbi.init(allocator);
         defer zstbi.deinit();
 
@@ -113,7 +112,7 @@ pub const Texture = struct {
         const c_path: [:0]const u8 = try allocator.dupeZ(u8, path);
         defer allocator.free(c_path);
 
-        std.debug.print("loading image\n", .{});
+        // std.debug.print("loading image\n", .{});
         var image = try zstbi.Image.loadFromFile(c_path, 0);
         defer image.deinit();
 
@@ -126,10 +125,10 @@ pub const Texture = struct {
 
         var texture_id: gl.Uint = undefined;
 
-        std.debug.print("Texture: generating a texture\n", .{});
+        // std.debug.print("Texture: generating a texture\n", .{});
         gl.genTextures(1, &texture_id);
 
-        std.debug.print("Texture: binding a texture\n", .{});
+        // std.debug.print("Texture: binding a texture\n", .{});
         gl.bindTexture(gl.TEXTURE_2D, texture_id);
 
         gl.texImage2D(
@@ -162,7 +161,7 @@ pub const Texture = struct {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         }
 
-        std.debug.print("Texture: returning texture\n", .{});
+        // std.debug.print("Texture: returning texture\n", .{});
         return Texture{
             .id = texture_id,
             .texture_path = try allocator.dupe(u8, path),

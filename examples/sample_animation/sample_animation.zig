@@ -1,7 +1,7 @@
 const std = @import("std");
 const glfw = @import("zglfw");
 const zopengl = @import("zopengl");
-const zm = @import("zmath");
+const math = @import("../src/core/math.zig");
 const zstbi = @import("zstbi");
 const Model = @import("../src/core/model_mesh.zig");
 const ModelBuilder = @import("../src/core/model_builder.zig").ModelBuilder;
@@ -22,7 +22,7 @@ const FLOOR_NON_BLUE: f32 = 0.7;
 // Struct for passing state between the window loop and the event handler.
 const State = struct {
     camera: Camera,
-    lightPos: zm.Vec3,
+    lightPos: math.Vec3,
     deltaTime: f32,
     lastFrame: f32,
     firstMouse: bool,

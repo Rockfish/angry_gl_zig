@@ -46,6 +46,10 @@ pub const Model = struct {
         try self.animator.play_clip(clip);
     }
 
+    pub fn play_clip_with_transition(self: *Self, clip: AnimationClip, transition_duration: f32) void {
+        self.animator.play_clip_with_transition(clip, transition_duration);
+    }
+
     pub fn render(self: *Self, shader: *const Shader) !void {
         var buf: [256:0]u8 = undefined;
 
@@ -63,7 +67,7 @@ pub const Model = struct {
             mesh.render(shader);
         }
 
-        std.debug.print("Model render done.\n",.{});
+        // std.debug.print("Model render done.\n",.{});
     }
 
     pub fn set_shader_bones_for_mesh(self: *Self, shader: *const Shader, mesh: *ModelMesh) !void {

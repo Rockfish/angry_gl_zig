@@ -1,7 +1,6 @@
 const std = @import("std");
 const glfw = @import("zglfw");
 const zopengl = @import("zopengl");
-const zm = @import("zmath");
 const zstbi = @import("zstbi");
 const assimp = @import("../src/core/assimp.zip");
 const Model = @import("../src/core/model_mesh.zig");

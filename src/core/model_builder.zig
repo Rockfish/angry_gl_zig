@@ -1,5 +1,4 @@
 const std = @import("std");
-const zm = @import("zmath");
 const gl = @import("zopengl").bindings;
 const Texture = @import("texture.zig").Texture;
 const ModelVertex = @import("model_mesh.zig").ModelVertex;
@@ -123,7 +122,7 @@ pub const ModelBuilder = struct {
             .animator = animator,
         };
 
-        std.debug.print("Builder: finishing up\n", .{});
+        // std.debug.print("Builder: finishing up\n", .{});
         return model;
     }
 
@@ -136,7 +135,7 @@ pub const ModelBuilder = struct {
             Assimp.aiProcess_JoinIdenticalVertices |
             Assimp.aiProcess_SortByPType);
 
-        printSceneInfo(aiScene[0]);
+        // printSceneInfo(aiScene[0]);
         return aiScene;
     }
 
@@ -146,12 +145,12 @@ pub const ModelBuilder = struct {
 
     fn processNode(self: *Self, node: *const Assimp.aiNode, aiScene: [*c]const Assimp.aiScene) !void {
         // std.debug.print("Builder: processing node: {any}\n", .{node});
-        if (node.mName.length < 1024) {
-            const name = node.mName.data[0..@min(1024, node.mName.length)];
-            std.debug.print("Builder: node name: '{s}'  num children: {d}\n", .{ name, node.mNumChildren });
-        } else {
-            std.debug.print("Builder: node error\n", .{});
-        }
+        // if (node.mName.length < 1024) {
+        //     const name = node.mName.data[0..@min(1024, node.mName.length)];
+        //     std.debug.print("Builder: node name: '{s}'  num children: {d}\n", .{ name, node.mNumChildren });
+        // } else {
+        //     std.debug.print("Builder: node error\n", .{});
+        // }
 
         const num_mesh: u32 = node.mNumMeshes;
         for (0..num_mesh) |i| {
@@ -160,14 +159,14 @@ pub const ModelBuilder = struct {
             try self.meshes.append(model_mesh);
         }
 
-        const name = node.mName.data[0..@min(1024, node.mName.length)];
+        // const name = node.mName.data[0..@min(1024, node.mName.length)];
 
         const num_children: u32 = node.mNumChildren;
         for (node.mChildren[0..num_children]) |child| {
-            std.debug.print("Builder: parent calling child, parent name: '{s}'\n", .{name});
+            // std.debug.print("Builder: parent calling child, parent name: '{s}'\n", .{name});
             try self.processNode(child, aiScene);
         }
-        std.debug.print("Builder: finished node name: '{s}'  num chidern: {d}\n", .{ name, node.mNumChildren });
+        // std.debug.print("Builder: finished node name: '{s}'  num chidern: {d}\n", .{ name, node.mNumChildren });
     }
 
     fn processMesh(self: *Self, aiMesh: Assimp.aiMesh, aiScene: [*c]const Assimp.aiScene) !*ModelMesh {
@@ -272,7 +271,7 @@ pub const ModelBuilder = struct {
                     .width = cached_texture.width,
                     .allocator = cached_texture.allocator,
                 };
-                std.debug.print("ModelBuilder loadTexture- id: {d}  type: {any}  path: {s}\n", .{texture.id, texture.texture_type, texture.texture_path});
+                // std.debug.print("ModelBuilder loadTexture- id: {d}  type: {any}  path: {s}\n", .{texture.id, texture.texture_type, texture.texture_path});
                 return texture;
             }
         }
@@ -281,7 +280,7 @@ pub const ModelBuilder = struct {
         texture.* = try Texture.new(self.allocator, file_path, texture_config);
         try self.texture_cache.append(texture);
 
-        std.debug.print("Builder: created a new texture: {s}\n", .{texture.texture_path});
+        // std.debug.print("Builder: created a new texture: {s}\n", .{texture.texture_path});
         return texture;
     }
 
@@ -304,7 +303,7 @@ pub const ModelBuilder = struct {
                 bone_data.* = BoneData {
                     .name = try String.new(bone_name),
                     .bone_index = self.bone_count,
-                    .offset_transform = Transform.from_matrix(assimp.mat4_from_aiMatrix(bone.*.mOffsetMatrix)),
+                    .offset_transform = Transform.from_matrix(&assimp.mat4_from_aiMatrix(&bone.*.mOffsetMatrix)),
                     .allocator = self.allocator,
                 };
                 result.value_ptr.* = bone_data;

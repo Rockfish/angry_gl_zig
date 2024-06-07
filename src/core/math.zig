@@ -6,7 +6,39 @@ pub const Vec3 = cglm.vec3;
 pub const Vec4 = cglm.vec4;
 pub const Versor = cglm.versor;
 
-pub fn vec4_scale(v: Vec4, s: f32) Vec4 {
+pub fn vec3(x: f32, y: f32, z: f32) Vec3 {
+    return .{x, y, z};
+}
+
+pub fn vec3_normalize(v: *Vec3) void {
+    cglm.glmc_vec3_normalize(v);
+}
+
+pub fn vec3_add(a: *const Vec3, b: *const Vec3) Vec3 {
+    return .{a[0] + b[0], a[1] + b[1], a[2] + b[2]};
+}
+
+pub fn vec3_mul(a: *const Vec3, b: *const Vec3) Vec3 {
+    return .{a[0] * b[0], a[1] * b[1], a[2] * b[2]};
+}
+
+pub fn vec3_cross(a: *const Vec3, b: *const Vec3) Vec3 {
+    var result: [3]f32 = undefined;
+    cglm.glmc_vec3_cross(@constCast(a),@constCast(b), &result);
+    return result;
+}
+
+pub fn vec3_lerp(from: *const Vec3, to: *const Vec3, t: f32) Vec3 {
+    var result: [3]f32 align(16) = undefined;
+    cglm.glmc_vec3_lerp(@constCast(from), @constCast(to),  t, &result);
+    return result;
+}
+
+pub fn vec4(x: f32, y: f32, z: f32, w: f32) Vec4 {
+    return .{x, y, z, w};
+}
+
+pub fn vec4_scale(v: *const Vec4, s: f32) Vec4 {
     return .{
         v[0] * s,
         v[1] * s,
@@ -15,20 +47,14 @@ pub fn vec4_scale(v: Vec4, s: f32) Vec4 {
     };
 }
 
-pub fn vec3_lerp(from: *Vec3, to: *Vec3, t: f32) Vec3 {
-    var result: [3]f32 align(16) = undefined;
-    cglm.glmc_vec3_lerp(@constCast(from), @constCast(to),  t, &result);
-    return result;
-}
-
-pub fn vec4_lerp(from: *Vec4, to: *Vec4, t: f32) Vec4 {
+pub fn vec4_lerp(from: *const Vec4, to: *const Vec4, t: f32) Vec4 {
     var result: [4]f32 align(16) = undefined;
     cglm.glmc_vec4_lerp(@constCast(from), @constCast(to),  t, &result);
     return result;
 }
 
 pub fn vec4_normalize(v: *Vec4) void {
-    cglm.glmc_vec4_normalize(@constCast(v));
+    cglm.glmc_vec4_normalize(v);
 }
 
 pub fn vec4_normalize_to(v: *const Vec4) Vec4 {
@@ -64,7 +90,7 @@ pub const Mat4 = struct {
         };
     }
 
-    pub fn toArray(self: *Self) [16]f32 {
+    pub fn toArray(self: *const Self) [16]f32 {
         return .{
             self.data[0][0],
             self.data[0][1],
@@ -83,6 +109,12 @@ pub const Mat4 = struct {
             self.data[3][2],
             self.data[3][3],
         };
+    }
+
+    pub fn getInverse(m: *const Mat4) Self {
+        var result: [4][4]f32 align(16) = undefined;
+        cglm.glmc_mat4_inv(@constCast(&m.data), &result);
+        return Mat4 { .data = result, };
     }
 
     pub fn translation(translationVec3: Vec3) Self {
@@ -135,47 +167,42 @@ pub const Mat4 = struct {
         return Quat { .data = result, };
     }
 
-    pub fn rotateVec(self: *Self, v: *const Vec4) Vec4 {
-        var result: [4]f32 align(16) = undefined;
-        cglm.glmc_quat_rotatev(&self.data, @constCast(v), &result);
-        return result;
-    }
-
     pub const TrnRotScl = struct {
-        translation: Vec4,
+        translation: Vec3,
         rotation: Quat,
         scale: Vec3,
         };
 
-    pub fn to_scale_rotation_translation(self: *Self) TrnRotScl {
+    pub fn to_scale_rotation_translation(self: *const Self) TrnRotScl {
         var tran: [4]f32 align(16) = undefined;
         var rota: [4][4]f32 align(16) = undefined;
         var scal: [3]f32 align(16) = undefined;
 
-        cglm.glmc_decompose(&self.data, &tran, &rota, &scal);
+        cglm.glmc_decompose(@constCast(&self.data), &tran, &rota, &scal);
         var quat: [4]f32 align(16) = undefined;
-        cglm.glmc_mat4_quat(&self.data, &quat);
+        cglm.glmc_mat4_quat(@constCast(&self.data), &quat);
 
         return TrnRotScl{
-            .translation = tran,
+            .translation = .{tran[0], tran[1], tran[2] },
             .rotation = Quat { .data = quat, },
             .scale = scal,
         };
     }
 
-    pub fn from_scale_rotation_translation(scal: Vec3, rota: Quat, tran: Vec4) Mat4 {
+    pub fn from_scale_rotation_translation(scal: *const Vec3, rota: *const Quat, tran: *const Vec3) Mat4 {
         const axis = Quat.to_axes(rota);
 
         const mat = Mat4{
             .data = .{
-                vec4_scale(axis[0], scal[0]),
-                vec4_scale(axis[1], scal[1]),
-                vec4_scale(axis[2], scal[2]),
-                tran,
+                vec4_scale(&axis[0], scal[0]),
+                vec4_scale(&axis[1], scal[1]),
+                vec4_scale(&axis[2], scal[2]),
+                .{tran[0], tran[1], tran[2], 1.0},
             },
         };
         return mat;
     }
+
     // pub fn to_scale_rotation_translation(&self) -> (Vec3, Quat, Vec3) {
     //         let det = self.determinant();
     //         glam_assert!(det != 0.0);
@@ -227,13 +254,21 @@ pub const Quat = struct {
         return Quat { .data = .{x, y, z, w} };
     }
 
-    pub fn fromMat4(mat4: Mat4) Self {
+    pub fn clone(self: *const Self) Quat {
+        return Quat { .data = self.data };
+    }
+
+    pub fn fromMat4(mat4: Mat4) Quat {
         var result: [4]f32 align(16) = undefined;
         cglm.glmc_mat4_quat(@constCast(&mat4.data), &result);
         return Quat { .data = result, };
     }
 
-    pub fn mulQuats(p: *const Quat, q: *const Quat) Self {
+    pub fn normalize(self: *Self) void {
+        cglm.glmc_quat_normalize(&self.data);
+    }
+
+    pub fn mulQuats(p: *const Quat, q: *const Quat) Quat {
         var result: [4]f32 align(16) = undefined;
         cglm.glmc_quat_mul(@constCast(&p.data), @constCast(&q.data), &result);
         return Quat { .data = result };
@@ -245,13 +280,19 @@ pub const Quat = struct {
         self.data = result;
     }
 
-    pub fn slerp(self: *Self, rot: *const Quat, t: f32) Quat {
+    pub fn rotateVec(self: *const Self, v: *const Vec3) Vec3 {
+        var result: [3]f32 align(16) = undefined;
+        cglm.glmc_quat_rotatev(@constCast(&self.data), @constCast(v), &result);
+        return result;
+    }
+
+    pub fn slerp(self: *const Self, rot: *const Quat, t: f32) Quat {
         var result: [4]f32 align(16) = undefined;
-        cglm.glmc_quat_slerp(&self.data, @constCast(&rot.data), t, &result);
+        cglm.glmc_quat_slerp(@constCast(&self.data), @constCast(&rot.data), t, &result);
         return Quat { .data = result };
     }
 
-    fn to_axes(rotation: Quat) [3]Vec4 {
+    fn to_axes(rotation: *const Quat) [3]Vec4 {
         // glam_assert!(rotation.is_normalized());
         const x = rotation.data[0];
         const y = rotation.data[1];

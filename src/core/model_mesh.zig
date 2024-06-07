@@ -1,5 +1,4 @@
 const std = @import("std");
-const zm = @import("zmath");
 const gl = @import("zopengl").bindings;
 const Texture = @import("texture.zig").Texture;
 const Shader = @import("shader.zig").Shader;
@@ -106,7 +105,7 @@ pub const ModelMesh = struct {
             .ebo = 0,
         };
 
-        std.debug.print("ModelMesh: setting up mesh, name: {s}\n", .{name});
+        // std.debug.print("ModelMesh: setting up mesh, name: {s}\n", .{name});
         model_mesh.setupMesh();
         // print_model_mesh(model_mesh);
         return model_mesh;
@@ -163,7 +162,7 @@ pub const ModelMesh = struct {
     }
 
     pub fn setupMesh(self: *ModelMesh) void {
-        std.debug.print("ModelMesh: calling opengl\n", .{});
+        // std.debug.print("ModelMesh: calling opengl\n", .{});
 
         var vao: gl.Uint = undefined;
         var vbo: gl.Uint = undefined;
