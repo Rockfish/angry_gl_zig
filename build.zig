@@ -5,7 +5,7 @@ pub fn build(b: *std.Build) void {
 
     const optimize = b.standardOptimizeOption(.{});
 
-    const zmath = b.dependency("zmath", .{
+    const cglm = b.dependency("cglm", .{
         .target = target,
         .optimize = optimize,
     });
@@ -47,7 +47,7 @@ pub fn build(b: *std.Build) void {
 
     @import("system_sdk").addLibraryPathsTo(exe);
 
-    exe.root_module.addImport("zmath", zmath.module("root"));
+    exe.root_module.addImport("cglm", cglm.module("root"));
     exe.root_module.addImport("zglfw", zglfw.module("root"));
     exe.root_module.addImport("zopengl", zopengl.module("root"));
     exe.root_module.addImport("zstbi", zstbi.module("root"));
@@ -56,6 +56,8 @@ pub fn build(b: *std.Build) void {
     exe.linkLibrary(zstbi.artifact("zstbi"));
     exe.linkLibrary(zglfw.artifact("glfw"));
     exe.linkLibrary(assimp.artifact("assimp"));
+
+    exe.addIncludePath(.{ .path = "include" });
 
     b.installArtifact(exe);
 
@@ -78,7 +80,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    math_example.root_module.addImport("zmath", zmath.module("root"));
+    math_example.root_module.addImport("cglm", cglm.module("root"));
     math_example.linkLibrary(lib);
 
     b.installArtifact(math_example);

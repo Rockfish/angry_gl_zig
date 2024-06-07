@@ -97,6 +97,16 @@ pub const NodeAnimation = struct {
     }
 
     pub fn get_animation_transform(self: *Self, animation_time: f32) Transform {
+            const translation = self.interpolate_position(animation_time);
+            const rotation = self.interpolate_rotation(animation_time);
+            const scale = self.interpolate_scaling(animation_time);
+
+        // std.debug.print("looking for nan, translation = {any}  rotation = {any}  scale = {any}\n", .{translation, rotation, scale});
+
+        if (std.math.isNan(translation[0]) or std.math.isNan(rotation[0])) {
+            std.debug.print("translation is Nan, translation = {any}  rotation = {any}  scale = {any}\n", .{translation, rotation, scale});
+        }
+
         return Transform{
             .translation = self.interpolate_position(animation_time),
             .rotation = self.interpolate_rotation(animation_time),
@@ -124,7 +134,12 @@ pub const NodeAnimation = struct {
 
     fn interpolate_rotation(self: *Self, animation_time: f32) zm.Quat {
         if (self.rotations.items.len == 1) {
-            const rotation = zm.normalize3(self.rotations.items[0].orientation);
+            const rotation = zm.normalize4(self.rotations.items[0].orientation);
+            if (std.math.isNan(rotation[0])) {
+                const orientation = self.rotations.items[0].orientation;
+                const rot = zm.normalize4(orientation);
+                std.debug.print("rotation is Nan, orientation = {any}  rotation = {any}\n", .{orientation, rot});
+            }
             return rotation;
         }
 
@@ -138,7 +153,11 @@ pub const NodeAnimation = struct {
         );
 
         // final_rotation
-        return zm.slerp(self.rotations.items[p0_index].orientation, self.rotations.items[p1_index].orientation, scale_factor);
+        const final_rotation =  zm.slerp(self.rotations.items[p0_index].orientation, self.rotations.items[p1_index].orientation, scale_factor);
+        if (std.math.isNan(final_rotation[0])) {
+            std.debug.print("rotation is Nan, rotation = {any}\n", .{final_rotation});
+        }
+        return final_rotation;
     }
 
     fn interpolate_scaling(self: *Self, animation_time: f32) zm.Vec4 {

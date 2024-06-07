@@ -115,6 +115,10 @@ pub const ModelAnimation = struct {
             try model_animation.node_animations.append(node_animation);
         }
 
+        // std.debug.print("NodeAnimation[0] position[0] = {any}\n", .{model_animation.node_animations.items[0].positions.items[0]});
+        // std.debug.print("NodeAnimation[0] rotations[0] = {any}\n", .{model_animation.node_animations.items[0].rotations.items[0]});
+        // std.debug.print("NodeAnimation[0] scales[0] = {any}\n", .{model_animation.node_animations.items[0].scales.items[0]});
+
         return model_animation;
     }
 };

@@ -6,7 +6,7 @@
         .assimp = .{ .path = "libs/assimp" },
         .system_sdk = .{ .path = "libs/system-sdk" },
         .zglfw = .{ .path = "libs/zglfw" },
-        .zmath = .{ .path = "libs/zmath" },
+        .cglm = .{ .path = "libs/cglm" },
         .zopengl = .{ .path = "libs/zopengl" },
         .zstbi = .{ .path = "libs/zstbi" },
     },

@@ -201,7 +201,10 @@ pub const Shader = struct {
     // ------------------------------------------------------------------------
     pub fn set_mat4(self: *const Shader, uniform: [:0]const u8, mat4: *const zm.Mat4) void {
         const location = gl.getUniformLocation(self.id, uniform);
-        gl.uniformMatrix4fv(location, 1, gl.FALSE, zm.arrNPtr(mat4));
+        const mat4Array: [16]f32 = zm.matToArr(mat4.*);
+
+        std.debug.print("{d} - {s} = {any}\n",.{location, uniform, mat4Array});
+        gl.uniformMatrix4fv(location, 1, gl.FALSE, @ptrCast(&mat4Array));
     }
 
     // ------------------------------------------------------------------------

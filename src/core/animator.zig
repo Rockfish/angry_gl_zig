@@ -163,12 +163,15 @@ pub const Animator = struct {
     pub fn init(allocator: Allocator, aiScene: [*c]const Assimp.aiScene, bone_data_map: *StringHashMap(*BoneData)) !*Self {
         const root = aiScene[0].mRootNode;
         const root_node = try read_hierarchy_data(allocator, root);
+
         const transform = assimp.mat4_from_aiMatrix(root.*.mTransformation);
         const global_inverse_transform = zm.inverse(transform);
 
+        // std.debug.print("root.*.mTransformation = {any}  transform = {any}  global_inverse_transform = {any}\n", .{root.*.mTransformation, transform, global_inverse_transform});
+
         const model_animation = try ModelAnimation.init(allocator, aiScene);
 
-        // probably don't need to initialize these
+        //  initialize below
         // for (0..100) |i| {
         // final_bone_matrices.push(zm.identity());
         // if (i < 50) {
@@ -286,12 +289,9 @@ pub const Animator = struct {
     // }
 
     pub fn update_animation(self: *Self, delta_time: f32) !void {
-        std.debug.print("Animator: current_animation.update\n", .{});
         self.current_animation.update(delta_time);
-        std.debug.print("Animator: update_node_map\n", .{});
         try self.update_node_map(delta_time);
-        std.debug.print("Animator: update_final_transforms\n", .{});
-        self.update_final_transforms();
+        try self.update_final_transforms();
     }
 
     fn hasCurrentWeight(animation: *AnimationTransition) bool {
@@ -321,31 +321,35 @@ pub const Animator = struct {
 
         const inverse_transform = Transform.from_matrix(self.global_inverse_transform);
 
-        std.debug.print("Animator: calculate_transform_maps\n", .{});
         // First for current animation at weight 1.0
         try self.calculate_transform_maps(
             self.root_node,
             node_animations,
             node_map,
             inverse_transform,
-            self.current_animation.current_tick,
+            134.0, //self.current_animation.current_tick,
             1.0,
         );
 
         for (transitions.items) |transition| {
             transition.animation.update(delta_time);
+            std.debug.print("transition = {any}\n", .{transition});
             try self.calculate_transform_maps(
                 self.root_node,
                 node_animations,
                 node_map,
                 inverse_transform,
-                transition.animation.current_tick,
+                134.0, //transition.animation.current_tick,
                 transition.current_weight,
             );
         }
+
+        std.debug.print("node_map updated.\n", .{});
     }
 
-    fn update_final_transforms(self: *Self) void {
+    fn update_final_transforms(self: *Self) !void {
+        var buf: [256:0]u8 = undefined;
+
         var iterator = self.node_transforms.iterator();
         while (iterator.next()) |entry| { // |node_name, node_transform| {
             const node_name = entry.key_ptr.*;
@@ -353,13 +357,21 @@ pub const Animator = struct {
 
             if (self.bone_data_map.get(node_name)) |bone_data| {
                 const index = bone_data.bone_index;
-                const transform_matrix = node_transform.transform.mul_transform(bone_data.offset_transform).compute_matrix();
+                const transform = node_transform.transform;
+                const mul_transform = transform.mul_transform(bone_data.offset_transform);
+                const transform_matrix = mul_transform.compute_matrix();
+                // const transform_matrix = node_transform.transform.mul_transform(bone_data.offset_transform).compute_matrix();
+
+                const finalBoneMatrixName = try std.fmt.bufPrintZ(&buf, "final_bone_matrices[{d}]", .{index});
+                std.debug.print("node_name: {s} - {s} = {any}\n\n", .{node_name, finalBoneMatrixName, transform_matrix});
 
                 self.final_bone_matrices[@intCast(index)] = transform_matrix;
             }
 
             for (node_transform.meshes.items) |mesh_index| {
                 self.final_node_matrices[mesh_index] = node_transform.transform.compute_matrix();
+
+                std.debug.print("node_name: {s} -\n    node_transform = {any}\n    final_node_matrices[{d}] = {any}\n\n", .{node_name, node_transform, mesh_index, self.final_node_matrices[mesh_index]});
             }
         }
     }
@@ -373,8 +385,8 @@ pub const Animator = struct {
         current_tick: f32,
         weight: f32,
     ) !void {
-        std.debug.print("Animator: start calculate_transform_maps\n", .{});
         const global_transformation = try self.calculate_transform(node_data, node_animations, node_map, parent_transform, current_tick, weight);
+        std.debug.print("calculate_transform_maps  node_data.name = {s}  parent_transform = {any}  global_transform = {any}\n", .{node_data.name.str, parent_transform, global_transformation});
 
         for (node_data.childern.items) |child_node| {
             try self.calculate_transform_maps(child_node, node_animations, node_map, global_transformation, current_tick, weight);
@@ -390,7 +402,7 @@ pub const Animator = struct {
         current_tick: f32,
         weight: f32,
     ) !Transform {
-        std.debug.print("Animator: start calculate_transform\n", .{});
+        // std.debug.print("Animator: start calculate_transform\n", .{});
         var some_node_animation: ?*NodeAnimation = null;
 
         for (node_animations.items) |node_anim| {
@@ -399,12 +411,22 @@ pub const Animator = struct {
             }
         }
 
+        if (node_data.name.equalsU8("Character1_LeftUpLeg")) {
+            std.debug.print("Character1_LeftUpLeg\n", .{});
+        }
+
         var global_transform: Transform = undefined;
+        var node_transform: Transform = undefined;
+
         if (some_node_animation) |node_animation| {
-            const node_transform = node_animation.get_animation_transform(current_tick);
+            node_transform = node_animation.get_animation_transform(current_tick);
             global_transform = parent_transform.mul_transform(node_transform);
         } else {
             global_transform = parent_transform.mul_transform(node_data.transform);
+        }
+
+        if (node_data.name.equalsU8("Character1_LeftUpLeg")) {
+            std.debug.print("get_animation_transform current_tick = {any}\nparent_transform = {any}\nnode_transform = {any}\nglobal_transform = {any}\n", .{current_tick, parent_transform, node_transform, global_transform});
         }
 
         const result = try node_map.getOrPut(node_data.name.str);
@@ -412,10 +434,10 @@ pub const Animator = struct {
         if (result.found_existing) {
             result.value_ptr.*.transform = result.value_ptr.*.transform.mul_transform_weighted(global_transform, weight);
         } else {
-            const node_transform = try self.allocator.create(NodeTransform);
-            node_transform.* = NodeTransform.new(global_transform, node_data.meshes);
-            result.value_ptr.* = node_transform;
-
+            const node_transform_ptr = try self.allocator.create(NodeTransform);
+            node_transform_ptr.* = NodeTransform.new(global_transform, node_data.meshes);
+            std.debug.print("calculate_transform: node_data.name = {s}  global_transform = {any}\n", .{node_data.name.str, global_transform});
+            result.value_ptr.* = node_transform_ptr;
         }
 
         return global_transform;
@@ -426,7 +448,16 @@ pub const Animator = struct {
 fn read_hierarchy_data(allocator: Allocator, source: [*c] Assimp.aiNode) !*NodeData {
     const name = try String.from_aiString(source.*.mName);
     var node_data = try NodeData.init(allocator, name);
-    node_data.*.transform = Transform.from_matrix(assimp.mat4_from_aiMatrix(source.*.mTransformation));
+
+    const aiTransform = source.*.mTransformation;
+    const transformMatrix =assimp.mat4_from_aiMatrix(aiTransform);
+    const transform = Transform.from_matrix(transformMatrix);
+    node_data.*.transform = transform;
+    // node_data.*.transform = Transform.from_matrix(assimp.mat4_from_aiMatrix(source.*.mTransformation));
+
+    if (name.str[0] == 'G') {
+        std.debug.print("node = {s}  transform: {any}\n", .{name.str, transform});
+    }
 
     if (source.*.mNumMeshes > 0) {
         for (source.*.mMeshes[0..source.*.mNumMeshes]) |mesh_id| {

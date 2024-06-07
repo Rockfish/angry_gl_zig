@@ -20,15 +20,21 @@ pub const Transform = struct {
     const Self = @This();
 
     pub fn from_matrix(m: zm.Mat4) Transform {
-        return Transform{
+        var transform = Transform{
             .translation = zm.util.getTranslationVec(m),
             .rotation = zm.util.getRotationQuat(m),
             .scale = zm.util.getScaleVec(m),
         };
+        transform.translation[3] = 1.0;
+        transform.scale[3] = 1.0;
+        return transform;
     }
 
     pub fn default() Transform {
-        return from_matrix(zm.identity());
+        var transform = from_matrix(zm.identity());
+        transform.translation[3] = 1.0;
+        transform.scale[3] = 1.0;
+        return transform;
     }
 
     pub fn mul_transform_weighted(self: *const Self, transform: Transform, weight: f32) Self {
@@ -44,7 +50,8 @@ pub const Transform = struct {
 
     pub fn mul_transform(self: *const Self, transform: Transform) Self {
         const translation = self.transform_point(transform.translation);
-        const rotation = zm.qmul(self.rotation, transform.rotation);
+        // const rotation = zm.qmul(self.rotation, transform.rotation);
+        const rotation = zm.qmul(transform.rotation, self.rotation); // zm.mul requires reversed operands!!!!
         const scale = self.scale * transform.scale;
         return Transform{
             .translation = translation,

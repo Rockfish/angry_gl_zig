@@ -226,14 +226,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             window.setShouldClose(true);
         }
 
+        std.debug.print("Main: use_shader\n", .{});
+        shader.use_shader();
+
         std.debug.print("Main: update_animation\n", .{});
-        try model.update_animation(state.deltaTime);
+        try model.update_animation(0.0); // state.deltaTime);
 
         gl.clearColor(0.05, 0.1, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        std.debug.print("Main: use_shader\n", .{});
-        shader.use_shader();
 
         // fov: 0.7853982
         // width: 800

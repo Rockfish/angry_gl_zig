@@ -42,4 +42,8 @@ pub const String = struct {
     pub fn equals(self: *Self, other: *String) bool {
         return std.mem.eql(u8, self.str, other.str);
     }
+
+    pub fn equalsU8(self: *Self, other: []const u8) bool {
+        return std.mem.eql(u8, self.str, other);
+    }
 };

@@ -43,16 +43,19 @@ void main() {
     }
 
     vec4 localPosition = finalBonesMatrices[boneIds[i]] * vec4(pos, 1.0f);
-    totalPosition += localPosition * weights[i];
+
+//    totalPosition += localPosition * weights[i];
+
     vec3 localNormal = mat3(finalBonesMatrices[boneIds[i]]) * norm;
   }
 
   if (totalPosition == vec4(0.0f)) {
-    totalPosition = nodeTransform * vec4(pos, 1.0f);
+//    totalPosition = nodeTransform * vec4(pos, 1.0f);
   }
 
-  gl_Position = projection * view * model * totalPosition;
+//  gl_Position = projection * view * model * totalPosition;
 //  gl_Position = projection * view * model * vec4(pos, 1.0f);
+    gl_Position = projection * view * model * nodeTransform * vec4(pos, 1.0f);
 
   TexCoords = tex;
 

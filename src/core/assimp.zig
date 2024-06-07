@@ -4,6 +4,7 @@ pub const Assimp = @cImport({
     @cInclude("assimp/postprocess.h");
 });
 const zm = @import("zmath");
+const std = @import("std");
 
 pub fn mat4_from_aiMatrix(aiMat: Assimp.aiMatrix4x4) zm.Mat4 {
     const mat4 = zm.Mat4 {
@@ -12,11 +13,12 @@ pub fn mat4_from_aiMatrix(aiMat: Assimp.aiMatrix4x4) zm.Mat4 {
         zm.f32x4(aiMat.a3, aiMat.b3, aiMat.c3, aiMat.d3), // m20, m21, m22, m23
         zm.f32x4(aiMat.a4, aiMat.b4, aiMat.c4, aiMat.d4), // m30, m31, m32, m33
     };
+    //std.debug.print("aiMatrix = {any}\nmat = {any}\n", .{aiMat, zm.matToArr(mat4)});
     return mat4;
 }
 
 pub fn vec4_from_aiVector3D(vec3d: Assimp.aiVector3D) zm.Vec4 {
-    return .{vec3d.x, vec3d.y, vec3d.z, 0.0 };
+    return .{vec3d.x, vec3d.y, vec3d.z, 1.0 };  // using 1.0 to fill in vec4
 }
 
 pub fn quat_from_aiQuaternion(aiQuat: Assimp.aiQuaternion) zm.Quat {
