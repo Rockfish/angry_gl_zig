@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) !void {
 
     lib.addConfigHeader(config_h);
     lib.addIncludePath(assimp.path("include"));
-    lib.addIncludePath(.{ .path = "include" });
+    lib.addIncludePath(b.path("include" ));
 
     lib.addIncludePath(assimp.path(""));
     lib.addIncludePath(assimp.path("contrib"));
@@ -127,7 +127,7 @@ pub fn build(b: *std.Build) !void {
     b.installArtifact(lib);
 
     _ = b.addModule("root", .{
-        .root_source_file = .{ .path = "src/assimp.zig" },
+        .root_source_file = b.path("src/assimp.zig" ),
     });
 
     // const example_cpp = b.addExecutable(.{
@@ -137,7 +137,7 @@ pub fn build(b: *std.Build) !void {
     // });
 
     // example_cpp.addCSourceFile(.{
-    //     .file = .{ .path = "src/example.cpp" },
+    //     .file = b.path("src/example.cpp" },
     //     .flags = &[_][]const u8{"-std=c++17"},
     // });
     // example_cpp.linkLibrary(lib);
@@ -151,7 +151,7 @@ pub fn build(b: *std.Build) !void {
     //     .optimize = optimize,
     // });
     // example_c.addCSourceFile(.{
-    //     .file = .{ .path = "src/example.c" },
+    //     .file = b.path("src/example.c" },
     //     .flags = &[_][]const u8{"-std=c99"},
     // });
     // example_c.linkLibrary(lib);
@@ -160,7 +160,7 @@ pub fn build(b: *std.Build) !void {
 
     // const zig_example = b.addExecutable(.{
     //     .name = "zig-example",
-    //     .root_source_file = .{ .path = "src/example.zig" },
+    //     .root_source_file = b.path("src/example.zig" },
     //     .target = target,
     //     .optimize = optimize,
     // });

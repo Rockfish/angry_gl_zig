@@ -61,7 +61,7 @@ pub fn build(b: *std.Build) void {
     exe.linkLibrary(zglfw.artifact("glfw"));
     exe.linkLibrary(assimp.artifact("assimp"));
 
-    exe.addIncludePath(.{ .path = "src/include" });
+    exe.addIncludePath(b.path("src/include" ));
 
     b.installArtifact(exe);
 

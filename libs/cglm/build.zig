@@ -61,7 +61,7 @@ pub fn build(b: *std.Build) void {
     });
 
     lib.addCSourceFiles(.{
-        .root = .{ .path = "" },
+        .root = b.path("" ),
         .files = cglm_sources,
         .flags = &.{ "-DCGLM_STATIC=ON" },
     });
@@ -69,7 +69,7 @@ pub fn build(b: *std.Build) void {
     // lib.addIncludePath(.{.path = "include"});
 
     _ = b.addModule("root", .{
-        .root_source_file = .{ .path = "src/cglm.zig" },
+        .root_source_file = b.path("src/cglm.zig" ),
     });
 
     lib.installHeadersDirectory(
@@ -77,6 +77,12 @@ pub fn build(b: *std.Build) void {
         "",
         .{ .include_extensions = &.{ ".h", } }
     );
+
+    // .{ .cwd_relative = b.pathJoin(&.{ sdk, "/usr/include" }) }
+    // lib.addIncludePath(.{ .cwd_relative = "C:/Program Files (x86)/Windows Kits/10/include/10.0.22621.0/ucrt"});
+    // lib.addIncludePath(.{ .cwd_relative = "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/include"});
+    // lib.addSystemIncludePath(.{ .cwd_relative = "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/include"});
+    // lib.addSystemIncludePath(.{ .cwd_relative = "C:/Program Files (x86)/Windows Kits/10/include/10.0.22621.0/ucrt"});
 
     b.installArtifact(lib);
 }
