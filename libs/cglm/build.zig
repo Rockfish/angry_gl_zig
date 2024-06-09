@@ -60,29 +60,35 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
-    lib.addCSourceFiles(.{
-        .root = b.path("" ),
-        .files = cglm_sources,
-        .flags = &.{ "-DCGLM_STATIC=ON" },
-    });
-
-    // lib.addIncludePath(.{.path = "include"});
+    switch (target.result.os.tag) {
+        .macos => {
+            lib.addCSourceFiles(.{
+                .root = b.path(""),
+                .files = cglm_sources,
+                .flags = &.{ "-DCGLM_STATIC=ON", "-DCGLM_SHARED=OFF" },
+            });
+        },
+        .windows => {
+            lib.addCSourceFiles(.{
+                .root = b.path(""),
+                .files = cglm_sources,
+                .flags = &.{ "-DCGLM_STATIC=ON", "-DCGLM_SHARED=OFF", "-D_MSC_VER" },
+            });
+            lib.addIncludePath(.{ .cwd_relative = "C:\\cygwin64\\usr\\x86_64-w64-mingw32\\sys-root\\mingw\\include" });
+            lib.addLibraryPath(.{ .cwd_relative = "C:\\cygwin64\\usr\\x86_64-w64-mingw32\\sys-root\\mingw\\lib" });
+        },
+        else => {},
+    }
 
     _ = b.addModule("root", .{
-        .root_source_file = b.path("src/cglm.zig" ),
+        .root_source_file = b.path("src/cglm.zig"),
     });
 
-    lib.installHeadersDirectory(
-        b.path("include"),
-        "",
-        .{ .include_extensions = &.{ ".h", } }
-    );
+    lib.installHeadersDirectory(b.path("include"), "", .{ .include_extensions = &.{
+        ".h",
+    } });
 
-    // .{ .cwd_relative = b.pathJoin(&.{ sdk, "/usr/include" }) }
-    // lib.addIncludePath(.{ .cwd_relative = "C:/Program Files (x86)/Windows Kits/10/include/10.0.22621.0/ucrt"});
-    // lib.addIncludePath(.{ .cwd_relative = "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/include"});
-    // lib.addSystemIncludePath(.{ .cwd_relative = "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/include"});
-    // lib.addSystemIncludePath(.{ .cwd_relative = "C:/Program Files (x86)/Windows Kits/10/include/10.0.22621.0/ucrt"});
+    b.verbose = true;
 
     b.installArtifact(lib);
 }

@@ -61,7 +61,7 @@ pub fn build(b: *std.Build) void {
     exe.linkLibrary(zglfw.artifact("glfw"));
     exe.linkLibrary(assimp.artifact("assimp"));
 
-    exe.addIncludePath(b.path("src/include" ));
+    exe.addIncludePath(b.path("src/include"));
 
     b.installArtifact(exe);
 
@@ -75,7 +75,6 @@ pub fn build(b: *std.Build) void {
 
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
-
 
     // const math_example = b.addExecutable(.{
     //     .name = "math_example",

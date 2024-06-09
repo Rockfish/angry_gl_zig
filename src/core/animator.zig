@@ -61,7 +61,7 @@ pub const AnimationTransition = struct {
     // How much to decrease `current_weight` per second
     weight_decline_per_sec: f32,
     // The animation that is being faded out
-    animation: PlayingAnimation,
+    animation: *PlayingAnimation,
 };
 
 pub const WeightedAnimation = struct {
@@ -161,7 +161,7 @@ pub const Animator = struct {
 
         var nodeIterator = self.node_transforms.valueIterator();
         while (nodeIterator.next()) |nodeTransform| {
-           self.allocator.destroy(nodeTransform.*);
+            self.allocator.destroy(nodeTransform.*);
         }
         self.node_transforms.deinit();
         self.allocator.destroy(self.node_transforms);
@@ -216,7 +216,6 @@ pub const Animator = struct {
     }
 
     pub fn play_clip(self: *Self, clip: AnimationClip) !void {
-
         self.allocator.destroy(self.current_animation);
 
         self.current_animation = try self.allocator.create(PlayingAnimation);
@@ -228,26 +227,25 @@ pub const Animator = struct {
         };
     }
 
-    pub fn play_clip_with_transition(self: *Self, clip: AnimationClip, transition_duration: f32) void {
+    pub fn play_clip_with_transition(self: *Self, clip: AnimationClip, transition_duration: f32) !void {
+        self.allocator.destroy(self.current_animation);
 
-        const animation = PlayingAnimation {
+        self.current_animation = try self.allocator.create(PlayingAnimation);
+        self.current_animation.* = .{
             .animation_clip = clip,
             .current_tick = -1.0,
             .ticks_per_second = self.model_animation.ticks_per_second,
             .repeat_completions = 0,
         };
 
-        self.allocator.destroy(self.current_animation);
-        self.current_animation = animation;
-
         const transition = try self.allocator.create(AnimationTransition);
-        transition.* = AnimationTransition {
+        transition.* = AnimationTransition{
             .current_weight = 1.0,
             .weight_decline_per_sec = 1.0 / transition_duration,
-            .animation = animation,
+            .animation = self.current_animation,
         };
 
-        self.transitions.push(transition);
+        try self.transitions.append(transition);
     }
 
     pub fn play_weight_animations(self: *Self, weighted_animation: *ArrayList(WeightedAnimation), frame_time: f32) void {
@@ -294,7 +292,7 @@ pub const Animator = struct {
 
     pub fn update_animation(self: *Self, delta_time: f32) !void {
         self.current_animation.update(delta_time);
-        // try self.update_transitions(delta_time);
+        try self.update_transitions(delta_time);
         try self.update_node_map(delta_time);
         try self.update_final_transforms();
     }
@@ -307,7 +305,7 @@ pub const Animator = struct {
         for (self.transitions.items) |animation| {
             animation.?.current_weight -= animation.?.weight_decline_per_sec * delta_time;
         }
-        try utils.retain(AnimationTransition,  self.transitions, hasCurrentWeight, self.allocator);
+        try utils.retain(AnimationTransition, self.transitions, hasCurrentWeight, self.allocator);
     }
 
     fn update_node_map(self: *Self, delta_time: f32) !void {
@@ -439,12 +437,12 @@ pub const Animator = struct {
 };
 
 /// Converts scene Node tree to local NodeData tree. Converting all the transforms to column major form.
-fn read_hierarchy_data(allocator: Allocator, source: [*c] Assimp.aiNode) !*NodeData {
+fn read_hierarchy_data(allocator: Allocator, source: [*c]Assimp.aiNode) !*NodeData {
     const name = try String.from_aiString(source.*.mName);
     var node_data = try NodeData.init(allocator, name);
 
     const aiTransform = source.*.mTransformation;
-    const transformMatrix =assimp.mat4_from_aiMatrix(&aiTransform);
+    const transformMatrix = assimp.mat4_from_aiMatrix(&aiTransform);
     const transform = Transform.from_matrix(&transformMatrix);
     node_data.*.transform = transform;
 

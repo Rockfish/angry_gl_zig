@@ -140,8 +140,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const shader = try Shader.new(
         allocator,
-            "examples/sample_animation/player_shader.vert",
-            "examples/sample_animation/player_shader.frag",
+        "examples/sample_animation/player_shader.vert",
+        "examples/sample_animation/player_shader.frag",
     );
 
     _ = root_path;
@@ -159,25 +159,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const ambientColor: Vec3 = vec3(NON_BLUE * 0.7, NON_BLUE * 0.7, 0.7);
 
-
-    // const model_path = "examples/sample_animation/vampire/dancing_vampire.dae";
-    // const model_path = "/Users/john/Dev_Assets/glTF-Sample-Models/2.0/CesiumMan/glTF/CesiumMan.gltf"; // works
-    // const model_path = "/Users/john/Dev_Rust/Repos/OpenGL-Tutorials/LearnOpenGL/8.Guest Articles/2020/2.Skeletal Animation/resources/objects/vampire/dancing_vampire.dae";
-    const model_path = "/Users/john/Dev/Dev_Rust/angry_gl_bots_rust/assets/Models/Player/Player.fbx";
-    // const model_path = "/Users/john/Dev/Dev_Rust/bevy/assets/models/animated/Fox.glb";
-    // const model_path = "/Users/john/Dev_Assets/animated-characters-3/Model/characterMedium.fbx";
-    // const model_path = "/Users/john/Dev/Dev_Rust/alien_explorer/assets/models/alien.glb";
-    // const cube = Cube.new("cube", shader.clone());
-    // const model_path = "examples/sample_animation/source/cube_capoeira_martelo_cruzando.FBX.fbx"; // platform with martial arts guy
-    // const model_path = "/Users/john/Dev_Rust/Repos/ogldev/Content/box.obj"; // no animations
-    // const model_path = "/Users/john/Dev_Rust/Repos/OpenGL-Animation/Resources/res/model.dae"; // doesn't load
-    // const model_path = "examples/sample_animation/colorful_cube/scene.gltf";  // small cube, doesn't animate
-    // const model_path = "/Users/john/Dev/Dev_Rust/learn_opengl_with_rust/resources/objects/cyborg/cyborg.obj"; // not animated
-
-    // const scene = AssimpScene.load_assimp_scene(model_path).unwrap();
-    // const scene = ModelBuilder.load_russimp_scene(model_path).unwrap();
+    const model_path = "assets/Models/Player/Player.fbx";
 
     std.debug.print("Main: loading model: {s}\n", .{model_path});
+
     var texture_cache = std.ArrayList(*Texture).init(allocator);
     var builder = try ModelBuilder.init(allocator, &texture_cache, "Player", model_path);
 
@@ -186,22 +171,21 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const texture_emissive = .{ .texture_type = .Emissive, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
     const texture_normals = .{ .texture_type = .Normals, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
 
-
     std.debug.print("Main: adding textures\n", .{});
-    try builder.addTexture("Player", texture_diffuse, "/Users/john/Dev/Dev_Rust/angry_gl_bots_rust/assets/Models/Player/Textures/Player_D.tga");
-    try builder.addTexture( "Player", texture_specular, "/Users/john/Dev/Dev_Rust/angry_gl_bots_rust/assets/Models/Player/Textures/Player_M.tga");
-    try builder.addTexture( "Player", texture_emissive, "/Users/john/Dev/Dev_Rust/angry_gl_bots_rust/assets/Models/Player/Textures/Player_E.tga", );
-    try builder.addTexture( "Player", texture_normals, "/Users/john/Dev/Dev_Rust/angry_gl_bots_rust/assets/Models/Player/Textures/Player_NRM.tga", );
-    try builder.addTexture( "Gun", texture_diffuse, "/Users/john/Dev/Dev_Rust/angry_gl_bots_rust/assets/Models/Player/Textures/Gun_D.tga", );
-    try builder.addTexture( "Gun", texture_specular, "/Users/john/Dev/Dev_Rust/angry_gl_bots_rust/assets/Models/Player/Textures/Gun_M.tga", );
-    try builder.addTexture( "Gun", texture_emissive, "/Users/john/Dev/Dev_Rust/angry_gl_bots_rust/assets/Models/Player/Textures/Gun_E.tga", );
-    try builder.addTexture( "Gun", texture_normals, "/Users/john/Dev/Dev_Rust/angry_gl_bots_rust/assets/Models/Player/Textures/Gun_NRM.tga", );
+    try builder.addTexture("Player", texture_diffuse, "assets/Models/Player/Textures/Player_D.tga");
+    try builder.addTexture("Player", texture_specular, "assets/Models/Player/Textures/Player_M.tga");
+    try builder.addTexture("Player", texture_emissive, "assets/Models/Player/Textures/Player_E.tga");
+    try builder.addTexture("Player", texture_normals, "assets/Models/Player/Textures/Player_NRM.tga");
+    try builder.addTexture("Gun", texture_diffuse, "assets/Models/Player/Textures/Gun_D.tga");
+    try builder.addTexture("Gun", texture_specular, "assets/Models/Player/Textures/Gun_M.tga");
+    try builder.addTexture("Gun", texture_emissive, "assets/Models/Player/Textures/Gun_E.tga");
+    try builder.addTexture("Gun", texture_normals, "assets/Models/Player/Textures/Gun_NRM.tga");
 
     std.debug.print("Main: building model: {s}\n", .{model_path});
     var model = try builder.build();
     builder.deinit();
 
-    // const idle = AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever);
+    const idle = AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever);
     const forward = AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever);
     // const backwards = AnimationClip.new(159.0, 179.0, AnimationRepeat.Forever);
     // const right = AnimationClip.new(184.0, 204.0, AnimationRepeat.Forever);
@@ -209,8 +193,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // const dying = AnimationClip.new(234.0, 293.0, AnimationRepeat.Once);
 
     std.debug.print("Main: playClip\n", .{});
-    try model.playClip(forward);
-    // model.play_clip_with_transition(&forward, Duration.from_secs(6));
+    try model.playClip(idle);
+    try model.play_clip_with_transition(forward, 6);
 
     // --- event loop
     state.lastFrame = @floatCast(glfw.getTime());

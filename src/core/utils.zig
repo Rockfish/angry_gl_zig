@@ -1,10 +1,9 @@
-
 const std = @import("std");
 
 pub fn bufCopyZ(buf: []u8, source: []const u8) [:0]const u8 {
     std.mem.copyForwards(u8, buf, source);
     buf[source.len] = 0;
-    return buf[0 .. source.len :0];
+    return buf[0..source.len :0];
 }
 
 pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a: *T) bool, allocator: std.mem.Allocator) !void {
@@ -61,11 +60,12 @@ pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a:
     }
 
     // delete remainder
-    for (list.items[count..length]) |d| {
-        if (d != null) {
-            allocator.destroy(d.?);
+    if (count < length) {
+        for (list.items[count..length]) |d| {
+            if (d != null) {
+                allocator.destroy(d.?);
+            }
         }
+        list.items = list.items[0..count];
     }
-
-    list.items = list.items[0..count];
 }

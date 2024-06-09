@@ -5,6 +5,9 @@ zig-cache
 zig-out
 backup
 
+# vim 
+*~
+
 # Ignore some special system files
 *.DS_Store
 

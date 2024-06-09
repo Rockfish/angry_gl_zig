@@ -12,7 +12,7 @@ const MAX_BONES = AnimatorPackage.MAX_BONES;
 const MAX_NODES = AnimatorPackage.MAX_NODES;
 
 pub const Model = struct {
-    allocator: Allocator, 
+    allocator: Allocator,
     name: []const u8,
     meshes: *ArrayList(*ModelMesh),
     animator: *Animator,
@@ -21,7 +21,7 @@ pub const Model = struct {
 
     pub fn init(allocator: Allocator, name: []const u8, meshes: *ArrayList(*ModelMesh), animator: *Animator) !Self {
         const model = try allocator.create(Model);
-        model.* = Model {
+        model.* = Model{
             .allocator = allocator,
             .name = try allocator.dupe(u8, name),
             .meshes = meshes,
@@ -46,8 +46,8 @@ pub const Model = struct {
         try self.animator.play_clip(clip);
     }
 
-    pub fn play_clip_with_transition(self: *Self, clip: AnimationClip, transition_duration: f32) void {
-        self.animator.play_clip_with_transition(clip, transition_duration);
+    pub fn play_clip_with_transition(self: *Self, clip: AnimationClip, transition_duration: f32) !void {
+        try self.animator.play_clip_with_transition(clip, transition_duration);
     }
 
     pub fn render(self: *Self, shader: *const Shader) !void {
@@ -87,4 +87,3 @@ pub const Model = struct {
         try self.animator.update_animation(delta_time);
     }
 };
-
