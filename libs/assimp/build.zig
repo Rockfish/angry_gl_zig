@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) !void {
 
     lib.addConfigHeader(config_h);
     lib.addIncludePath(assimp.path("include"));
-    lib.addIncludePath(b.path("include" ));
+    lib.addIncludePath(b.path("include"));
 
     lib.addIncludePath(assimp.path(""));
     lib.addIncludePath(assimp.path("contrib"));
@@ -42,7 +42,7 @@ pub fn build(b: *std.Build) !void {
     lib.addIncludePath(assimp.path("contrib/pugixml/src/"));
     lib.addIncludePath(assimp.path("contrib/rapidjson/include"));
     lib.addIncludePath(assimp.path("contrib/unzip"));
-    lib.addIncludePath(assimp.path("contrib/zlib"));
+    // lib.addIncludePath(assimp.path("contrib/zlib"));
     lib.addIncludePath(assimp.path("contrib/openddlparser/include"));
     lib.addIncludePath(assimp.path("contrib/utf8cpp/source"));
 
@@ -66,6 +66,21 @@ pub fn build(b: *std.Build) !void {
         });
     }
 
+    switch(target.result.os.tag) {
+        .windows => {
+            lib.addIncludePath(assimp.path("contrib/zlib"));
+            lib.addCSourceFiles(.{
+                .root = assimp.path(""),
+                .files = &sources.zlib,
+                .flags = &.{},
+            });
+        },
+        .macos => {
+            lib.linkSystemLibrary("zlib");
+            lib.addSystemFrameworkPath(.{ .cwd_relative = "/opt/homebrew/Cellar/zlib/1.3.1/lib" } );
+        },
+        else => {},
+    }
     // DASSIMP_BUILD_ASSIMP_TOOLS=ON
 
     var enable_all = false;
@@ -127,7 +142,7 @@ pub fn build(b: *std.Build) !void {
     b.installArtifact(lib);
 
     _ = b.addModule("root", .{
-        .root_source_file = b.path("src/assimp.zig" ),
+        .root_source_file = b.path("src/assimp.zig"),
     });
 
     // const example_cpp = b.addExecutable(.{
@@ -256,39 +271,39 @@ const sources = struct {
         pub const zip = [_][]const u8{
             "contrib/zip/src/zip.c",
         };
-        pub const zlib = [_][]const u8{
-            "contrib/zlib/inflate.c",
-            "contrib/zlib/infback.c",
-            "contrib/zlib/gzclose.c",
-            "contrib/zlib/gzread.c",
-            "contrib/zlib/inftrees.c",
-            "contrib/zlib/gzwrite.c",
-            "contrib/zlib/compress.c",
-            "contrib/zlib/inffast.c",
-            "contrib/zlib/uncompr.c",
-            "contrib/zlib/gzlib.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/testzlib/testzlib.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/inflate86/inffas86.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/masmx64/inffas8664.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/infback9/infback9.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/infback9/inftree9.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/minizip/miniunz.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/minizip/minizip.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/minizip/unzip.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/minizip/ioapi.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/minizip/mztools.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/minizip/zip.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/minizip/iowin32.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/puff/pufftest.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/puff/puff.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/blast/blast.c",
-            // assimpRoot() ++ "/contrib/zlib/contrib/untgz/untgz.c",
-            "contrib/zlib/trees.c",
-            "contrib/zlib/zutil.c",
-            "contrib/zlib/deflate.c",
-            "contrib/zlib/crc32.c",
-            "contrib/zlib/adler32.c",
-        };
+        // pub const zlib = [_][]const u8{
+        //     "contrib/zlib/inflate.c",
+        //     "contrib/zlib/infback.c",
+        //     "contrib/zlib/gzclose.c",
+        //     "contrib/zlib/gzread.c",
+        //     "contrib/zlib/inftrees.c",
+        //     "contrib/zlib/gzwrite.c",
+        //     "contrib/zlib/compress.c",
+        //     "contrib/zlib/inffast.c",
+        //     "contrib/zlib/uncompr.c",
+        //     "contrib/zlib/gzlib.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/testzlib/testzlib.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/inflate86/inffas86.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/masmx64/inffas8664.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/infback9/infback9.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/infback9/inftree9.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/minizip/miniunz.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/minizip/minizip.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/minizip/unzip.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/minizip/ioapi.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/minizip/mztools.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/minizip/zip.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/minizip/iowin32.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/puff/pufftest.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/puff/puff.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/blast/blast.c",
+        //     // assimpRoot() ++ "/contrib/zlib/contrib/untgz/untgz.c",
+        //     "contrib/zlib/trees.c",
+        //     "contrib/zlib/zutil.c",
+        //     "contrib/zlib/deflate.c",
+        //     "contrib/zlib/crc32.c",
+        //     "contrib/zlib/adler32.c",
+        // };
         pub const poly2tri = [_][]const u8{
             "contrib/poly2tri/poly2tri/common/shapes.cc",
             "contrib/poly2tri/poly2tri/sweep/sweep_context.cc",
@@ -307,6 +322,39 @@ const sources = struct {
             "contrib/openddlparser/code/Value.cpp",
             "contrib/openddlparser/code/OpenDDLStream.cpp",
         };
+    };
+    pub const zlib = [_][]const u8{
+        "contrib/zlib/inflate.c",
+        "contrib/zlib/infback.c",
+        "contrib/zlib/gzclose.c",
+        "contrib/zlib/gzread.c",
+        "contrib/zlib/inftrees.c",
+        "contrib/zlib/gzwrite.c",
+        "contrib/zlib/compress.c",
+        "contrib/zlib/inffast.c",
+        "contrib/zlib/uncompr.c",
+        "contrib/zlib/gzlib.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/testzlib/testzlib.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/inflate86/inffas86.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/masmx64/inffas8664.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/infback9/infback9.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/infback9/inftree9.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/minizip/miniunz.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/minizip/minizip.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/minizip/unzip.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/minizip/ioapi.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/minizip/mztools.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/minizip/zip.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/minizip/iowin32.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/puff/pufftest.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/puff/puff.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/blast/blast.c",
+        // assimpRoot() ++ "/contrib/zlib/contrib/untgz/untgz.c",
+        "contrib/zlib/trees.c",
+        "contrib/zlib/zutil.c",
+        "contrib/zlib/deflate.c",
+        "contrib/zlib/crc32.c",
+        "contrib/zlib/adler32.c",
     };
     pub const formats = struct {
         pub const @"3DS" = [_][]const u8{

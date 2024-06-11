@@ -92,11 +92,9 @@ pub fn build(b: *std.Build) void {
             });
         },
         .macos => {
-            glfw.addFrameworkPath(
-                b.path(system_sdk.path("macos12/System/Library/Frameworks").getPath(b) ),
-            );
-            glfw.addSystemIncludePath(b.path(system_sdk.path("macos12/usr/include").getPath(b) ));
-            glfw.addLibraryPath(b.path(system_sdk.path("macos12/usr/lib").getPath(b) ));
+            glfw.addFrameworkPath(system_sdk.path("macos12/System/Library/Frameworks"));
+            glfw.addSystemIncludePath(system_sdk.path("macos12/usr/include"));
+            glfw.addLibraryPath(system_sdk.path("macos12/usr/lib"));
             glfw.linkSystemLibrary("objc");
             glfw.linkFramework("IOKit");
             glfw.linkFramework("CoreFoundation");
