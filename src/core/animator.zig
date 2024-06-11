@@ -176,7 +176,6 @@ pub const Animator = struct {
 
         const transform = assimp.mat4_from_aiMatrix(&root.*.mTransformation);
         const global_inverse_transform = Mat4.getInverse(&transform);
-
         // std.debug.print("root.*.mTransformation = {any}  transform = {any}  global_inverse_transform = {any}\n", .{root.*.mTransformation, transform, global_inverse_transform});
 
         const model_animation = try ModelAnimation.init(allocator, aiScene);
@@ -228,7 +227,7 @@ pub const Animator = struct {
     }
 
     pub fn play_clip_with_transition(self: *Self, clip: AnimationClip, transition_duration: f32) !void {
-        self.allocator.destroy(self.current_animation);
+        const animation = self.current_animation;
 
         self.current_animation = try self.allocator.create(PlayingAnimation);
         self.current_animation.* = .{
@@ -242,14 +241,13 @@ pub const Animator = struct {
         transition.* = AnimationTransition{
             .current_weight = 1.0,
             .weight_decline_per_sec = 1.0 / transition_duration,
-            .animation = self.current_animation,
+            .animation = animation,
         };
 
         try self.transitions.append(transition);
     }
 
     pub fn play_weight_animations(self: *Self, weighted_animation: *ArrayList(WeightedAnimation), frame_time: f32) void {
-
         // reset node transforms
         var iterator = self.node_transforms.valueIterator();
         while (iterator.next()) |node_transform| {
@@ -362,10 +360,8 @@ pub const Animator = struct {
                 const mul_transform = transform.mul_transform(bone_data.offset_transform);
                 const transform_matrix = mul_transform.compute_matrix();
                 // const transform_matrix = node_transform.transform.mul_transform(bone_data.offset_transform).compute_matrix();
-
                 // const finalBoneMatrixName = try std.fmt.bufPrintZ(&buf, "final_bone_matrices[{d}]", .{index});
                 // std.debug.print("node_name: {s} - {s} = {any}\n\n", .{node_name, finalBoneMatrixName, transform_matrix});
-
                 self.final_bone_matrices[@intCast(index)] = transform_matrix;
             }
 
