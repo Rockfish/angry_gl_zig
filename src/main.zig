@@ -11,6 +11,7 @@ const Texture = @import("core/texture.zig").Texture;
 const Camera = @import("core/camera.zig").Camera;
 const Shader = @import("core/shader.zig").Shader;
 const String = @import("core/string.zig");
+const FrameCount = @import("core/frame_count.zig").FrameCount;
 
 // const math = @import("math/main.zig");
 const math = @import("core/math.zig");
@@ -26,6 +27,8 @@ const TextureType = Texture.TextureType;
 const Animator = Animation.Animator;
 const AnimationClip = Animation.AnimationClip;
 const AnimationRepeat = Animation.AnimationRepeat;
+
+const Window = glfw.Window;
 
 const SCR_WIDTH: f32 = 800.0;
 const SCR_HEIGHT: f32 = 800.0;
@@ -49,6 +52,8 @@ const State = struct {
 };
 
 const content_dir = "angrygl_assets";
+
+var state: State = undefined;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -81,42 +86,7 @@ pub fn main() !void {
 
     try zopengl.loadCoreProfile(glfw.getProcAddress, gl_major, gl_minor);
 
-    // try builderTest(allocator);
-
     try run(allocator, window);
-}
-
-pub fn builderTest(allocator: std.mem.Allocator) !void {
-    const file = "/Users/john/Dev/Dev_Rust/small_gl_core/examples/sample_animation/vampire/dancing_vampire.dae";
-
-    var texture_cache = std.ArrayList(*Texture).init(allocator);
-    var builder = try ModelBuilder.init(allocator, &texture_cache, "Player", file);
-
-    const texture_type = .{ .texture_type = .Normals, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
-
-    try builder.addTexture("Vampire-lib", texture_type, "textures/Vampire_normal.png");
-
-    var model = try builder.flipv().build();
-    builder.deinit();
-
-    std.debug.print("", .{});
-
-    // std.debug.print("mesh name: {s}\n", .{model.meshes.items[0].name});
-    // std.debug.print("mesh num vertices: {any}\n", .{model.meshes.items[0].vertices.items.len});
-    // std.debug.print("mesh num indices: {any}\n", .{model.meshes.items[0].indices.items.len});
-
-    // for (model.meshes.items[0].textures.items) |_texture| {
-    //     std.debug.print("model texture: {s}\n", .{_texture.texture_path});
-    // }
-
-    // std.debug.print("\nmodel builder test completed.\n\n", .{});
-
-    model.deinit();
-
-    for (texture_cache.items) |_texture| {
-        _texture.deinit();
-    }
-    texture_cache.deinit();
 }
 
 pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
@@ -126,7 +96,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const camera = try Camera.camera_vec3(allocator, vec3(0.0, 40.0, 120.0));
 
     // Initialize the world state
-    var state = State{
+    state = State{
         .camera = camera,
         .lightPos = vec3(1.2, 1.0, 2.0),
         .deltaTime = 0.0,
@@ -198,16 +168,23 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     // --- event loop
     state.lastFrame = @floatCast(glfw.getTime());
+    var frame_counter = FrameCount.new();
+
+    _ = window.setKeyCallback(key_handler);
+    _ = window.setFramebufferSizeCallback(framebuffer_size_handler);
 
     while (!window.shouldClose()) {
         const currentFrame: f32 = @floatCast(glfw.getTime());
         state.deltaTime = currentFrame - state.lastFrame;
         state.lastFrame = currentFrame;
 
+        frame_counter.update();
+
         glfw.pollEvents();
-        if (window.getKey(glfw.Key.escape) == glfw.Action.press) {
-            window.setShouldClose(true);
-        }
+
+        // if (window.getKey(glfw.Key.escape) == glfw.Action.press) {
+        //     window.setShouldClose(true);
+        // }
 
         // std.debug.print("Main: use_shader\n", .{});
         shader.use_shader();
@@ -266,4 +243,40 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
 inline fn toRadians(degrees: f32) f32 {
     return degrees * (std.math.pi / 180.0);
+}
+
+fn key_handler (window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
+    _ = scancode;
+    _ = mods;
+    switch (key) {
+        .t => {
+            if (action == glfw.Action.press) {
+                std.debug.print("time: {d}\n", .{state.deltaTime});
+            }
+        },
+        .escape => {
+            if (action == glfw.Action.press) {
+                window.setShouldClose(true);
+            }
+        },
+        else => {}
+    }
+}
+
+fn framebuffer_size_handler(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {
+    _ = window;
+    gl.viewport(0, 0, width, height);
+}
+
+fn mouse_hander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
+    _ = window;
+    _ = button;
+    _ = action;
+    _ = mods;
+}
+
+fn cursor_position_handler(window: *glfw.Window, xpos: f64, ypos: f64) callconv(.C) void {
+    _ = window;
+    _ = xpos;
+    _ = ypos;
 }

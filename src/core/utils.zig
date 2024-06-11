@@ -7,6 +7,7 @@ pub fn bufCopyZ(buf: []u8, source: []const u8) [:0]const u8 {
 }
 
 pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a: *T) bool, allocator: std.mem.Allocator) !void {
+    _ = allocator;
     const length = list.items.len;
     var i: usize = 0;
     var f: usize = 0;
@@ -32,8 +33,8 @@ pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a:
                 list.items[i] = null;
 
                 if (delete != null) {
-                    // delete.?.deinit();
-                    allocator.destroy(delete.?);
+                    delete.?.deinit();
+                    // allocator.destroy(delete.?);
                 }
                 f += 1;
                 count += 1;
@@ -47,8 +48,8 @@ pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a:
                 list.items[i] = null;
 
                 if (delete != null) {
-                    // delete.?.deinit();
-                    allocator.destroy(delete.?);
+                    delete.?.deinit();
+                    // allocator.destroy(delete.?);
                 }
                 f += 1;
             }
@@ -63,7 +64,8 @@ pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a:
     if (count < length) {
         for (list.items[count..length]) |d| {
             if (d != null) {
-                allocator.destroy(d.?);
+                d.?.deinit();
+                // allocator.destroy(d.?);
             }
         }
         list.items = list.items[0..count];

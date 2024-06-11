@@ -56,12 +56,18 @@ pub const AnimationClip = struct {
 
 // An animation that is being faded out as part of a transition (from Bevy)
 pub const AnimationTransition = struct {
+    allocator: Allocator,
     // The current weight. Starts at 1.0 and goes to 0.0 during the fade-out.
     current_weight: f32,
     // How much to decrease `current_weight` per second
     weight_decline_per_sec: f32,
     // The animation that is being faded out
     animation: *PlayingAnimation,
+
+    pub fn deinit(self: *AnimationTransition) void {
+        self.allocator.destroy(self.animation);
+        self.allocator.destroy(self);
+    }
 };
 
 pub const WeightedAnimation = struct {
@@ -154,7 +160,7 @@ pub const Animator = struct {
         self.allocator.destroy(self.current_animation);
 
         for (self.transitions.items) |transition| {
-            self.allocator.destroy(transition.?);
+            transition.?.deinit();
         }
         self.transitions.deinit();
         self.allocator.destroy(self.transitions);
@@ -239,6 +245,7 @@ pub const Animator = struct {
 
         const transition = try self.allocator.create(AnimationTransition);
         transition.* = AnimationTransition{
+            .allocator = self.allocator,
             .current_weight = 1.0,
             .weight_decline_per_sec = 1.0 / transition_duration,
             .animation = animation,
