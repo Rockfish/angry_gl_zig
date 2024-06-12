@@ -1,5 +1,5 @@
 const std = @import("std");
-const math = @import("math.zig");
+const math = @import("math");
 
 const Allocator = std.mem.Allocator;
 
@@ -10,8 +10,6 @@ const vec2 = math.vec2;
 const vec3 = math.vec3;
 const vec4 = math.vec4;
 const Mat4 = math.Mat4;
-const vec3_normalize = math.vec3_normalize;
-const vec3_cross = math.vec3_cross;
 
 const muzzlePointLightColor = vec3(1.0, 0.2, 0.0);
 
@@ -111,20 +109,20 @@ pub const Camera = struct {
 
         // std.debug.print("front: {any}\n", .{front});
 
-        vec3_normalize(&front);
+        front.normalize();
         self.front = front;
 
         // also re-calculate the Right and Up vector
         // normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
         // self.right = self.front.cross(self.world_up).normalize_or_zero();
         // self.up = self.right.cross(self.front).normalize_or_zero();
-        var right = vec3_cross(&self.front, &self.world_up);
-        vec3_normalize(&right);
+        var right = self.front.cross(&self.world_up);
+        right.normalize();
         self.right = right;
         // std.debug.print("right: {any}\n", .{right});
 
-        var up = vec3_cross(&self.right, &self.front);
-        vec3_normalize(&up);
+        var up = self.right.cross(&self.front);
+        up.normalize();
         self.up = up;
 
         // std.debug.print("up: {any}\n", .{up});
@@ -134,7 +132,7 @@ pub const Camera = struct {
 
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
     pub fn get_view_matrix(self: *Self) Mat4 {
-        const viewTransform = Mat4.lookRhGl(self.position, self.front, self.up);
+        const viewTransform = Mat4.lookRhGl(&self.position, &self.front, &self.up);
         return viewTransform;
     }
 
@@ -144,12 +142,12 @@ pub const Camera = struct {
         const velocity: f32 = self.movement_speed * delta_time;
 
         switch (direction) {
-            CameraMovement.Forward => self.position += self.front * velocity,
-            CameraMovement.Backward => self.position -= self.front * velocity,
-            CameraMovement.Left => self.position -= self.right * velocity,
-            CameraMovement.Right => self.position += self.right * velocity,
-            CameraMovement.Up => self.position += self.up * velocity,
-            CameraMovement.Down => self.position -= self.up * velocity,
+            CameraMovement.Forward => { self.position = self.position.add(&self.front.mulScalar(velocity)); },
+            CameraMovement.Backward => { self.position = self.position.sub(&self.front.mulScalar(velocity)); },
+            CameraMovement.Left =>  { self.position = self.position.sub(&self.right.mulScalar(velocity)); },
+            CameraMovement.Right =>  { self.position = self.position.add(&self.right.mulScalar(velocity)); },
+            CameraMovement.Up =>  {  self.position = self.position.add(&self.up.mulScalar(velocity)); },
+            CameraMovement.Down =>  { self.position = self.position.sub(&self.up.mulScalar(velocity)); },
         }
 
         // For FPS: make sure the user stays at the ground level
@@ -157,9 +155,9 @@ pub const Camera = struct {
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
-    pub fn process_mouse_movement(self: *Self, xoffset: f32, yoffset: f32, constrain_pitch: bool) void {
-        xoffset *= self.mouse_sensitivity;
-        yoffset *= self.mouse_sensitivity;
+    pub fn process_mouse_movement(self: *Self, xoffset_in: f32, yoffset_in: f32, constrain_pitch: bool) void {
+        const xoffset = xoffset_in * self.mouse_sensitivity;
+        const yoffset = yoffset_in * self.mouse_sensitivity;
 
         self.yaw += xoffset;
         self.pitch += yoffset;

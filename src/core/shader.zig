@@ -1,6 +1,6 @@
 const std = @import("std");
 const gl = @import("zopengl").bindings;
-const math = @import("math.zig");
+const math = @import("math");
 
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
@@ -170,7 +170,7 @@ pub const Shader = struct {
     // ------------------------------------------------------------------------
     pub fn set_vec3(self: *const Shader, uniform: [:0]const u8, value: *const Vec3) void {
         const location = gl.getUniformLocation(self.id, uniform);
-        gl.uniform3fv(location, 1, value);
+        gl.uniform3fv(location, 1, &value.data);
     }
 
     // ------------------------------------------------------------------------
@@ -182,7 +182,7 @@ pub const Shader = struct {
     // ------------------------------------------------------------------------
     pub fn set_vec4(self: *const Shader, uniform: [:0]const u8, value: *const Vec4) void {
         const location = gl.getUniformLocation(self.id, uniform);
-        gl.uniform4fv(location, 1, value);
+        gl.uniform4fv(location, 1, &value.data);
     }
 
     // ------------------------------------------------------------------------

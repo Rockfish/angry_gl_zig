@@ -1,5 +1,5 @@
 const std = @import("std");
-const math = @import("math.zig");
+const math = @import("math");
 const assimp = @import("assimp.zig");
 const utils = @import("utils.zig");
 const Transform = @import("transform.zig").Transform;
@@ -17,10 +17,6 @@ const vec3 = math.vec3;
 const vec4 = math.vec4;
 const Mat4 = math.Mat4;
 const Quat = math.Quat;
-const vec3_normalize = math.vec3_normalize;
-const vec3_cross = math.vec3_cross;
-const vec3_lerp = math.vec3_lerp;
-const vec4_lerp = math.vec4_lerp;
 
 pub const KeyPosition = struct {
     position: Vec3,
@@ -110,15 +106,10 @@ pub const NodeAnimation = struct {
     }
 
     pub fn get_animation_transform(self: *Self, animation_time: f32) Transform {
-            const translation = self.interpolate_position(animation_time);
-            const rotation = self.interpolate_rotation(animation_time);
-            const scale = self.interpolate_scaling(animation_time);
-
+        // const translation = self.interpolate_position(animation_time);
+        // const rotation = self.interpolate_rotation(animation_time);
+        // const scale = self.interpolate_scaling(animation_time);
         // std.debug.print("looking for nan, translation = {any}  rotation = {any}  scale = {any}\n", .{translation, rotation, scale});
-
-        if (std.math.isNan(translation[0]) or std.math.isNan(rotation.data[0])) {
-            std.debug.print("translation is Nan, translation = {any}  rotation = {any}  scale = {any}\n", .{translation, rotation, scale});
-        }
 
         return Transform{
             .translation = self.interpolate_position(animation_time),
@@ -142,7 +133,7 @@ pub const NodeAnimation = struct {
         );
 
         // final_position
-        return vec3_lerp(&self.positions.items[p0_index].position, &self.positions.items[p1_index].position, scale_factor);
+        return self.positions.items[p0_index].position.lerp(&self.positions.items[p1_index].position, scale_factor);
     }
 
     fn interpolate_rotation(self: *Self, animation_time: f32) Quat {
@@ -162,7 +153,7 @@ pub const NodeAnimation = struct {
         );
 
         // final_rotation
-        const final_rotation =  Quat.slerp(&self.rotations.items[p0_index].orientation, &self.rotations.items[p1_index].orientation, scale_factor);
+        const final_rotation = Quat.slerp(&self.rotations.items[p0_index].orientation, &self.rotations.items[p1_index].orientation, scale_factor);
         return final_rotation;
     }
 
@@ -177,7 +168,7 @@ pub const NodeAnimation = struct {
         const scale_factor = self.get_scale_factor(self.scales.items[p0_index].time_stamp, self.scales.items[p1_index].time_stamp, animation_time);
 
         // final_scale
-        return vec3_lerp(&self.scales.items[p0_index].scale, &self.scales.items[p1_index].scale, scale_factor);
+        return self.scales.items[p0_index].scale.lerp(&self.scales.items[p1_index].scale, scale_factor);
     }
 
     fn get_position_index(self: *Self, animation_time: f32) usize {

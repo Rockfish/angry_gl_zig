@@ -88,7 +88,7 @@ pub fn build(b: *std.Build) void {
         ".h",
     } });
 
-    b.verbose = true;
+    // b.verbose = true;
 
     b.installArtifact(lib);
 }

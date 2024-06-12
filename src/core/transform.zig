@@ -1,5 +1,5 @@
 const std = @import("std");
-const math = @import("math.zig");
+const math = @import("math");
 
 const Allocator = std.mem.Allocator;
 
@@ -11,11 +11,6 @@ const vec3 = math.vec3;
 const vec4 = math.vec4;
 const Mat4 = math.Mat4;
 const Quat = math.Quat;
-const vec3_normalize = math.vec3_normalize;
-const vec3_cross = math.vec3_cross;
-const vec3_lerp = math.vec3_lerp;
-const vec3_mul = math.vec3_mul;
-const vec3_add = math.vec3_add;
 
 pub const Transform = struct {
     translation: Vec3,
@@ -38,9 +33,9 @@ pub const Transform = struct {
     }
 
     pub fn mul_transform_weighted(self: *const Self, transform: Transform, weight: f32) Self {
-        const translation = vec3_lerp(&self.translation, &transform.translation, weight);
+        const translation = self.translation.lerp( &transform.translation, weight);
         const rotation = self.rotation.slerp(&transform.rotation, weight);
-        const scale = vec3_lerp(&self.scale, &transform.scale, weight);
+        const scale = self.scale.lerp(&transform.scale, weight);
         return Transform{
             .translation = translation,
             .rotation = rotation,
@@ -51,7 +46,7 @@ pub const Transform = struct {
     pub fn mul_transform(self: *const Self, transform: Transform) Self {
         const translation = self.transform_point(transform.translation);
         const rotation = Quat.mulQuats(&self.rotation, &transform.rotation);
-        const scale = vec3_mul(&self.scale, &transform.scale);
+        const scale = self.scale.mul(&transform.scale);
         return Transform{
             .translation = translation,
             .rotation = rotation,
@@ -60,9 +55,9 @@ pub const Transform = struct {
     }
 
     pub fn transform_point(self: *const Self, point: Vec3) Vec3 {
-        var _point = vec3_mul(&self.scale, &point);
+        var _point = self.scale.mul(&point);
         _point = self.rotation.rotateVec(&_point);
-        _point = vec3_add(&self.translation, &_point);
+        _point = self.translation.add(&_point);
         return _point;
     }
 

@@ -1,20 +1,21 @@
 const std = @import("std");
 const glfw = @import("zglfw");
 const zopengl = @import("zopengl");
-const gl = @import("zopengl").bindings;
 const zstbi = @import("zstbi");
-const Assimp = @import("core/assimp.zig");
-const Model = @import("core/model_mesh.zig");
-const ModelBuilder = @import("core/model_builder.zig").ModelBuilder;
-const Animation = @import("core/animator.zig");
-const Texture = @import("core/texture.zig").Texture;
-const Camera = @import("core/camera.zig").Camera;
-const Shader = @import("core/shader.zig").Shader;
-const String = @import("core/string.zig");
-const FrameCount = @import("core/frame_count.zig").FrameCount;
+const core = @import("core");
+const math = @import("math");
 
-// const math = @import("math/main.zig");
-const math = @import("core/math.zig");
+const gl = zopengl.bindings;
+
+const Assimp = core.Assimp;
+const Model = core.Model;
+const ModelBuilder = core.ModelBuilder;
+const Animation = core.Animation;
+const Texture = core.Texture;
+const Camera = core.Camera;
+const Shader = core.Shader;
+const String = core.String;
+const FrameCount = core.FrameCount;
 
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
@@ -43,12 +44,12 @@ const FLOOR_NON_BLUE: f32 = 0.7;
 // Struct for passing state between the window loop and the event handler.
 const State = struct {
     camera: *Camera,
-    lightPos: Vec3,
-    deltaTime: f32,
-    lastFrame: f32,
-    firstMouse: bool,
-    lastX: f32,
-    lastY: f32,
+    light_postion: Vec3,
+    delta_time: f32,
+    last_frame: f32,
+    first_mouse: bool,
+    last_x: f32,
+    last_y: f32,
 };
 
 const content_dir = "angrygl_assets";
@@ -98,12 +99,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // Initialize the world state
     state = State{
         .camera = camera,
-        .lightPos = vec3(1.2, 1.0, 2.0),
-        .deltaTime = 0.0,
-        .lastFrame = 0.0,
-        .firstMouse = true,
-        .lastX = SCR_WIDTH / 2.0,
-        .lastY = SCR_HEIGHT / 2.0,
+        .light_postion = vec3(1.2, 1.0, 2.0),
+        .delta_time = 0.0,
+        .last_frame = 0.0,
+        .first_mouse = true,
+        .last_x = SCR_WIDTH / 2.0,
+        .last_y = SCR_HEIGHT / 2.0,
     };
 
     gl.enable(gl.DEPTH_TEST);
@@ -167,16 +168,18 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     try model.play_clip_with_transition(forward, 6);
 
     // --- event loop
-    state.lastFrame = @floatCast(glfw.getTime());
+    state.last_frame = @floatCast(glfw.getTime());
     var frame_counter = FrameCount.new();
 
     _ = window.setKeyCallback(key_handler);
     _ = window.setFramebufferSizeCallback(framebuffer_size_handler);
+    _ = window.setCursorPosCallback(cursor_position_handler);
+    _ = window.setScrollCallback(scroll_handler);
 
     while (!window.shouldClose()) {
         const currentFrame: f32 = @floatCast(glfw.getTime());
-        state.deltaTime = currentFrame - state.lastFrame;
-        state.lastFrame = currentFrame;
+        state.delta_time = currentFrame - state.last_frame;
+        state.last_frame = currentFrame;
 
         frame_counter.update();
 
@@ -190,7 +193,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         shader.use_shader();
 
         // std.debug.print("Main: update_animation\n", .{});
-        try model.update_animation(state.deltaTime);
+        try model.update_animation(state.delta_time);
 
         gl.clearColor(0.05, 0.1, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -206,8 +209,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         const view = state.camera.get_view_matrix();
 
         var modelTransform = Mat4.identity();
-        modelTransform.translate(vec3(0.0, -10.4, -400.0));
-        modelTransform.scale(vec3(1.0, 1.0, 1.0));
+        modelTransform.translate(&vec3(0.0, -10.4, -400.0));
+        modelTransform.scale(&vec3(1.0, 1.0, 1.0));
 
         // std.debug.print("fov: {any}\nwidth: {any}\nheight: {any}\nprojection: {any}\nview: {any}\nmodel: {any}\n\n",
         // .{toRadians(state.camera.zoom), SCR_WIDTH, SCR_HEIGHT, projection, view, modelTransform});
@@ -249,16 +252,16 @@ fn key_handler (window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw
     _ = scancode;
     _ = mods;
     switch (key) {
+        .escape => { window.setShouldClose(true); },
         .t => {
             if (action == glfw.Action.press) {
-                std.debug.print("time: {d}\n", .{state.deltaTime});
+                std.debug.print("time: {d}\n", .{state.delta_time});
             }
         },
-        .escape => {
-            if (action == glfw.Action.press) {
-                window.setShouldClose(true);
-            }
-        },
+        .w => { state.camera.process_keyboard(.Forward, state.delta_time);},
+        .s => { state.camera.process_keyboard(.Backward, state.delta_time);},
+        .a => { state.camera.process_keyboard(.Left, state.delta_time);},
+        .d => { state.camera.process_keyboard(.Right, state.delta_time);},
         else => {}
     }
 }
@@ -275,8 +278,28 @@ fn mouse_hander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Act
     _ = mods;
 }
 
-fn cursor_position_handler(window: *glfw.Window, xpos: f64, ypos: f64) callconv(.C) void {
+fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
     _ = window;
-    _ = xpos;
-    _ = ypos;
+    const xpos: f32 = @floatCast(xposIn);
+    const ypos: f32 = @floatCast(yposIn);
+
+    if (state.first_mouse) {
+        state.last_x = xpos;
+        state.last_y = ypos;
+        state.first_mouse = false;
+    }
+
+    const xoffset = xpos - state.last_x;
+    const yoffset = state.last_y - ypos; // reversed since y-coordinates go from bottom to top
+
+    state.last_x = xpos;
+    state.last_y = ypos;
+
+    state.camera.process_mouse_movement(xoffset, yoffset, true);
+}
+
+fn scroll_handler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {
+    _ = window;
+    _ = xoffset;
+    state.camera.process_mouse_scroll(@floatCast(yoffset));
 }

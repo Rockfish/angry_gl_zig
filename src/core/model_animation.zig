@@ -1,5 +1,5 @@
 const std = @import("std");
-const math = @import("math.zig");
+const math = @import("math");
 const Assimp = @import("assimp.zig").Assimp;
 const Transform = @import("transform.zig").Transform;
 const NodeAnimation = @import("node_animation.zig").NodeAnimation;

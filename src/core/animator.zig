@@ -1,5 +1,5 @@
 const std = @import("std");
-const math = @import("math.zig");
+const math = @import("math");
 const assimp = @import("assimp.zig");
 const BoneData = @import("model_animation.zig").BoneData;
 const NodeData = @import("model_animation.zig").NodeData;
@@ -22,8 +22,6 @@ const vec2 = math.vec2;
 const vec3 = math.vec3;
 const vec4 = math.vec4;
 const Mat4 = math.Mat4;
-const vec3_normalize = math.vec3_normalize;
-const vec3_cross = math.vec3_cross;
 
 pub const MAX_BONES: usize = 100;
 pub const MAX_NODES: usize = 50;
