@@ -9,6 +9,10 @@
         .cglm = .{ .path = "libs/cglm" },
         .zopengl = .{ .path = "libs/zopengl" },
         .zstbi = .{ .path = "libs/zstbi" },
+        .ziglangSet = .{
+            .url = "https://github.com/deckarep/ziglang-set/archive/fc2aa43.tar.gz",
+            .hash = "1220c4600b6a431a46c3b5eac0630c8aa7cd63e3493886bb785b6d3cb4a5f507852e",
+        },
     },
 
     .paths = .{

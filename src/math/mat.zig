@@ -79,6 +79,12 @@ pub const Mat4 = struct {
         return Mat4 { .data = projection, };
     }
 
+    pub fn orthographicRhGl(left: f32, right: f32, top: f32, bottom: f32, near: f32, far: f32) Self {
+        var ortho: [4][4]f32 align(16) = undefined;
+        cglm.glmc_ortho_rh_no(left, right, bottom, top, near, far, &ortho);
+        return Mat4 { .data = ortho, };
+    }
+
     pub fn lookRhGl(position: *const Vec3, front: *const Vec3, up: *const Vec3) Self {
         var view: [4][4]f32 align(16) = undefined;
         cglm.glmc_look_rh_no(@constCast(&position.data), @constCast(&front.data), @constCast(&up.data), &view);

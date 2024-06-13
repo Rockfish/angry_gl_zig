@@ -40,6 +40,8 @@ pub fn build(b: *std.Build) void {
     lib.addIncludePath(assimp.path("include"));
     b.installArtifact(lib);
 
+    const ziglangSet = b.dependency("ziglangSet", .{});
+
     const exe = b.addExecutable(.{
         .name = "angry_gl_zig",
         .root_source_file = b.path("src/main.zig"),
@@ -64,6 +66,7 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addImport("cglm", cglm.module("root"));
     exe.root_module.addImport("zglfw", zglfw.module("root"));
     exe.root_module.addImport("zopengl", zopengl.module("root"));
+    exe.root_module.addImport("ziglangSet", ziglangSet.module("ziglangSet"));
     exe.linkLibrary(zglfw.artifact("glfw"));
     exe.linkLibrary(cglm.artifact("cglm"));
     exe.addIncludePath(b.path("src/include"));
@@ -82,6 +85,34 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_exe.step);
 
+    // game
+    const game = b.addExecutable(.{
+        .name = "angry_monsters",
+        .root_source_file = b.path("game/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    game.addIncludePath(b.path("src/include"));
+    game.root_module.addImport("math", math);
+    game.root_module.addImport("core", core);
+    game.root_module.addImport("cglm", cglm.module("root"));
+    game.root_module.addImport("zglfw", zglfw.module("root"));
+    game.root_module.addImport("zopengl", zopengl.module("root"));
+    exe.root_module.addImport("ziglangSet", ziglangSet.module("ziglangSet"));
+    game.linkLibrary(zglfw.artifact("glfw"));
+    game.linkLibrary(cglm.artifact("cglm"));
+
+    const install_game = b.addInstallArtifact(game, .{});
+
+    b.getInstallStep().dependOn(&install_game.step);
+    b.step("game", "Build game").dependOn(&install_game.step);
+
+    const run_game = b.addRunArtifact(game);
+    run_game.step.dependOn(&install_game.step);
+    b.step("game-run", "Run game").dependOn(&run_game.step);
+
+    // examples/sample_animation
     const animation_example = b.addExecutable(.{
         .name = "animation_example",
         .root_source_file = b.path("examples/sample_animation/sample_animation.zig"),
@@ -103,7 +134,7 @@ pub fn build(b: *std.Build) void {
     b.getInstallStep().dependOn(&install_sample.step);
     b.step("sample", "Build 'animation_example' demo").dependOn(&install_sample.step);
 
-    const run_cmd = b.addRunArtifact(exe);
+    const run_cmd = b.addRunArtifact(animation_example);
     run_cmd.step.dependOn(&install_sample.step);
     b.step("sample-run", "Run 'animation_example' demo").dependOn(&run_cmd.step);
 }
