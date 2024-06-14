@@ -36,6 +36,7 @@ const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
 const vec2 = math.vec2;
 const vec3 = math.vec3;
+const vec4 = math.vec4;
 const Mat4 = math.Mat4;
 
 const TextureType = Texture.TextureType;
@@ -79,7 +80,7 @@ const CameraType = enum {
     Floating,
     TopDown,
     Side,
-};
+    };
 
 // Struct for passing state between the window loop and the event handler.
 const State = struct {
@@ -105,7 +106,7 @@ const State = struct {
     last_x: f32,
     last_y: f32,
     run: bool,
-};
+    };
 
 const content_dir = "angrygl_assets";
 
@@ -169,8 +170,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     // for debug
     const basicer_shader = Shader.new(allocator, "shaders/basicer_shader.vert", "shaders/basicer_shader.frag");
-    const _depth_shader = Shader.new(allocator, "shaders/depth_shader.vert", "shaders/depth_shader.frag");
-    const _debug_depth_shader = Shader.new(allocator, "shaders/debug_depth_quad.vert", "shaders/debug_depth_quad.frag");
+    // const _depth_shader = Shader.new(allocator, "shaders/depth_shader.vert", "shaders/depth_shader.frag");
+    // const _debug_depth_shader = Shader.new(allocator, "shaders/debug_depth_quad.vert", "shaders/debug_depth_quad.frag");
 
     // --- Lighting ---
 
@@ -202,14 +203,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // --- quads ---
 
     const unit_square_quad = quads.create_unit_square_vao();
-    const _obnoxious_quad_vao = quads.create_obnoxious_quad_vao();
+    // const _obnoxious_quad_vao = quads.create_obnoxious_quad_vao();
     const more_obnoxious_quad_vao = quads.create_more_obnoxious_quad_vao();
 
 
     // --- Cameras ---
 
     const camera_follow_vec = vec3(-4.0, 4.3, 0.0);
-    const _camera_up = vec3(0.0, 1.0, 0.0);
+    // const _camera_up = vec3(0.0, 1.0, 0.0);
 
     const game_camera = Camera.camera_vec3_up_yaw_pitch(
         vec3(0.0, 20.0, 80.0), // for xz world
@@ -251,6 +252,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .floating_camera = floating_camera,
         .ortho_camera = ortho_camera,
         .active_camera = CameraType.Game,
+        .game_projection = game_projection,
+        .floating_projection = floating_projection,
+        .orthographic_projection = orthographic_projection,
         .player = player,
         .enemies = ArrayList(Enemy).init(allocator),
         .light_postion = vec3(1.2, 1.0, 2.0),
@@ -259,6 +263,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .first_mouse = true,
         .last_x = VIEW_PORT_WIDTH / 2.0,
         .last_y = VIEW_PORT_HEIGHT / 2.0,
+        .mouse_x = scaled_width / 2.0,
+        .mouse_y = scaled_height / 2.0,
+        .burn_marks = BurnMarks.new(allocator, unit_square_quad),
+        .sound_system = undefined,
     };
 
     // Set fixed shader uniforms
@@ -286,20 +294,18 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     wiggly_shader.set_vec3("directionLight.color", &light_color);
     wiggly_shader.set_vec3("ambient", &ambient_color);
 
+    // --------------------------------
 
-    const ambientColor: Vec3 = vec3(NON_BLUE * 0.7, NON_BLUE * 0.7, 0.7);
+    const use_framebuffers = true;
 
+    var buffer_ready = false;
+    var aim_theta: f32 = 0.0;
+    var quad_vao: gl.Uint = 0;
 
-    const idle = AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever);
-    const forward = AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever);
-    // const backwards = AnimationClip.new(159.0, 179.0, AnimationRepeat.Forever);
-    // const right = AnimationClip.new(184.0, 204.0, AnimationRepeat.Forever);
-    // const left = AnimationClip.new(209.0, 229.0, AnimationRepeat.Forever);
-    // const dying = AnimationClip.new(234.0, 293.0, AnimationRepeat.Once);
-
-    std.debug.print("Main: playClip\n", .{});
-    try model.playClip(idle);
-    try model.play_clip_with_transition(forward, 6);
+    const emission_texture_unit = 0;
+    const horizontal_texture_unit = 1;
+    const vertical_texture_unit = 2;
+    const scene_texture_unit = 3;
 
     // --- event loop
     state.last_frame = @floatCast(glfw.getTime());
@@ -311,67 +317,378 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     _ = window.setScrollCallback(scroll_handler);
 
     while (!window.shouldClose()) {
+        glfw.pollEvents();
+
         const currentFrame: f32 = @floatCast(glfw.getTime());
         state.delta_time = currentFrame - state.last_frame;
         state.last_frame = currentFrame;
 
         frame_counter.update();
 
-        glfw.pollEvents();
+        gl.clearColor(0.0, 0.02, 0.25, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.enable(gl.DEPTH_TEST);
 
-        // if (window.getKey(glfw.Key.escape) == glfw.Action.press) {
-        //     window.setShouldClose(true);
+        if (viewport_width != state.viewport_width or viewport_height != state.viewport_height) {
+            viewport_width = state.viewport_width;
+            viewport_height = state.viewport_height;
+            scaled_width = state.scaled_width;
+            scaled_height = state.scaled_height;
+
+            if (use_framebuffers) {
+                emissions_fbo = fb.create_emission_fbo(viewport_width, viewport_height);
+                scene_fbo = fb.create_scene_fbo(viewport_width, viewport_height);
+                horizontal_blur_fbo = fb.create_horizontal_blur_fbo(viewport_width, viewport_height);
+                vertical_blur_fbo = fb.create_vertical_blur_fbo(viewport_width, viewport_height);
+            }
+            std.debug.print( "view port size: {}, {}  scaled size: {}, {}\n", viewport_width, viewport_height, scaled_width, scaled_height );
+        }
+
+        state.game_camera.position = player.position + camera_follow_vec;
+        const game_view = Mat4.look_at_rh(state.game_camera.position, player.position, state.game_camera.up);
+
+        const pcv = switch (state.active_camera) {
+            CameraType.Game => .{ state.game_projection, game_view},
+            CameraType.Floating => {
+                const view = Mat4.look_at_rh(state.floating_camera.position, player.position, state.floating_camera.up);
+                .{state.floating_projection, view};
+            },
+            CameraType.TopDown => {
+                const view = Mat4.look_at_rh(
+                    vec3(player.position.x, 1.0, player.position.z),
+                    player.position,
+                    vec3(0.0, 0.0, -1.0),
+                );
+                .{state.orthographic_projection, view};
+            },
+            CameraType.Side => {
+                const view = Mat4.look_at_rh(vec3(0.0, 0.0, -3.0), player.position, vec3(0.0, 1.0, 0.0));
+                .{state.orthographic_projection, view};
+            },
+        };
+
+        const projection_view = pcv.@"0" * pcv.@"1";
+
+        var dx: f32 = 0.0;
+        var dz: f32 = 0.0;
+
+        if (player.is_alive and buffer_ready) {
+            const world_ray = math.get_world_ray_from_mouse(
+                state.mouse_x,
+                state.mouse_y,
+                state.scaled_width,
+                state.scaled_height,
+                &game_view,
+                &state.game_projection,
+            );
+
+            const xz_plane_point = vec3(0.0, 0.0, 0.0);
+            const xz_plane_normal = vec3(0.0, 1.0, 0.0);
+
+            const world_point = math.ray_plane_intersection(state.game_camera.position, world_ray, xz_plane_point, xz_plane_normal).unwrap();
+
+            dx = world_point.x - player.position.x;
+            dz = world_point.z - player.position.z;
+
+            if (dz < 0.0) {
+                aim_theta = (dx / dz).atan() + math.pi;
+            } else {
+                aim_theta = (dx / dz).atan();
+            }
+
+            if (state.mouse_x.abs() < 0.005 and state.mouse_y.abs() < 0.005) {
+                aim_theta = 0.0;
+            }
+        }
+
+        const aim_rot = Mat4.from_axis_angle(vec3(0.0, 1.0, 0.0), aim_theta);
+
+        var player_transform = Mat4.from_translation(player.position);
+        player_transform *= Mat4.from_scale(Vec3.splat(PLAYER_MODEL_SCALE));
+        player_transform *= aim_rot;
+
+        const muzzle_transform = player.get_muzzle_position(&player_transform);
+
+        if (player.is_alive and player.is_trying_to_fire and (player.last_fire_time + FIRE_INTERVAL) < state.frame_time) {
+            player.borrow_mut().last_fire_time = state.frame_time;
+            if (bullet_store.create_bullets(dx, dz, &muzzle_transform, SPREAD_AMOUNT)) {
+                muzzle_flash.add_flash();
+                state.sound_system.play_player_shooting();
+            }
+        }
+
+        muzzle_flash.update(state.delta_time);
+        bullet_store.update_bullets(&state);
+
+        if (player.is_alive) {
+            enemies.update(&state);
+            enemies.chase_player(&state);
+        }
+
+        // Update Player
+        player.borrow_mut().update(&state, aim_theta);
+
+        var use_point_light = false;
+        var muzzle_world_position = Vec3.default();
+
+        if (muzzle_flash.muzzle_flash_sprites_age.len != 0) {
+            const min_age = muzzle_flash.get_min_age();
+            const muzzle_world_position_vec4 = muzzle_transform * vec4(0.0, 0.0, 0.0, 1.0);
+
+            muzzle_world_position = vec3(
+                muzzle_world_position_vec4.x / muzzle_world_position_vec4.w,
+                muzzle_world_position_vec4.y / muzzle_world_position_vec4.w,
+                muzzle_world_position_vec4.z / muzzle_world_position_vec4.w,
+            );
+
+            use_point_light = min_age < 0.03;
+        }
+
+        const near_plane: f32 = 1.0;
+        const far_plane: f32 = 50.0;
+        const ortho_size: f32 = 10.0;
+        const player_position = player.position;
+
+        const light_projection = Mat4.orthographic_rh_gl(-ortho_size, ortho_size, -ortho_size, ortho_size, near_plane, far_plane);
+        const light_view = Mat4.look_at_rh(player_position - 20.0 * player_light_dir, player_position, vec3(0.0, 1.0, 0.0));
+        const light_space_matrix = light_projection * light_view;
+
+        player_shader.use_shader();
+        player_shader.set_mat4("projectionView", &projection_view);
+        player_shader.set_mat4("model", &player_transform);
+        player_shader.set_mat4("aimRot", &aim_rot);
+        player_shader.set_vec3("viewPos", &state.game_camera.position);
+        player_shader.set_mat4("lightSpaceMatrix", &light_space_matrix);
+        player_shader.set_bool("usePointLight", use_point_light);
+        player_shader.set_vec3("pointLight.color", &muzzle_point_light_color);
+        player_shader.set_vec3("pointLight.worldPos", &muzzle_world_position);
+
+        floor_shader.use_shader();
+        floor_shader.set_vec3("viewPos", &state.game_camera.position);
+        floor_shader.set_mat4("lightSpaceMatrix", &light_space_matrix);
+        floor_shader.set_bool("usePointLight", use_point_light);
+        floor_shader.set_vec3("pointLight.color", &muzzle_point_light_color);
+        floor_shader.set_vec3("pointLight.worldPos", &muzzle_world_position);
+
+        // shadows start - render to depth fbo
+        gl.bindFramebuffer(gl.FRAMEBUFFER, depth_map_fbo.framebuffer_id);
+        gl.viewport(0, 0, fb.SHADOW_WIDTH, fb.SHADOW_HEIGHT);
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+
+        player_shader.use_shader();
+        player_shader.set_bool("depth_mode", true);
+        player_shader.set_bool("useLight", false);
+
+        player.render(&player_shader);
+
+        wiggly_shader.use_shader();
+        wiggly_shader.set_mat4("projectionView", &projection_view);
+        wiggly_shader.set_mat4("lightSpaceMatrix", &light_space_matrix);
+        wiggly_shader.set_bool("depth_mode", true);
+
+        enemies.draw_enemies(&wiggly_shader, &state);
+
+        // shadows end
+
+        if (use_framebuffers) {
+            // render to emission buffer
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, emissions_fbo.framebuffer_id);
+            gl.viewport(0, 0, viewport_width, viewport_height);
+            gl.clearColor(0.0, 0.0, 0.0, 0.0);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            player_emissive_shader.use_shader();
+            player_emissive_shader.set_mat4("projectionView", &projection_view);
+            player_emissive_shader.set_mat4("model", &player_transform);
+
+            player.render(&player_emissive_shader);
+
+            // doesn't seem to do anything
+            // {
+            //     unsafe {
+            //         gl.ColorMask(gl.FALSE, gl.FALSE, gl.FALSE, gl.FALSE);
+            //     }
+            //
+            //     floor_shader.use_shader();
+            //     floor_shader.set_bool("usePointLight", true);
+            //     floor_shader.set_bool("useLight", true);
+            //     floor_shader.set_bool("useSpec", true);
+            //
+            //     // floor.draw(&floor_shader, &projection_view);
+            //
+            //     unsafe {
+            //         gl.ColorMask(gl.TRUE, gl.TRUE, gl.TRUE, gl.TRUE);
+            //     }
+            // }
+
+            bullet_store.draw_bullets(&instanced_texture_shader, &projection_view);
+
+            const debug_emission = false;
+            if (debug_emission) {
+                const texture_unit = 0;
+                gl.bindFramebuffer(gl.FRAMEBUFFER, 0);
+                gl.viewport(0, 0, viewport_width, viewport_height);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+                gl.activeTexture(gl.TEXTURE0 + texture_unit);
+                gl.bindTexture(gl.TEXTURE_2D, emissions_fbo.texture_id);
+
+                basicer_shader.use_shader();
+                basicer_shader.set_bool("greyscale", false);
+                basicer_shader.set_int("tex", texture_unit);
+
+                quads.render_quad(&quad_vao);
+
+                buffer_ready = true;
+                window.swap_buffers();
+                continue;
+            }
+        }
+
+        // const debug_depth = false;
+        // if debug_depth {
+        //     unsafe {
+        //         gl.activeTexture(gl.TEXTURE0);
+        //         gl.bindTexture(gl.TEXTURE_2D, depth_map_fbo.texture_id);
+        //         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        //     }
+        //     debug_depth_shader.use_shader();
+        //     debug_depth_shader.set_float("near_plane", near_plane);
+        //     debug_depth_shader.set_float("far_plane", far_plane);
+        //     render_quad(&quad_vao);
         // }
 
-        // std.debug.print("Main: use_shader\n", .{});
-        shader.use_shader();
+        // render to scene buffer for base texture
+        if (use_framebuffers) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, scene_fbo.framebuffer_id);
+            gl.viewport(0, 0, viewport_width, viewport_height);
+            gl.clearColor(0.0, 0.02, 0.25, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        } else {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, 0);
+            gl.viewport(0, 0, viewport_width, viewport_height);
+        }
 
-        // std.debug.print("Main: update_animation\n", .{});
-        try model.update_animation(state.delta_time);
+        floor_shader.use_shader();
+        floor_shader.set_bool("useLight", true);
+        floor_shader.set_bool("useSpec", true);
 
-        gl.clearColor(0.05, 0.1, 0.05, 1.0);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        floor.draw(&floor_shader, &projection_view);
 
-        // fov: 0.7853982
-        // width: 800
-        // height: 800
-        // projection: [[2.4142134, 0, 0, 0], [0, 2.4142134, 0, 0], [0, 0, -1.0001999, -1], [0, 0, -0.20001999, 0]]
-        // view: [[1, 0, 0.00000004371139, 0], [0, 1, -0, 0], [-0.00000004371139, 0, 1, 0], [0.0000052453665, -40, -120, 1]]
-        // model: [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, -10.4, -400, 1]]
+        player_shader.use_shader();
+        player_shader.set_bool("useLight", true);
+        player_shader.set_bool("useEmissive", true);
+        player_shader.set_bool("depth_mode", false);
 
-        const projection = Mat4.perspectiveRhGl(toRadians(state.game_camera.zoom), VIEW_PORT_WIDTH / VIEW_PORT_HEIGHT, 0.1, 1000.0);
-        const view = state.game_camera.get_view_matrix();
+        player.render(&player_shader);
 
-        var modelTransform = Mat4.identity();
-        modelTransform.translate(&vec3(0.0, -10.4, -400.0));
-        modelTransform.scale(&vec3(1.0, 1.0, 1.0));
+        muzzle_flash.draw(&sprite_shader, &projection_view, &muzzle_transform);
 
-        // std.debug.print("fov: {any}\nwidth: {any}\nheight: {any}\nprojection: {any}\nview: {any}\nmodel: {any}\n\n",
-        // .{toRadians(state.game_camera.zoom), SCR_WIDTH, SCR_HEIGHT, projection, view, modelTransform});
-        // std.debug.print("Matrix identity: {any}\n", .{Matrix.identity().toArray()});
+        wiggly_shader.use_shader();
+        wiggly_shader.set_bool("useLight", true);
+        wiggly_shader.set_bool("useEmissive", false);
+        wiggly_shader.set_bool("depth_mode", false);
 
-        shader.set_mat4("projection", &projection);
-        shader.set_mat4("view", &view);
-        shader.set_mat4("model", &modelTransform);
+        enemies.draw_enemies(&wiggly_shader, &state);
 
-        shader.set_bool("useLight", true);
-        shader.set_vec3("ambient", &ambientColor);
+        state.burn_marks.draw_marks(&basic_texture_shader, &projection_view, state.delta_time);
+        bullet_store.draw_bullet_impacts(&sprite_shader, &projection_view);
 
-        const identity = Mat4.identity();
-        shader.set_mat4("aimRot", &identity);
-        shader.set_mat4("lightSpaceMatrix", &identity);
+        if (!use_framebuffers) {
+            bullet_store.draw_bullets(&instanced_texture_shader, &projection_view);
+        }
 
-        // std.debug.print("Main: render\n", .{});
-        try model.render(shader);
+        if (use_framebuffers) {
+            // generated blur and combine with emission and scene for final draw to framebuffer 0
+            // gl.Disable(gl.DEPTH_TEST);
+
+            // view port for blur effect
+            gl.viewport(0, 0, viewport_width / BLUR_SCALE, viewport_height / BLUR_SCALE);
+
+            // Draw horizontal blur
+            gl.bindFramebuffer(gl.FRAMEBUFFER, horizontal_blur_fbo.framebuffer_id);
+            gl.bindVertexArray(more_obnoxious_quad_vao);
+
+            gl.activeTexture(gl.TEXTURE0 + emission_texture_unit);
+            gl.bindTexture(gl.TEXTURE_2D, emissions_fbo.texture_id);
+
+            blur_shader.use_shader();
+            blur_shader.set_int("image", emission_texture_unit);
+            blur_shader.set_bool("horizontal", true);
+
+            gl.DrawArrays(gl.TRIANGLES, 0, 6);
+
+            // Draw vertical blur
+            gl.bindFramebuffer(gl.FRAMEBUFFER, vertical_blur_fbo.framebuffer_id);
+            gl.bindVertexArray(more_obnoxious_quad_vao);
+
+            gl.activeTexture(gl.TEXTURE0 + horizontal_texture_unit);
+            gl.bindTexture(gl.TEXTURE_2D, horizontal_blur_fbo.texture_id);
+
+            blur_shader.use_shader();
+            blur_shader.set_int("image", horizontal_texture_unit);
+            blur_shader.set_bool("horizontal", false);
+
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+            // view port for final draw combining everything
+            gl.viewport(0, 0, viewport_width, viewport_height);
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, 0);
+            gl.bindVertexArray(more_obnoxious_quad_vao);
+
+            gl.activeTexture(gl.TEXTURE0 + vertical_texture_unit);
+            gl.bindTexture(gl.TEXTURE_2D, vertical_blur_fbo.texture_id);
+
+            gl.activeTexture(gl.TEXTURE0 + emission_texture_unit);
+            gl.bindTexture(gl.TEXTURE_2D, emissions_fbo.texture_id);
+
+            gl.activeTexture(gl.TEXTURE0 + scene_texture_unit);
+            gl.bindTexture(gl.TEXTURE_2D, scene_fbo.texture_id);
+
+            scene_draw_shader.use_shader();
+            scene_draw_shader.set_int("base_texture", scene_texture_unit);
+            scene_draw_shader.set_int("emission_texture", vertical_texture_unit);
+            scene_draw_shader.set_int("bright_texture", emission_texture_unit);
+
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+            // gl.Enable(gl.DEPTH_TEST);
+
+            const debug_blur = false;
+            if (debug_blur) {
+                const texture_unit = 0;
+                gl.bindFramebuffer(gl.FRAMEBUFFER, 0);
+
+                gl.viewport(0, 0, viewport_width, viewport_height);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+                gl.activeTexture(gl.TEXTURE0 + texture_unit);
+                gl.bindTexture(gl.TEXTURE_2D, scene_fbo.texture_id);
+
+                basicer_shader.use_shader();
+                basicer_shader.set_bool("greyscale", false);
+                basicer_shader.set_int("tex", texture_unit);
+
+                quads.render_quad(&quad_vao);
+
+                buffer_ready = true;
+                window.swap_buffers();
+                continue;
+            }
+        }
+
+        buffer_ready = true;
 
         window.swapBuffers();
     }
 
     std.debug.print("\nRun completed.\n\n", .{});
 
-    shader.deinit();
+    // shader.deinit();
     game_camera.deinit();
-    model.deinit();
+    // model.deinit();
     for (texture_cache.items) |_texture| {
         _texture.deinit();
     }
