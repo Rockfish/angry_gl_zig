@@ -6,7 +6,7 @@
     <option name="highlightGlobalVarDeclarations" value="true" />
   </component>
   <component name="ZigProjectSettings">
-    <option name="explicitPathToStd" value="Users/john/zig/zig-macos-aarch64-0.13.0-dev.46+3648d7df1/lib/std" />
+    <option name="explicitPathToStd" value="Users/john/zig/zig-macos-aarch64-0.13.0/lib/std" />
     <option name="toolchainHomeDirectory" value="$USER_HOME$/Zig/bin" />
   </component>
 </project>

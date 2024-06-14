@@ -154,27 +154,27 @@ pub const Mat4 = struct {
         return mat;
     }
 
-    // pub fn to_scale_rotation_translation(&self) -> (Vec3, Quat, Vec3) {
-    //         let det = self.determinant();
+    // pub fn to_scale_rotation_translation(&self) (Vec3, Quat, Vec3) {
+    //         const det = self.determinant();
     //         glam_assert!(det != 0.0);
     //
-    //         let scale = Vec3::new(
-    //             self.x_axis.length() * math::signum(det),
+    //         const scale = Vec3.new(
+    //             self.x_axis.length() * math.signum(det),
     //             self.y_axis.length(),
     //             self.z_axis.length(),
     //         );
     //
-    //         glam_assert!(scale.cmpne(Vec3::ZERO).all());
+    //         glam_assert!(scale.cmpne(Vec3.ZERO).all());
     //
-    //         let inv_scale = scale.recip();
+    //         const inv_scale = scale.recip();
     //
-    //         let rotation = Quat::from_rotation_axes(
+    //         const rotation = Quat.from_rotation_axes(
     //             self.x_axis.mul(inv_scale.x).xyz(),
     //             self.y_axis.mul(inv_scale.y).xyz(),
     //             self.z_axis.mul(inv_scale.z).xyz(),
     //         );
     //
-    //         let translation = self.w_axis.xyz();
+    //         const translation = self.w_axis.xyz();
     //
     //         (scale, rotation, translation)
     //     }

@@ -14,7 +14,10 @@ const BurnMarks = @import("burn_marks.zig").BurnMarks;
 const MuzzleFlash = @import("muzzle_flash.zig").MuzzleFlash;
 const Floor = @import("floor.zig").Floor;
 const SoundSystem = @import("sound_system.zig").SoundSystem;
+const fb = @import("framebuffers.zig");
+const quads = @import("quads.zig");
 
+const ArrayList = std.ArrayList;
 
 const gl = zopengl.bindings;
 
@@ -150,7 +153,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     // Shaders
 
-    const shader = try Shader.new( allocator, "game/shaders/player_shader.vert", "game/shaders/player_shader.frag");
+    const player_shader = try Shader.new( allocator, "game/shaders/player_shader.vert", "game/shaders/player_shader.frag");
     const player_emissive_shader = Shader.new(allocator, "shaders/player_shader.vert", "shaders/texture_emissive_shader.frag");
     const wiggly_shader = Shader.new(allocator, "shaders/wiggly_shader.vert", "shaders/player_shader.frag");
     const floor_shader = Shader.new(allocator, "shaders/basic_texture_shader.vert", "shaders/floor_shader.frag");
@@ -188,19 +191,19 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const scaled_width = viewport_width / window_scale[0];
     const scaled_height = viewport_height / window_scale[1];
 
-    //     // -- Framebuffers ---
-    //
-    //     let depth_map_fbo = create_depth_map_fbo();
-    //     let mut emissions_fbo = create_emission_fbo(viewport_width, viewport_height);
-    //     let mut scene_fbo = create_scene_fbo(viewport_width, viewport_height);
-    //     let mut horizontal_blur_fbo = create_horizontal_blur_fbo(viewport_width, viewport_height);
-    //     let mut vertical_blur_fbo = create_vertical_blur_fbo(viewport_width, viewport_height);
-    //
-    //     // --- quads ---
-    //
-    //     let unit_square_quad = create_unit_square_vao() as i32;
-    //     let _obnoxious_quad_vao = create_obnoxious_quad_vao() as i32;
-    //     let more_obnoxious_quad_vao = create_more_obnoxious_quad_vao() as i32;
+    // -- Framebuffers ---
+
+    const depth_map_fbo = fb.create_depth_map_fbo();
+    const emissions_fbo = fb.create_emission_fbo(viewport_width, viewport_height);
+    const scene_fbo = fb.create_scene_fbo(viewport_width, viewport_height);
+    const horizontal_blur_fbo = fb.create_horizontal_blur_fbo(viewport_width, viewport_height);
+    const vertical_blur_fbo = fb.create_vertical_blur_fbo(viewport_width, viewport_height);
+
+    // --- quads ---
+
+    const unit_square_quad = quads.create_unit_square_vao();
+    const _obnoxious_quad_vao = quads.create_obnoxious_quad_vao();
+    const more_obnoxious_quad_vao = quads.create_more_obnoxious_quad_vao();
 
 
     // --- Cameras ---
@@ -233,7 +236,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     // Models and systems
 
-    const player = Player.new(allocator);
+    var texture_cache = ArrayList(*Texture).init(allocator);
+
+    const player = Player.new(allocator, &texture_cache);
     const floor = Floor.new(allocator);
     const enemies = EnemySystem.new(allocator);
     const muzzle_flash = MuzzleFlash.new(allocator, unit_square_quad);
@@ -243,55 +248,47 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // Initialize the world state
     state = State{
         .game_camera = game_camera,
+        .floating_camera = floating_camera,
+        .ortho_camera = ortho_camera,
+        .active_camera = CameraType.Game,
+        .player = player,
+        .enemies = ArrayList(Enemy).init(allocator),
         .light_postion = vec3(1.2, 1.0, 2.0),
         .delta_time = 0.0,
         .last_frame = 0.0,
         .first_mouse = true,
-        .last_x = SCR_WIDTH / 2.0,
-        .last_y = SCR_HEIGHT / 2.0,
+        .last_x = VIEW_PORT_WIDTH / 2.0,
+        .last_y = VIEW_PORT_HEIGHT / 2.0,
     };
 
-    gl.enable(gl.DEPTH_TEST);
+    // Set fixed shader uniforms
 
+    const shadow_texture_unit = 10;
 
-    std.debug.print("Shader id: {d}\n", .{shader.id});
+    player_shader.use_shader();
+    player_shader.set_vec3("directionLight.dir", &player_light_dir);
+    player_shader.set_vec3("directionLight.color", &light_color);
+    player_shader.set_vec3("ambient", &ambient_color);
 
-    // const lightDir: Vec3 = vec3(-0.8, 0.0, -1.0).normalize_or_zero();
-    // const playerLightDir: Vec3 = vec3(-1.0, -1.0, -1.0).normalize_or_zero();
+    player_shader.set_int("shadow_map", shadow_texture_unit);
+    player_shader.set_texture_unit(shadow_texture_unit, depth_map_fbo.texture_id);
 
-    // const lightColor: Vec3 = LIGHT_FACTOR * 1.0 * vec3(NON_BLUE * 0.406, NON_BLUE * 0.723, 1.0);
-    // const lightColor: Vec3 = LIGHT_FACTOR * 1.0 * vec3(0.406, 0.723, 1.0);
+    floor_shader.use_shader();
+    floor_shader.set_vec3("directionLight.dir", &light_dir);
+    floor_shader.set_vec3("directionLight.color", &floor_light_color);
+    floor_shader.set_vec3("ambient", &floor_ambient_color);
 
-    // const floorLightColor: Vec3 = FLOOR_LIGHT_FACTOR * 1.0 * vec3(FLOOR_NON_BLUE * 0.406, FLOOR_NON_BLUE * 0.723, 1.0);
-    // const floorAmbientColor: Vec3 = FLOOR_LIGHT_FACTOR * 0.50 * vec3(FLOOR_NON_BLUE * 0.7, FLOOR_NON_BLUE * 0.7, 0.7);
+    floor_shader.set_int("shadow_map", shadow_texture_unit);
+    floor_shader.set_texture_unit(shadow_texture_unit, depth_map_fbo.texture_id);
+
+    wiggly_shader.use_shader();
+    wiggly_shader.set_vec3("directionLight.dir", &player_light_dir);
+    wiggly_shader.set_vec3("directionLight.color", &light_color);
+    wiggly_shader.set_vec3("ambient", &ambient_color);
+
 
     const ambientColor: Vec3 = vec3(NON_BLUE * 0.7, NON_BLUE * 0.7, 0.7);
 
-    const model_path = "assets/Models/Player/Player.fbx";
-
-    std.debug.print("Main: loading model: {s}\n", .{model_path});
-
-    var texture_cache = std.ArrayList(*Texture).init(allocator);
-    var builder = try ModelBuilder.init(allocator, &texture_cache, "Player", model_path);
-
-    const texture_diffuse = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
-    const texture_specular = .{ .texture_type = .Specular, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
-    const texture_emissive = .{ .texture_type = .Emissive, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
-    const texture_normals = .{ .texture_type = .Normals, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
-
-    std.debug.print("Main: adding textures\n", .{});
-    try builder.addTexture("Player", texture_diffuse, "assets/Models/Player/Textures/Player_D.tga");
-    try builder.addTexture("Player", texture_specular, "assets/Models/Player/Textures/Player_M.tga");
-    try builder.addTexture("Player", texture_emissive, "assets/Models/Player/Textures/Player_E.tga");
-    try builder.addTexture("Player", texture_normals, "assets/Models/Player/Textures/Player_NRM.tga");
-    try builder.addTexture("Gun", texture_diffuse, "assets/Models/Player/Textures/Gun_D.tga");
-    try builder.addTexture("Gun", texture_specular, "assets/Models/Player/Textures/Gun_M.tga");
-    try builder.addTexture("Gun", texture_emissive, "assets/Models/Player/Textures/Gun_E.tga");
-    try builder.addTexture("Gun", texture_normals, "assets/Models/Player/Textures/Gun_NRM.tga");
-
-    std.debug.print("Main: building model: {s}\n", .{model_path});
-    var model = try builder.build();
-    builder.deinit();
 
     const idle = AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever);
     const forward = AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever);
@@ -342,7 +339,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // view: [[1, 0, 0.00000004371139, 0], [0, 1, -0, 0], [-0.00000004371139, 0, 1, 0], [0.0000052453665, -40, -120, 1]]
         // model: [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, -10.4, -400, 1]]
 
-        const projection = Mat4.perspectiveRhGl(toRadians(state.game_camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
+        const projection = Mat4.perspectiveRhGl(toRadians(state.game_camera.zoom), VIEW_PORT_WIDTH / VIEW_PORT_HEIGHT, 0.1, 1000.0);
         const view = state.game_camera.get_view_matrix();
 
         var modelTransform = Mat4.identity();
