@@ -5,7 +5,10 @@ const zstbi = @import("zstbi");
 const set = @import("ziglangSet");
 const core = @import("core");
 const math = @import("math");
+const s = @import("state.zig");
 
+const State = s.State;
+const CameraType = s.CameraType;
 const Player = @import("player.zig").Player;
 const Enemy = @import("enemy.zig").Enemy;
 const EnemySystem = @import("enemy.zig").EnemySystem;
@@ -49,21 +52,8 @@ const Window = glfw.Window;
 const VIEW_PORT_WIDTH: f32 = 1500.0;
 const VIEW_PORT_HEIGHT: f32 = 1000.0;
 
-// Player
-const FIRE_INTERVAL: f32 = 0.1;
-// seconds
-const SPREAD_AMOUNT: i32 = 20;
 
-const PLAYER_COLLISION_RADIUS: f32 = 0.35;
 
-// Models
-const PLAYER_MODEL_SCALE: f32 = 0.0044;
-//const PLAYER_MODEL_GUN_HEIGHT: f32 = 120.0; // un-scaled
-const PLAYER_MODEL_GUN_HEIGHT: f32 = 110.0;
-// un-scaled
-const PLAYER_MODEL_GUN_MUZZLE_OFFSET: f32 = 100.0;
-// un-scaled
-const MONSTER_Y: f32 = PLAYER_MODEL_SCALE * PLAYER_MODEL_GUN_HEIGHT;
 
 // Lighting
 const LIGHT_FACTOR: f32 = 0.8;
@@ -71,42 +61,6 @@ const NON_BLUE: f32 = 0.9;
 const BLUR_SCALE: i32 = 2;
 const FLOOR_LIGHT_FACTOR: f32 = 0.35;
 const FLOOR_NON_BLUE: f32 = 0.7;
-
-// Enemies
-const MONSTER_SPEED: f32 = 0.6;
-
-const CameraType = enum {
-    Game,
-    Floating,
-    TopDown,
-    Side,
-    };
-
-// Struct for passing state between the window loop and the event handler.
-const State = struct {
-    game_camera: *Camera,
-    floating_camera: *Camera,
-    ortho_camera: *Camera,
-    active_camera: CameraType,
-    player: *Player,
-    enemies: std.ArrayList(*Enemy),
-    burn_marks: *BurnMarks,
-    sound_system: *SoundSystem,
-    game_projection: Mat4,
-    floating_projection: Mat4,
-    orthographic_projection: Mat4,
-    key_presses: set.Set(glfw.Key),
-    light_postion: Vec3,
-    mouse_x: f32,
-    mouse_y: f32,
-    delta_time: f32,
-    frame_time: f32,
-    last_frame: f32,
-    first_mouse: bool,
-    last_x: f32,
-    last_y: f32,
-    run: bool,
-    };
 
 const content_dir = "angrygl_assets";
 
@@ -404,14 +358,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         const aim_rot = Mat4.from_axis_angle(vec3(0.0, 1.0, 0.0), aim_theta);
 
         var player_transform = Mat4.from_translation(player.position);
-        player_transform *= Mat4.from_scale(Vec3.splat(PLAYER_MODEL_SCALE));
+        player_transform *= Mat4.from_scale(Vec3.splat(s.PLAYER_MODEL_SCALE));
         player_transform *= aim_rot;
 
         const muzzle_transform = player.get_muzzle_position(&player_transform);
 
-        if (player.is_alive and player.is_trying_to_fire and (player.last_fire_time + FIRE_INTERVAL) < state.frame_time) {
+        if (player.is_alive and player.is_trying_to_fire and (player.last_fire_time + s.FIRE_INTERVAL) < state.frame_time) {
             player.borrow_mut().last_fire_time = state.frame_time;
-            if (bullet_store.create_bullets(dx, dz, &muzzle_transform, SPREAD_AMOUNT)) {
+            if (bullet_store.create_bullets(dx, dz, &muzzle_transform, s.SPREAD_AMOUNT)) {
                 muzzle_flash.add_flash();
                 state.sound_system.play_player_shooting();
             }

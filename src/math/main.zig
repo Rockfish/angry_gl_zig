@@ -49,3 +49,31 @@ pub const sqrt1_2 = std.math.sqrt1_2;
 
 // This is the difference between 1.0 and the next larger representable number. copied from rust.
 pub const epsilon: f32 = 1.19209290e-07;
+
+pub fn truncate(v: Vec2, max: f32) Vec2 {
+    if (v.length() > max) {
+        const v2 = v.normalize_or_zero();
+        return v2.mul(max);
+    }
+    return v;
+}
+
+pub fn wrap_around(pos: *Vec2, max_x: i32, max_y: i32) void {
+    const max_x_f32: f32 = @floatCast(max_x);
+    const max_y_f32: f32 = @floatCast(max_y);
+    if (pos.x > max_x_f32) {
+        pos.x -= max_x_f32;
+    }
+
+    if (pos.x < 0.0) {
+        pos.x += max_x_f32;
+    }
+
+    if (pos.y < 0.0) {
+        pos.y += max_y_f32;
+    }
+
+    if (pos.y > max_y_f32) {
+        pos.y -= max_y_f32;
+    }
+}

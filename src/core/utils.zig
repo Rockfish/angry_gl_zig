@@ -6,6 +6,23 @@ pub fn bufCopyZ(buf: []u8, source: []const u8) [:0]const u8 {
     return buf[0..source.len :0];
 }
 
+
+
+//
+// pub fn get_exists_filename(directory: &Path, filename: &str) -> Result<PathBuf, Error> {
+//     let path = directory.join(filename);
+//     if path.is_file() {
+//         return Ok(path);
+//     }
+//     let filepath = PathBuf::from(filename.replace('\\', "/"));
+//     let filename = filepath.file_name().unwrap();
+//     let path = directory.join(filename);
+//     if path.is_file() {
+//         return Ok(path);
+//     }
+//     Err(PathError(format!("filename not found: {:?}", filename.to_os_string())))
+// }
+
 pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a: *T) bool, allocator: std.mem.Allocator) !void {
     _ = allocator;
     const length = list.items.len;
