@@ -7,6 +7,10 @@ const Vec3 = _vec.Vec3;
 const Vec4 = _vec.Vec4;
 const Quat = _quat.Quat;
 
+pub fn mat4(x_axis: Vec4, y_axis: Vec4, z_axis: Vec4, w_axis: Vec4) Mat4 {
+    return Mat4.from_cols(x_axis, y_axis, z_axis, w_axis);
+}
+
 pub const Mat4 = struct {
     data: [4][4]f32 align(16),
 
@@ -31,6 +35,15 @@ pub const Mat4 = struct {
                 .{0.0, 0.0, 0.0, 0.0},
                 .{0.0, 0.0, 0.0, 0.0},
             }
+        };
+    }
+
+    pub fn from_cols(x_axis: Vec4, y_axis: Vec4, z_axis: Vec4, w_axis: Vec4) Self {
+        return .{
+            x_axis.data,
+            y_axis.data,
+            z_axis.data,
+            w_axis.data,
         };
     }
 
@@ -121,7 +134,7 @@ pub const Mat4 = struct {
         translation: Vec3,
         rotation: Quat,
         scale: Vec3,
-        };
+    };
 
     pub fn to_scale_rotation_translation(self: *const Self) TrnRotScl {
         var tran: [4]f32 align(16) = undefined;

@@ -3,6 +3,8 @@ const math = @import("math");
 
 const Vec3 = math.Vec3;
 const vec3 = math.vec3;
+const Mat3 = math.Mat3;
+const mat3 = math.mat3;
 
 pub fn distance_between_point_and_line_segment(point: *Vec3, a: *Vec3, b: *Vec3) f32 {
     const ab = *b - *a;
@@ -20,13 +22,13 @@ pub fn distance_between_point_and_line_segment(point: *Vec3, a: *Vec3, b: *Vec3)
 pub fn distance_between_line_segments(a0: *Vec3, a1: *Vec3, b0: *Vec3, b1: *Vec3) f32 {
     const eps: f32 = 0.001;
 
-    const a = *a1 - *a0;
-    const b = *b1 - *b0;
+    var a = *a1 - *a0;
+    var b = *b1 - *b0;
     const mag_a = a.length();
     const mag_b = b.length();
 
-    const a = a / mag_a;
-    const b = b / mag_b;
+    a = a / mag_a;
+    b = b / mag_b;
 
     const cross = a.cross(b);
     const cl = cross.length();
@@ -58,8 +60,8 @@ pub fn distance_between_line_segments(a0: *Vec3, a1: *Vec3, b0: *Vec3, b1: *Vec3
 
     // Lines criss-cross: Calculate the projected closest points
     const t = *b0 - *a0;
-    const det_a = (mat3(t, b, cross)).determinant();
-    const det_b = (mat3(t, a, cross)).determinant();
+    const det_a = mat3(t, b, cross).determinant();
+    const det_b = mat3(t, a, cross).determinant();
 
     const t0 = det_a / denom;
     const t1 = det_b / denom;

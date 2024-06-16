@@ -1,6 +1,7 @@
 const std = @import("std");
 const gl = @import("zopengl").bindings;
 const math = @import("math");
+const Texture = @import("texture.zig");
 
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
@@ -224,6 +225,12 @@ pub const Shader = struct {
         _ = self;
         gl.activeTexture(gl.TEXTURE0 + texture_unit);
         gl.bindTexture(gl.TEXTURE_2D, texture_id);
+    }
+
+    pub fn bind_texture(self: *const Shader, texture_unit: i32, uniform_name: [:0]const u8, texture: *Texture) void {
+        gl.activeTexture(gl.TEXTURE0 + texture_unit);
+        gl.bindTexture(gl.TEXTURE_2D, texture.id);
+        self.set_int(uniform_name, texture_unit);
     }
 };
 

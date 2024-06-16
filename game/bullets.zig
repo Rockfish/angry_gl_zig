@@ -1,6 +1,7 @@
 const std = @import("std");
 const core = @import("core");
 const math = @import("math");
+const geom = @import("geom.zig");
 
 const ArrayList = std.ArrayList;
 const HashMap = std.AutoArrayHashMap;
@@ -251,9 +252,9 @@ pub const BulletStore = struct {
 
         const bullet_group = BulletGroup.new(start_index, bullet_group_size, BULLET_LIFETIME);
 
-        self.all_bullet_positions.resize(start_index + bullet_group_size, Vec3::default());
-        self.all_bullet_rotations.resize(start_index + bullet_group_size, Quat::default());
-        self.all_bullet_directions.resize(start_index + bullet_group_size, Vec3::default());
+        self.all_bullet_positions.resize(start_index + bullet_group_size, Vec3.default());
+        self.all_bullet_rotations.resize(start_index + bullet_group_size, Quat.default());
+        self.all_bullet_directions.resize(start_index + bullet_group_size, Vec3.default());
 
         const i_start = 0;
         const i_end = spread_amount;
@@ -317,11 +318,10 @@ pub const BulletStore = struct {
                 for (0..num_sub_groups) |sub_group| {
                     var bullet_start = sub_group_size * sub_group;
 
-                    var bullet_end = if sub_group == (num_sub_groups - 1) {
+                    var bullet_end = if (sub_group == (num_sub_groups - 1))
                         num_bullets_in_group
-                    } else {
-                        bullet_start + sub_group_size
-                    };
+                    else
+                        (bullet_start + sub_group_size);
 
                     bullet_start += bullet_group_start_index;
                     bullet_end += bullet_group_start_index;
@@ -330,10 +330,10 @@ pub const BulletStore = struct {
                         self.all_bullet_positions[bullet_index] += self.all_bullet_directions[bullet_index] * delta_position_magnitude;
                     }
 
-                    var subgroup_bound_box = Aabb::new();
+                    var subgroup_bound_box = Aabb.new();
 
-                    if use_aabb {
-                        for bullet_index in bullet_start..bullet_end {
+                    if (use_aabb) {
+                        for (bullet_start..bullet_end) |bullet_index| {
                             subgroup_bound_box.expand_to_include(self.all_bullet_positions[bullet_index]);
                         }
 
@@ -347,11 +347,11 @@ pub const BulletStore = struct {
                             continue;
                         }
                         for (bullet_start..bullet_end) |bullet_index| {
-                            if bullet_collides_with_enemy(
+                            if (bullet_collides_with_enemy(
                                 &self.all_bullet_positions[bullet_index],
                                 &self.all_bullet_directions[bullet_index],
                                 enemy,
-                            ) {
+                            )) {
                                 // println!("killed enemy!");
                                 enemy.is_alive = false;
                                 break;
@@ -401,7 +401,7 @@ pub const BulletStore = struct {
     }
 
     pub fn draw_bullets(self: *Self, shader: *Shader, projection_view: *Mat4) void {
-        if self.all_bullet_positions.is_empty() {
+        if (self.all_bullet_positions.len == 0) {
             return;
         }
 
@@ -503,7 +503,7 @@ pub const BulletStore = struct {
 };
 
 fn bullet_collides_with_enemy(position: *Vec3, direction: *Vec3, enemy: *Enemy) bool {
-    if position.distance(enemy.position) > BULLET_ENEMY_MAX_COLLISION_DIST {
+    if (position.distance(enemy.position) > BULLET_ENEMY_MAX_COLLISION_DIST) {
         return false;
     }
 
@@ -512,9 +512,9 @@ fn bullet_collides_with_enemy(position: *Vec3, direction: *Vec3, enemy: *Enemy) 
     const b0 = enemy.position - enemy.dir * (ENEMY_COLLIDER.height / 2.0);
     const b1 = enemy.position + enemy.dir * (ENEMY_COLLIDER.height / 2.0);
 
-    const closet_distance = distance_between_line_segments(&a0, &a1, &b0, &b1);
+    const closet_distance = geom.distance_between_line_segments(&a0, &a1, &b0, &b1);
 
-    closet_distance <= (BULLET_COLLIDER.radius + ENEMY_COLLIDER.radius)
+    return closet_distance <= (BULLET_COLLIDER.radius + ENEMY_COLLIDER.radius);
 }
 
 pub fn rotate_by_quat(v: *Vec3, q: *Quat) Vec3 {
@@ -539,51 +539,51 @@ pub fn partial_hamilton_product(q1: *Quat, q2: *Quat) Vec3 {
     );
 }
 
-fn hamilton_product_quat_vec(quat: &Quat, vec: &Vec3) Quat {
-    Quat::from_xyzw(
+fn hamilton_product_quat_vec(quat: *Quat, vec: *Vec3) Quat {
+    return Quat.from_xyzw(
         quat.w * vec.x + quat.y * vec.z - quat.z * vec.y,
         quat.w * vec.y - quat.x * vec.z + quat.z * vec.x,
         quat.w * vec.z + quat.x * vec.y - quat.y * vec.x,
         -quat.x * vec.x - quat.y * vec.y - quat.z * vec.z,
-    )
+    );
 }
 
-fn hamilton_product_quat_quat(first: Quat, other: &Quat) Quat {
-    Quat::from_xyzw(
+fn hamilton_product_quat_quat(first: Quat, other: *Quat) Quat {
+    return Quat.from_xyzw(
         first.w * other.x + first.x * other.w + first.y * other.z - first.z * other.y,
         first.w * other.y - first.x * other.z + first.y * other.w + first.z * other.x,
         first.w * other.z + first.x * other.y - first.y * other.x + first.z * other.w,
         first.w * other.w - first.x * other.x - first.y * other.y - first.z * other.z,
-    )
+    );
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::geom::oriented_angle;
-    use glam::vec3;
-
-    #[test]
-    fn test_oriented_rotation() {
-        const canonical_dir = vec3(0.0, 0.0, -1.0);
-
-        for angle in 0..361 {
-            const (sin, cos) = (angle).to_radians().sin_cos();
-            const x = sin;
-            const z = cos;
-
-            const direction = vec3(x, 0.0, z);
-
-            const normalized_direction = direction; //.normalize_or_zero();
-
-            const rot_vec = vec3(0.0, 1.0, 0.0); // rotate around y
-
-            const x = vec3(canonical_dir.x, 0.0, canonical_dir.z).normalize_or_zero();
-            const y = vec3(normalized_direction.x, 0.0, normalized_direction.z).normalize_or_zero();
-
-            // direction angle with respect to the canonical direction
-            const theta = oriented_angle(x, y, rot_vec) * -1.0;
-
-            println!("angle: {}  direction: {:?}   theta: {:?}", angle, normalized_direction, theta);
-        }
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use crate::geom::oriented_angle;
+//     use glam::vec3;
+//
+//     #[test]
+//     fn test_oriented_rotation() {
+//         const canonical_dir = vec3(0.0, 0.0, -1.0);
+//
+//         for angle in 0..361 {
+//             const (sin, cos) = (angle).to_radians().sin_cos();
+//             const x = sin;
+//             const z = cos;
+//
+//             const direction = vec3(x, 0.0, z);
+//
+//             const normalized_direction = direction; //.normalize_or_zero();
+//
+//             const rot_vec = vec3(0.0, 1.0, 0.0); // rotate around y
+//
+//             const x = vec3(canonical_dir.x, 0.0, canonical_dir.z).normalize_or_zero();
+//             const y = vec3(normalized_direction.x, 0.0, normalized_direction.z).normalize_or_zero();
+//
+//             // direction angle with respect to the canonical direction
+//             const theta = oriented_angle(x, y, rot_vec) * -1.0;
+//
+//             println!("angle: {}  direction: {:?}   theta: {:?}", angle, normalized_direction, theta);
+//         }
+//     }
+// }

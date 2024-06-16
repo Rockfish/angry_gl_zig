@@ -213,7 +213,7 @@ pub const Player = struct {
     fn update_animation_weights(self: *Self, move_vec: Vec2, aim_theta: f32, frame_time: f32) [6]WeightedAnimation {
         const is_moving = move_vec.length_squared() > 0.1;
 
-        const move_theta = (move_vec.x / move_vec.y).atan() + if move_vec.y < 0.0 { PI } else { 0.0 };
+        const move_theta = (move_vec.x / move_vec.y).atan() + if (move_vec.y < 0.0) math.pi else 0.0;
         const theta_delta = move_theta - aim_theta;
         const anim_move = vec2(theta_delta.sin(), theta_delta.cos());
 
@@ -228,12 +228,12 @@ pub const Player = struct {
         self.anim_weights.prev_back_weight = max(0.0, self.anim_weights.prev_back_weight - anim_delta_time / ANIM_TRANSITION_TIME);
         self.anim_weights.prev_left_weight = max(0.0, self.anim_weights.prev_left_weight - anim_delta_time / ANIM_TRANSITION_TIME);
 
-        var dead_weight = if is_dead { 1.0 } else { 0.0 };
-        var idle_weight = self.anim_weights.prev_idle_weight + if is_moving || is_dead { 0.0f32 } else { 1.0 };
-        var right_weight = self.anim_weights.prev_right_weight + if is_moving { clamp0(-anim_move.x) } else { 0.0 };
-        var forward_weight = self.anim_weights.prev_forward_weight + if is_moving { clamp0(anim_move.y) } else { 0.0 };
-        var back_weight = self.anim_weights.prev_back_weight + if is_moving { clamp0(-anim_move.y) } else { 0.0 };
-        var left_weight = self.anim_weights.prev_left_weight + if is_moving { clamp0(anim_move.x) } else { 0.0 };
+        var dead_weight = if (is_dead) 1.0 else 0.0;
+        var idle_weight = self.anim_weights.prev_idle_weight + if (is_moving || is_dead) 0.0 else 1.0;
+        var right_weight = self.anim_weights.prev_right_weight + if (is_moving) clamp0(-anim_move.x) else 0.0;
+        var forward_weight = self.anim_weights.prev_forward_weight + if (is_moving) clamp0(anim_move.y) else 0.0;
+        var back_weight = self.anim_weights.prev_back_weight + if (is_moving) clamp0(-anim_move.y) else 0.0;
+        var left_weight = self.anim_weights.prev_left_weight + if (is_moving) clamp0(anim_move.x) else 0.0;
 
         const weight_sum = dead_weight + idle_weight + forward_weight + back_weight + right_weight + left_weight;
         dead_weight /= weight_sum;
@@ -250,14 +250,14 @@ pub const Player = struct {
         self.anim_weights.prev_left_weight = max(self.anim_weights.prev_left_weight, left_weight);
 
         // weighted animations
-        [
+        return []WeightedAnimation = .{
             WeightedAnimation.new(idle_weight, 55.0, 130.0, 0.0, 0.0),
             WeightedAnimation.new(forward_weight, 134.0, 154.0, 0.0, 0.0),
             WeightedAnimation.new(back_weight, 159.0, 179.0, 10.0, 0.0),
             WeightedAnimation.new(right_weight, 184.0, 204.0, 10.0, 0.0),
             WeightedAnimation.new(left_weight, 209.0, 229.0, 0.0, 0.0),
             WeightedAnimation.new(dead_weight, 234.0, 293.0, 0.0, self.death_time),
-        ]
+        };
     }
 };
 

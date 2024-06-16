@@ -1,6 +1,6 @@
 const vec = @import("vec.zig");
-const mat = @import("mat.zig");
-const quat = @import("quat.zig");
+const mat4_ = @import("mat4.zig");
+const quat_ = @import("quat.zig");
 
 pub const Vec2 = vec.Vec2;
 pub const Vec3 = vec.Vec3;
@@ -10,8 +10,8 @@ pub const vec2 = vec.vec2;
 pub const vec3 = vec.vec3;
 pub const vec4 = vec.vec4;
 
-pub const Mat4 = mat.Mat4;
-pub const Quat = quat.Quat;
+pub const Mat4 = mat4_.Mat4;
+pub const Quat = quat_.Quat;
 
 pub const epsilon: f32 = 1.19209290e-07;
 

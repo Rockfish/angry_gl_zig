@@ -1,11 +1,11 @@
 const std = @import("std");
 const cglm = @import("cglm.zig").CGLM;
 const vec = @import("vec.zig");
-const mat = @import("mat.zig");
+const mat4_ = @import("mat4.zig");
 
 const Vec3 = vec.Vec3;
 const Vec4 = vec.Vec4;
-const Mat4 = mat.Mat4;
+const Mat4 = mat4_.Mat4;
 
 pub const Versor = [4]f32;
 
@@ -15,6 +15,10 @@ pub const Quat = struct {
     const Self = @This();
 
     pub fn identity() Self {
+        return Quat { .data = .{0.0, 0.0, 0.0, 1.0} };
+    }
+
+    pub fn default() Self {
         return Quat { .data = .{0.0, 0.0, 0.0, 1.0} };
     }
 
