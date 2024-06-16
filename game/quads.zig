@@ -64,9 +64,9 @@ pub fn create_unit_square_vao() gl.Uint {
             gl.STATIC_DRAW,
         );
         gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), null);
-        gl.EnableVertexAttribArray(0);
-        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), (3 * SIZE_OF_FLOAT));
-        gl.EnableVertexAttribArray(1);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), &(3 * SIZE_OF_FLOAT));
+        gl.enableVertexAttribArray(1);
     return unit_square_vao;
 }
 
@@ -84,9 +84,9 @@ pub fn create_more_obnoxious_quad_vao() gl.Uint {
             gl.STATIC_DRAW,
         );
         gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), null);
-        gl.EnableVertexAttribArray(0);
-        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), (3 * SIZE_OF_FLOAT));
-        gl.EnableVertexAttribArray(1);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), &(3 * SIZE_OF_FLOAT));
+        gl.enableVertexAttribArray(1);
     return more_obnoxious_quad_vao;
 }
 
@@ -113,9 +113,9 @@ pub fn render_quad(quad_vao: *gl.Uint) void {
             &quad_vertices,
             gl.STATIC_DRAW,
         );
-        gl.EnableVertexAttribArray(0);
+        gl.enableVertexAttribArray(0);
         gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), null);
-        gl.EnableVertexAttribArray(1);
+        gl.enableVertexAttribArray(1);
         gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), (3 * SIZE_OF_FLOAT));
     }
 

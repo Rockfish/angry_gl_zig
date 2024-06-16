@@ -32,8 +32,10 @@ pub const Vec3 = struct {
         return Vec3 { .data = value };
     }
 
-    pub fn normalize(v: *Vec3) void {
-        cglm.glm_vec3_normalize(&v.data);
+    pub fn normalize(v: *const Vec3) Vec3 {
+        var n: [3]f32 = undefined;
+        cglm.glm_vec3_normalize_to(@constCast(&v.data), &n);
+        return Vec3 { .data = n };
     }
 
     pub fn add(a: *const Vec3, b: *const Vec3) Vec3 {

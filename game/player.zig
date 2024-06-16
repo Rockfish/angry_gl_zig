@@ -1,14 +1,18 @@
 const std = @import("std");
 const core = @import("core");
 const math = @import("math");
+const world = @import("world.zig");
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const HashMap = std.AutoArrayHashMap;
 
+const State = world.State;
 const Model = core.Model;
 const ModelBuilder = core.ModelBuilder;
+const ModelMesh = core.Model.ModelMesh;
 const Texture = core.Texture;
+const Shader = core.Shader;
 const Animation = core.Animation;
 const WeightedAnimation = core.Animation.WeightedAnimation;
 
@@ -103,7 +107,7 @@ pub const AnimationWeights = struct {
 
 pub const Player = struct {
     allocator: Allocator,
-    model: Model,
+    model: *Model.Model,
     position: Vec3,
     direction: Vec2,
     speed: f32,
@@ -119,7 +123,7 @@ pub const Player = struct {
 
     const Self = @This();
 
-    pub fn new(allocator: Allocator, texture_cache: *ArrayList(*Texture)) Self {
+    pub fn new(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !Self {
         const model_path = "assets/Models/Player/Player.fbx";
 
         var builder = try ModelBuilder.init(allocator, texture_cache, "Player", model_path);
@@ -142,12 +146,12 @@ pub const Player = struct {
         builder.deinit();
 
         var anim_hash = HashMap(AnimationName, AnimationClip).init(allocator);
-        anim_hash.push(.idle, AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever));
-        anim_hash.push(.forward, AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever));
-        anim_hash.push(.back, AnimationClip.new(159.0, 179.0, AnimationRepeat.Forever));
-        anim_hash.push(.right, AnimationClip.new(184.0, 204.0, AnimationRepeat.Forever));
-        anim_hash.push(.left, AnimationClip.new(209.0, 229.0, AnimationRepeat.Forever));
-        anim_hash.push(.dead, AnimationClip.new(234.0, 293.0, AnimationRepeat.Once));
+        try anim_hash.put(.idle, AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever));
+        try anim_hash.put(.forward, AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever));
+        try anim_hash.put(.back, AnimationClip.new(159.0, 179.0, AnimationRepeat.Forever));
+        try anim_hash.put(.right, AnimationClip.new(184.0, 204.0, AnimationRepeat.Forever));
+        try anim_hash.put(.left, AnimationClip.new(209.0, 229.0, AnimationRepeat.Forever));
+        try anim_hash.put(.dead, AnimationClip.new(234.0, 293.0, AnimationRepeat.Once));
 
         const player = Player {
             .allocator = allocator,
@@ -183,7 +187,13 @@ pub const Player = struct {
         const point_vec = vec3(191.04, 79.231, -3.4651); // center of muzzle
 
         const animator = self.model.animator.borrow();
-        const gun_mesh = self.model.meshes.iter().find(|m| m.name.as_str() == "Gun");
+
+        const gun_mesh: ModelMesh = undefined;
+        for (self.model.meshes.items) |m| {
+            if (std.mem.eql(u8, m.name, "Gun")) {
+                gun_mesh = m;
+            }
+        }
 
         const final_node_matrices = animator.final_node_matrices.borrow();
 
@@ -250,7 +260,7 @@ pub const Player = struct {
         self.anim_weights.prev_left_weight = max(self.anim_weights.prev_left_weight, left_weight);
 
         // weighted animations
-        return []WeightedAnimation = .{
+        return .{
             WeightedAnimation.new(idle_weight, 55.0, 130.0, 0.0, 0.0),
             WeightedAnimation.new(forward_weight, 134.0, 154.0, 0.0, 0.0),
             WeightedAnimation.new(back_weight, 159.0, 179.0, 10.0, 0.0),

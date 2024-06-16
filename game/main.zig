@@ -5,10 +5,10 @@ const zstbi = @import("zstbi");
 const set = @import("ziglangSet");
 const core = @import("core");
 const math = @import("math");
-const s = @import("state.zig");
+const world = @import("world.zig");
 
-const State = s.State;
-const CameraType = s.CameraType;
+const State = world.State;
+const CameraType = world.CameraType;
 const Player = @import("player.zig").Player;
 const Enemy = @import("enemy.zig").Enemy;
 const EnemySystem = @import("enemy.zig").EnemySystem;
@@ -133,11 +133,11 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const player_light_dir = vec3(-1.0, -1.0, -1.0).normalize();
     const muzzle_point_light_color = vec3(1.0, 0.2, 0.0);
 
-    const light_color = LIGHT_FACTOR * 1.0 * vec3(NON_BLUE * 0.406, NON_BLUE * 0.723, 1.0);
-    const ambient_color = LIGHT_FACTOR * 0.10 * vec3(NON_BLUE * 0.7, NON_BLUE * 0.7, 0.7);
+    const light_color = vec3(NON_BLUE * 0.406, NON_BLUE * 0.723, 1.0).mulScalar(LIGHT_FACTOR * 1.0);
+    const ambient_color =vec3(NON_BLUE * 0.7, NON_BLUE * 0.7, 0.7).mulScalar(LIGHT_FACTOR * 0.10);
 
-    const floor_light_color = FLOOR_LIGHT_FACTOR * 1.0 * vec3(FLOOR_NON_BLUE * 0.406, FLOOR_NON_BLUE * 0.723, 1.0);
-    const floor_ambient_color = FLOOR_LIGHT_FACTOR * 0.50 * vec3(FLOOR_NON_BLUE * 0.7, FLOOR_NON_BLUE * 0.7, 0.7);
+    const floor_light_color = vec3(FLOOR_NON_BLUE * 0.406, FLOOR_NON_BLUE * 0.723, 1.0).mulScalar(FLOOR_LIGHT_FACTOR * 1.0);
+    const floor_ambient_color =  vec3(FLOOR_NON_BLUE * 0.7, FLOOR_NON_BLUE * 0.7, 0.7).mulScalar(FLOOR_LIGHT_FACTOR * 0.50);
 
     const window_scale = window.getContentScale();
 
@@ -166,38 +166,40 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const camera_follow_vec = vec3(-4.0, 4.3, 0.0);
     // const _camera_up = vec3(0.0, 1.0, 0.0);
 
-    const game_camera = Camera.camera_vec3_up_yaw_pitch(
+    const game_camera = try Camera.camera_vec3_up_yaw_pitch(
+        allocator,
         vec3(0.0, 20.0, 80.0), // for xz world
         vec3(0.0, 1.0, 0.0),
         -90.0,
         -20.0,
     );
 
-    const floating_camera = Camera.camera_vec3_up_yaw_pitch(
+    const floating_camera = try Camera.camera_vec3_up_yaw_pitch(
+        allocator,
         vec3(0.0, 10.0, 20.0), // for xz world
         vec3(0.0, 1.0, 0.0),
         -90.0,
         -20.0,
     );
 
-    const ortho_camera = Camera.camera_vec3_up_yaw_pitch(vec3(0.0, 1.0, 0.0), vec3(0.0, 1.0, 0.0), 0.0, -90.0);
+    const ortho_camera = try Camera.camera_vec3_up_yaw_pitch(allocator, vec3(0.0, 1.0, 0.0), vec3(0.0, 1.0, 0.0), 0.0, -90.0);
 
     const ortho_width = VIEW_PORT_WIDTH / 130.0;
     const ortho_height = VIEW_PORT_HEIGHT / 130.0;
     const aspect_ratio = VIEW_PORT_WIDTH / VIEW_PORT_HEIGHT;
-    const game_projection = Mat4.perspectiveRhGl(game_camera.zoom.to_radians(), aspect_ratio, 0.1, 100.0);
-    const floating_projection = Mat4.perspectiveRhGl(floating_camera.zoom.to_radians(), aspect_ratio, 0.1, 100.0);
+    const game_projection = Mat4.perspectiveRhGl(math.degreesToRadians(game_camera.zoom), aspect_ratio, 0.1, 100.0);
+    const floating_projection = Mat4.perspectiveRhGl(math.degreesToRadians(floating_camera.zoom), aspect_ratio, 0.1, 100.0);
     const orthographic_projection = Mat4.orthographicRhGl(-ortho_width, ortho_width, -ortho_height, ortho_height, 0.1, 100.0);
 
     // Models and systems
 
     var texture_cache = ArrayList(*Texture).init(allocator);
 
-    const player = Player.new(allocator, &texture_cache);
-    const floor = Floor.new(allocator);
-    const enemies = EnemySystem.new(allocator);
-    const muzzle_flash = MuzzleFlash.new(allocator, unit_square_quad);
-    const bullet_store = BulletStore.new(allocator, unit_square_quad);
+    const player = try Player.new(allocator, &texture_cache);
+    const floor = try Floor.new(allocator);
+    const enemies = try EnemySystem.new(allocator, &texture_cache);
+    const muzzle_flash = try MuzzleFlash.new(allocator, unit_square_quad);
+    const bullet_store = try BulletStore.new(allocator, unit_square_quad);
 
 
     // Initialize the world state
@@ -358,14 +360,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         const aim_rot = Mat4.from_axis_angle(vec3(0.0, 1.0, 0.0), aim_theta);
 
         var player_transform = Mat4.from_translation(player.position);
-        player_transform *= Mat4.from_scale(Vec3.splat(s.PLAYER_MODEL_SCALE));
+        player_transform *= Mat4.from_scale(Vec3.splat(world.PLAYER_MODEL_SCALE));
         player_transform *= aim_rot;
 
         const muzzle_transform = player.get_muzzle_position(&player_transform);
 
-        if (player.is_alive and player.is_trying_to_fire and (player.last_fire_time + s.FIRE_INTERVAL) < state.frame_time) {
+        if (player.is_alive and player.is_trying_to_fire and (player.last_fire_time + world.FIRE_INTERVAL) < state.frame_time) {
             player.borrow_mut().last_fire_time = state.frame_time;
-            if (bullet_store.create_bullets(dx, dz, &muzzle_transform, s.SPREAD_AMOUNT)) {
+            if (bullet_store.create_bullets(dx, dz, &muzzle_transform, world.SPREAD_AMOUNT)) {
                 muzzle_flash.add_flash();
                 state.sound_system.play_player_shooting();
             }

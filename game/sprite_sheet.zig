@@ -1,5 +1,8 @@
+const math = @import("math");
 const core = @import("core");
 const Texture = core.Texture;
+
+const Vec3 = math.Vec3;
 
 pub const SpriteSheet = struct {
     texture: Texture,

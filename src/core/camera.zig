@@ -78,8 +78,8 @@ pub const Camera = struct {
         return camera;
     }
 
-    pub fn camera_vec3_up_yaw_pitch(position: Vec3, world_up: Vec3, yaw: f32, pitch: f32) !*Camera {
-        var camera = try Camera.new();
+    pub fn camera_vec3_up_yaw_pitch(allocator: Allocator, position: Vec3, world_up: Vec3, yaw: f32, pitch: f32) !*Camera {
+        var camera = try Camera.new(allocator);
         camera.position = position;
         camera.world_up = world_up;
         camera.yaw = yaw;
@@ -88,8 +88,8 @@ pub const Camera = struct {
         return camera;
     }
 
-    pub fn camera_scalar(pos_x: f32, pos_y: f32, pos_z: f32, up_x: f32, up_y: f32, up_z: f32, yaw: f32, pitch: f32) !*Camera {
-        var camera = try Camera.new();
+    pub fn camera_scalar(allocator: Allocator, pos_x: f32, pos_y: f32, pos_z: f32, up_x: f32, up_y: f32, up_z: f32, yaw: f32, pitch: f32) !*Camera {
+        var camera = try Camera.new(allocator);
         camera.position = vec4(pos_x, pos_y, pos_z, 0.0);
         camera.world_up = vec4(up_x, up_y, up_z, 0.0);
         camera.yaw = yaw;
@@ -101,29 +101,20 @@ pub const Camera = struct {
     // calculates the front vector from the Camera's (updated) Euler Angles
     fn update_camera_vectors(self: *Self) void {
         // calculate the new Front vector
-        var front = vec3(
+        self.front = vec3(
             std.math.cos(toRadians(self.yaw)) * std.math.cos(toRadians(self.pitch)),
                 std.math.sin(toRadians(self.pitch)),
                 std.math.sin(toRadians(self.yaw)) * std.math.cos(toRadians(self.pitch)),
-        );
-
-        // std.debug.print("front: {any}\n", .{front});
-
-        front.normalize();
-        self.front = front;
+        ).normalize();
 
         // also re-calculate the Right and Up vector
         // normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
         // self.right = self.front.cross(self.world_up).normalize_or_zero();
         // self.up = self.right.cross(self.front).normalize_or_zero();
-        var right = self.front.cross(&self.world_up);
-        right.normalize();
-        self.right = right;
+        self.right = self.front.cross(&self.world_up).normalize();
         // std.debug.print("right: {any}\n", .{right});
 
-        var up = self.right.cross(&self.front);
-        up.normalize();
-        self.up = up;
+        self.up = self.right.cross(&self.front).normalize();
 
         // std.debug.print("up: {any}\n", .{up});
         // std.debug.print("front: {any}\nright: {any}\nup: {any}\n", .{self.front, self.right, self.up});

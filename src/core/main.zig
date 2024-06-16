@@ -1,6 +1,6 @@
 
 pub const Assimp = @import("assimp.zig");
-pub const Model = @import("model_mesh.zig");
+pub const Model = @import("model.zig");
 pub const ModelBuilder = @import("model_builder.zig").ModelBuilder;
 pub const Animation = @import("animator.zig");
 pub const Texture = @import("texture.zig").Texture;

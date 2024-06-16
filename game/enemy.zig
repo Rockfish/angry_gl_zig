@@ -1,13 +1,17 @@
 const std = @import("std");
 const math = @import("math");
 const core = @import("core");
-const stateg = @import("state.zig");
+const world = @import("world.zig");
 const geom = @import("geom.zig");
 
-const State = stateg.State;
+const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
+
+const State = world.State;
 const Model = core.Model;
 const ModelBuilder = core.ModelBuilder;
 const Shader = core.Shader;
+const Texture = core.Texture;
 const Random = core.Random;
 
 const Vec2 = math.Vec2;
@@ -47,11 +51,11 @@ pub const EnemySystem = struct {
 
     const Self = @This();
 
-    pub fn new() Self {
-        const enemy_model = ModelBuilder.new("enemy", "assets/Models/Eeldog/EelDog.FBX").build();
+    pub fn new(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !Self {
+        const enemy_model = try ModelBuilder.init(allocator, texture_cache,"enemy", "assets/Models/Eeldog/EelDog.FBX").build();
         return .{
-            .count_down = stateg.ENEMY_SPAWN_INTERVAL,
-            .monster_y = stateg.MONSTER_Y,
+            .count_down = world.ENEMY_SPAWN_INTERVAL,
+            .monster_y = world.MONSTER_Y,
             .enemy_model = enemy_model,
             .random = Random.init(),
         };
@@ -79,20 +83,20 @@ pub const EnemySystem = struct {
     pub fn chase_player(self: *Self, state: *State) void {
         _ = self;
         var player = state.player;
-        const player_collision_position = vec3(player.position.x, stateg.MONSTER_Y, player.position.z);
+        const player_collision_position = vec3(player.position.x, world.MONSTER_Y, player.position.z);
 
         for (state.enemies.items) |enemy| {
             var dir = player.position - enemy.position;
             dir.y = 0.0;
             enemy.dir = dir.normalize_or_zero();
-            enemy.position += enemy.dir * state.delta_time * stateg.MONSTER_SPEED;
+            enemy.position += enemy.dir * state.delta_time * world.MONSTER_SPEED;
 
             if (player.is_alive) {
-                const p1 = enemy.position - enemy.dir * (stateg.ENEMY_COLLIDER.height / 2.0);
-                const p2 = enemy.position + enemy.dir * (stateg.ENEMY_COLLIDER.height / 2.0);
+                const p1 = enemy.position - enemy.dir * (world.ENEMY_COLLIDER.height / 2.0);
+                const p2 = enemy.position + enemy.dir * (world.ENEMY_COLLIDER.height / 2.0);
                 const dist = geom.distance_between_point_and_line_segment(&player_collision_position, &p1, &p2);
 
-                if (dist <= (stateg.PLAYER_COLLISION_RADIUS + stateg.ENEMY_COLLIDER.radius)) {
+                if (dist <= (world.PLAYER_COLLISION_RADIUS + world.ENEMY_COLLIDER.radius)) {
                     // println!("GOTTEM!");
                     player.is_alive = false;
                     player.set_player_death_time(state.frame_time);
@@ -104,7 +108,7 @@ pub const EnemySystem = struct {
 
     pub fn draw_enemies(self: *Self, shader: *Shader, state: *State) void {
         shader.use_shader();
-        shader.set_vec3("nosePos", &vec3(1.0, stateg.MONSTER_Y, -2.0));
+        shader.set_vec3("nosePos", &vec3(1.0, world.MONSTER_Y, -2.0));
         shader.set_float("time", state.frame_time);
 
         for (state.enemies.items) |e| {

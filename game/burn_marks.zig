@@ -1,9 +1,19 @@
 const std = @import("std");
 const core = @import("core");
 const math = @import("math");
+const gl = @import("zopengl").bindings;
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
+
+const Texture = core.Texture;
+const Shader = core.Shader;
+const Vec2 = math.Vec2;
+const Vec3 = math.Vec3;
+const Vec4 = math.Vec4;
+const vec2 = math.vec2;
+const vec3 = math.vec3;
+const Mat4 = math.Mat4;
 
 const BURN_MARK_TIME: f32 = 5.0;
 
@@ -21,7 +31,7 @@ pub const BurnMarks = struct {
     const Self = @This();
 
     pub fn new(allocator: Allocator, unit_square_vao: i32) Self {
-        const texture_config = TextureConfig.new().set_wrap(TextureWrap.Repeat);
+        const texture_config = Texture.TextureConfig.new().set_wrap(Texture.TextureWrap.Repeat);
         const mark_texture = Texture.new("angrygl_assets/bullet/burn_mark.png", &texture_config);
 
         return .{
@@ -46,8 +56,8 @@ pub const BurnMarks = struct {
         shader.use_shader();
         shader.set_mat4("PV", projection_view);
 
-        bind_texture(shader, 0, "texture_diffuse", &self.mark_texture);
-        bind_texture(shader, 1, "texture_normal", &self.mark_texture);
+        shader.bind_texture(0, "texture_diffuse", &self.mark_texture);
+        shader.bind_texture(1, "texture_normal", &self.mark_texture);
 
         gl.enable(gl.BLEND);
         gl.depthMask(gl.FALSE);
@@ -70,7 +80,13 @@ pub const BurnMarks = struct {
             gl.drawArrays(gl.TRIANGLES, 0, 6);
         }
 
-        self.marks.retain(|m| m.time_left > 0.0);
+        const predicate = struct {
+           pub fn func(m: *BurnMark) bool {
+              return m.time_left > 0.0;
+           }
+        };
+
+        self.marks.retain(predicate.func);
 
         gl.disable(gl.BLEND);
         gl.depthMask(gl.TRUE);

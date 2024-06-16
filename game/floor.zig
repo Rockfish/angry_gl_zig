@@ -3,6 +3,7 @@ const math = @import("math");
 const core = @import("core");
 const zopengl = @import("zopengl");
 
+const Allocator = std.mem.Allocator;
 const gl = zopengl.bindings;
 const Texture = core.Texture;
 const Shader = core.Shader;
@@ -39,19 +40,24 @@ pub const Floor = struct {
 
     const Self = @This();
 
-    pub fn new() Self {
+    pub fn deinit(self: *Self) void {
+        self.texture_floor_diffuse.deinit();
+        self.texture_floor_normal.deinit();
+        self.texture_floor_spec.deinit();
+    }
+
+    pub fn new(allocator: Allocator) !Self {
         const texture_config = Texture.TextureConfig {
             .flip_v = false,
-            .flip_h = false,
             .gamma_correction = false,
             .filter = Texture.TextureFilter.Linear,
             .texture_type = Texture.TextureType.None,
             .wrap = Texture.TextureWrap.Repeat,
         };
 
-        const texture_floor_diffuse = Texture.new("assets/Models/Floor D.png", &texture_config);
-        const texture_floor_normal = Texture.new("assets/Models/Floor N.png", &texture_config);
-        const texture_floor_spec = Texture.new("assets/Models/Floor M.png", &texture_config);
+        const texture_floor_diffuse = try Texture.new(allocator, "assets/Models/Floor D.png", &texture_config);
+        const texture_floor_normal = try Texture.new(allocator, "assets/Models/Floor N.png", &texture_config);
+        const texture_floor_spec = try Texture.new(allocator, "assets/Models/Floor M.png", &texture_config);
 
         var floor_vao: gl.Uint = 0;
         var floor_vbo: gl.Uint = 0;
