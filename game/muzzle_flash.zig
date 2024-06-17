@@ -9,27 +9,34 @@ const ArrayList = std.ArrayList;
 
 const vec3 = math.vec3;
 const Mat4 = math.Mat4;
-const Texture = core.Texture;
 const Shader = core.Shader;
+const Texture = core.texture.Texture;
+const TextureConfig = core.texture.TextureConfig;
+const TextureType = core.texture.TextureType;
+const TextureWrap = core.texture.TextureWrap;
+const TextureFilter = core.texture.TextureFilter;
 
 
 pub const MuzzleFlash = struct {
-    unit_square_vao: i32,
-    muzzle_flash_impact_spritesheet: SpriteSheet,
+    unit_square_vao: c_uint,
+    muzzle_flash_impact_sprite: SpriteSheet,
     muzzle_flash_sprites_age: ArrayList(f32),
-    allocator: Allocator,
+    // allocator: Allocator,
 
     const Self = @This();
 
-    pub fn new(allocator: Allocator, unit_square_vao: i32) Self {
-        const texture_config = Texture.TextureConfig.new().set_wrap(Texture.TextureWrap.Repeat);
-        const texture_muzzle_flash_sprite_sheet = Texture.new("angrygl_assets/Player/muzzle_spritesheet.png", &texture_config);
-        const muzzle_flash_impact_spritesheet = SpriteSheet.new(texture_muzzle_flash_sprite_sheet, 6, 0.03);
+    pub fn new(allocator: Allocator, unit_square_vao: c_uint) !Self {
+        var texture_config = TextureConfig.default();
+        texture_config.set_wrap(TextureWrap.Repeat);
+
+        const texture_muzzle_flash_sprite_sheet = try Texture.new(allocator, "angrygl_assets/Player/muzzle_spritesheet.png", texture_config);
+        const muzzle_flash_impact_sprite = SpriteSheet.new(texture_muzzle_flash_sprite_sheet, 6, 0.03);
 
         return .{
             .unit_square_vao = unit_square_vao,
-            .muzzle_flash_impact_sprite = muzzle_flash_impact_spritesheet,
+            .muzzle_flash_impact_sprite = muzzle_flash_impact_sprite,
             .muzzle_flash_sprites_age = ArrayList(f32).init(allocator),
+            // .allocator = allocator,
         };
     }
 
@@ -38,7 +45,7 @@ pub const MuzzleFlash = struct {
             for (0..self.muzzle_flash_sprites_age.len) |i| {
                 self.muzzle_flash_sprites_age[i] += delta_time;
             }
-            const max_age = self.muzzle_flash_impact_spritesheet.num_columns * self.muzzle_flash_impact_spritesheet.time_per_sprite;
+            const max_age = self.muzzle_flash_impact_sprite.num_columns * self.muzzle_flash_impact_sprite.time_per_sprite;
 
             const predicate = struct {
                 pub fn func (age: f32) bool {
@@ -74,10 +81,10 @@ pub const MuzzleFlash = struct {
         gl.depthMask(gl.FALSE);
         gl.bindVertexArray(self.unit_square_vao);
 
-        sprite_shader.bind_texture(0, "spritesheet", &self.muzzle_flash_impact_spritesheet.texture);
+        sprite_shader.bind_texture(0, "spritesheet", &self.muzzle_flash_impact_sprite.texture);
 
-        sprite_shader.set_int("numCols", self.muzzle_flash_impact_spritesheet.num_columns);
-        sprite_shader.set_float("timePerSprite", self.muzzle_flash_impact_spritesheet.time_per_sprite);
+        sprite_shader.set_int("numCols", self.muzzle_flash_impact_sprite.num_columns);
+        sprite_shader.set_float("timePerSprite", self.muzzle_flash_impact_sprite.time_per_sprite);
 
         const scale: f32 = 50.0;
 

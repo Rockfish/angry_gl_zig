@@ -29,21 +29,18 @@ const FrameCount = core.FrameCount;
 
 // Player
 pub const FIRE_INTERVAL: f32 = 0.1;
-// seconds
-pub const SPREAD_AMOUNT: i32 = 20;
-
+pub const SPREAD_AMOUNT: i32 = 20; // bullet spread
 pub const PLAYER_COLLISION_RADIUS: f32 = 0.35;
-
-// Models
 pub const PLAYER_MODEL_SCALE: f32 = 0.0044;
-//const PLAYER_MODEL_GUN_HEIGHT: f32 = 120.0; // un-scaled
 pub const PLAYER_MODEL_GUN_HEIGHT: f32 = 110.0;
-// un-scaled
 pub const PLAYER_MODEL_GUN_MUZZLE_OFFSET: f32 = 100.0;
-// un-scaled
-pub const MONSTER_Y: f32 = PLAYER_MODEL_SCALE * PLAYER_MODEL_GUN_HEIGHT;
+
 // Enemies
+pub const MONSTER_Y: f32 = PLAYER_MODEL_SCALE * PLAYER_MODEL_GUN_HEIGHT;
 pub const MONSTER_SPEED: f32 = 0.6;
+pub const ENEMY_SPAWN_INTERVAL: f32 = 1.0; // seconds
+pub const SPAWNS_PER_INTERVAL: i32 = 1;
+pub const SPAWN_RADIUS: f32 = 10.0; // from player
 
 const CameraType = enum {
     Game,

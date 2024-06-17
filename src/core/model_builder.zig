@@ -1,6 +1,6 @@
 const std = @import("std");
 const gl = @import("zopengl").bindings;
-const Texture = @import("texture.zig").Texture;
+const panic = @import("std").debug.panic;
 const ModelVertex = @import("model_mesh.zig").ModelVertex;
 const Model = @import("model.zig").Model;
 const Animator = @import("animator.zig").Animator;
@@ -10,15 +10,19 @@ const Transform = @import("transform.zig").Transform;
 const String = @import("string.zig").String;
 const Model_Mesh = @import("model_mesh.zig");
 const utils = @import("utils.zig");
-const panic = @import("std").debug.panic;
 
+const texture_ = @import("texture.zig");
+const Texture = texture_.Texture;
+const TextureType = texture_.TextureType;
+const TextureConfig = texture_.TextureConfig;
+const TextureFilter = texture_.TextureFilter;
+const TextureWrap = texture_.TextureWrap;
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 const Path = std.fs.path;
 const Assimp = assimp.Assimp;
-const TextureType = Texture.TextureType;
 const ModelMesh = Model_Mesh.ModelMesh;
 const CVec2 = Model_Mesh.CVec2;
 const CVec3 = Model_Mesh.CVec3;
@@ -43,7 +47,7 @@ pub const ModelBuilder = struct {
 
     const AddedTexture = struct {
         mesh_name: []const u8,
-        texture_config: Texture.TextureConfig,
+        texture_config: TextureConfig,
         texture_filename: []const u8,
     };
 
@@ -92,7 +96,7 @@ pub const ModelBuilder = struct {
         return self;
     }
 
-    pub fn addTexture(self: *Self, mesh_name: []const u8, texture_config: Texture.TextureConfig, texture_filename: []const u8) !void { // !*Self {
+    pub fn addTexture(self: *Self, mesh_name: []const u8, texture_config: TextureConfig, texture_filename: []const u8) !void { // !*Self {
         const added = AddedTexture{
             .mesh_name = try self.allocator.dupe(u8, mesh_name),
             .texture_config = texture_config,
@@ -228,7 +232,7 @@ pub const ModelBuilder = struct {
                     const full_path = try Path.join(self.allocator, &.{ self.directory, path.data[0 .. path.length] });
                     defer self.allocator.free(full_path);
 
-                    const texture = try self.loadTexture(Texture.TextureConfig.new(texture_type), full_path);
+                    const texture = try self.loadTexture(TextureConfig.new(texture_type), full_path);
                     try material_textures.append(texture);
                 }
             }
@@ -259,7 +263,7 @@ pub const ModelBuilder = struct {
         }
     }
 
-    fn loadTexture(self: *Self, texture_config: Texture.TextureConfig, file_path: []const u8) !*Texture {
+    fn loadTexture(self: *Self, texture_config: TextureConfig, file_path: []const u8) !*Texture {
         for (self.texture_cache.items) |cached_texture| {
             if (std.mem.eql(u8, cached_texture.texture_path, file_path)) {
                 const texture = try self.allocator.create(Texture);
@@ -330,7 +334,7 @@ inline fn vec3FromVector3D(aiVec: Assimp.aiVector3D) CVec3 {
 
 inline fn GetMaterialTexture(
     material: *Assimp.aiMaterial,
-    texture_type: Texture.TextureType,
+    texture_type: TextureType,
     index: u32,
     path: *Assimp.aiString,
 ) Assimp.aiReturn {

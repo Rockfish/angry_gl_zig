@@ -1,15 +1,15 @@
 const std = @import("std");
 const ModelMesh = @import("model_mesh.zig").ModelMesh;
-const AnimatorPackage = @import("animator.zig");
+const animation = @import("animator.zig");
 const AnimationClip = @import("animator.zig").AnimationClip;
 const Shader = @import("shader.zig").Shader;
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
-const Animator = AnimatorPackage.Animator;
-const MAX_BONES = AnimatorPackage.MAX_BONES;
-const MAX_NODES = AnimatorPackage.MAX_NODES;
+const Animator = animation.Animator;
+const MAX_BONES = animation.MAX_BONES;
+const MAX_NODES = animation.MAX_NODES;
 
 pub const Model = struct {
     allocator: Allocator,
@@ -43,7 +43,7 @@ pub const Model = struct {
     }
 
     pub fn playClip(self: *Self, clip: AnimationClip) !void {
-        try self.animator.play_clip(clip);
+        try self.animator.playClip(clip);
     }
 
     pub fn play_clip_with_transition(self: *Self, clip: AnimationClip, transition_duration: f32) !void {

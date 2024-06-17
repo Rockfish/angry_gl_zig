@@ -7,13 +7,6 @@ const geom = @import("geom.zig");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
-const State = world.State;
-const Model = core.Model;
-const ModelBuilder = core.ModelBuilder;
-const Shader = core.Shader;
-const Texture = core.Texture;
-const Random = core.Random;
-
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
@@ -21,6 +14,16 @@ const vec2 = math.vec2;
 const vec3 = math.vec3;
 const Mat4 = math.Mat4;
 
+const State = world.State;
+const Model = core.Model;
+const ModelBuilder = core.ModelBuilder;
+const Shader = core.Shader;
+const Random = core.Random;
+const Texture = core.texture.Texture;
+const TextureConfig = core.texture.TextureConfig;
+const TextureType = core.texture.TextureType;
+const TextureWrap = core.texture.TextureWrap;
+const TextureFilter = core.texture.TextureFilter;
 // pub const ENEMY_COLLIDER: Capsule = Capsule { .height = 0.4, .radius = 0.08 };
 
 pub const Enemy = struct {
@@ -39,35 +42,40 @@ pub const Enemy = struct {
     }
 };
 
-const ENEMY_SPAWN_INTERVAL: f32 = 1.0; // seconds
-const SPAWNS_PER_INTERVAL: i32 = 1;
-const SPAWN_RADIUS: f32 = 10.0; // from player
+
 
 pub const EnemySystem = struct {
     count_down: f32,
     monster_y: f32,
-    enemy_model: Model,
+    enemy_model: *Model,
     random: Random,
+    allocator: Allocator,
 
     const Self = @This();
 
+    pub fn deinit(self: *Self) void {
+        self.enemy_model.deinit();
+    }
+
     pub fn new(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !Self {
-        const enemy_model = try ModelBuilder.init(allocator, texture_cache,"enemy", "assets/Models/Eeldog/EelDog.FBX").build();
+        const model_builder = try ModelBuilder.init(allocator, texture_cache,"enemy", "assets/Models/Eeldog/EelDog.FBX");
+        const enemy_model = try model_builder.build();
         return .{
             .count_down = world.ENEMY_SPAWN_INTERVAL,
             .monster_y = world.MONSTER_Y,
             .enemy_model = enemy_model,
             .random = Random.init(),
+            .allocator = allocator,
         };
     }
 
     pub fn update(self: *Self, state: *State) void {
         self.count_down -= state.delta_time;
         if (self.count_down <= 0.0) {
-            for (0..SPAWNS_PER_INTERVAL) |_| {
+            for (0..world.SPAWNS_PER_INTERVAL) |_| {
                 self.spawn_enemy(state);
             }
-            self.count_down += ENEMY_SPAWN_INTERVAL;
+            self.count_down += world.ENEMY_SPAWN_INTERVAL;
         }
     }
 
@@ -75,8 +83,8 @@ pub const EnemySystem = struct {
         const theta = math.degreesToRadians(self.random.rand_float() * 360.0);
         // const x = state.player.borrow().position.x + theta.sin() * SPAWN_RADIUS;
         // const z = state.player.borrow().position.z + theta.cos() * SPAWN_RADIUS;
-        const x = theta.sin().mul_add(SPAWN_RADIUS, state.player.borrow().position.x);
-        const z = theta.cos().mul_add(SPAWN_RADIUS, state.player.borrow().position.z);
+        const x = theta.sin().mul_add(world.SPAWN_RADIUS, state.player.borrow().position.x);
+        const z = theta.cos().mul_add(world.SPAWN_RADIUS, state.player.borrow().position.z);
         state.enemies.push(Enemy.new(vec3(x, self.monster_y, z), vec3(0.0, 0.0, 1.0)));
     }
 

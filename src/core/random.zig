@@ -1,12 +1,12 @@
 const std = @import("std");
 
 pub const Random = struct {
-    random: std.Random.Random,
+    random: std.Random,
     
     const Self = @This();
 
     pub fn init() Self {
-        const rng = std.rand.DefaultPrng.init(0);
+        var rng = std.rand.DefaultPrng.init(0);
         return Random {
             .random = rng.random(),
         };

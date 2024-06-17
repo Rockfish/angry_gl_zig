@@ -7,15 +7,6 @@ const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const HashMap = std.AutoArrayHashMap;
 
-const State = world.State;
-const Model = core.Model;
-const ModelBuilder = core.ModelBuilder;
-const ModelMesh = core.Model.ModelMesh;
-const Texture = core.Texture;
-const Shader = core.Shader;
-const Animation = core.Animation;
-const WeightedAnimation = core.Animation.WeightedAnimation;
-
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
@@ -23,11 +14,18 @@ const vec2 = math.vec2;
 const vec3 = math.vec3;
 const Mat4 = math.Mat4;
 
-const TextureType = Texture.TextureType;
-const Animator = Animation.Animator;
-const AnimationClip = Animation.AnimationClip;
-const AnimationRepeat = Animation.AnimationRepeat;
-
+const State = world.State;
+const Model = core.Model;
+const ModelBuilder = core.ModelBuilder;
+const ModelMesh = core.ModelMesh;
+const Shader = core.Shader;
+const animation = core.animation;
+const Texture = core.texture.Texture;
+const TextureType = core.texture.TextureType;
+const Animator = animation.Animator;
+const AnimationClip = animation.AnimationClip;
+const AnimationRepeat = animation.AnimationRepeat;
+const WeightedAnimation = animation.WeightedAnimation;
 
 const PLAYER_SPEED: f32 = 5.0;
 // 1.5;
@@ -107,7 +105,7 @@ pub const AnimationWeights = struct {
 
 pub const Player = struct {
     allocator: Allocator,
-    model: *Model.Model,
+    model: *Model,
     position: Vec3,
     direction: Vec2,
     speed: f32,
@@ -170,7 +168,7 @@ pub const Player = struct {
             .anim_hash = anim_hash,
         };
 
-        player.model.play_clip(&player.animations.idle);
+        try player.model.playClip(player.animations.idle);
         return player;
     }
     

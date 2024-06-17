@@ -12,20 +12,18 @@ pub fn init(allocator: Allocator) void {
 
 pub const String = struct {
     str: []const u8,
-    allocator: Allocator,
 
     const Self = @This();
 
     pub fn deinit(self: *Self) void {
-        self.allocator.free(self.str);
-        self.allocator.destroy(self);
+        _allocator.free(self.str);
+        _allocator.destroy(self);
     }
 
     pub fn new(str: []const u8) !*String {
         const string = try _allocator.create(String);
         string.* = String {
             .str = try _allocator.dupe(u8, str),
-            .allocator = _allocator,
         };
         return string;
     }

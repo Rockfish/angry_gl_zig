@@ -24,16 +24,6 @@ const ArrayList = std.ArrayList;
 
 const gl = zopengl.bindings;
 
-const Assimp = core.Assimp;
-const Model = core.Model;
-const ModelBuilder = core.ModelBuilder;
-const Animation = core.Animation;
-const Texture = core.Texture;
-const Camera = core.Camera;
-const Shader = core.Shader;
-const String = core.String;
-const FrameCount = core.FrameCount;
-
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
@@ -42,18 +32,23 @@ const vec3 = math.vec3;
 const vec4 = math.vec4;
 const Mat4 = math.Mat4;
 
-const TextureType = Texture.TextureType;
-const Animator = Animation.Animator;
-const AnimationClip = Animation.AnimationClip;
-const AnimationRepeat = Animation.AnimationRepeat;
+const Assimp = core.assimp.Assimp;
+const Model = core.Model;
+const ModelBuilder = core.ModelBuilder;
+const Camera = core.Camera;
+const Shader = core.Shader;
+const String = core.string.String;
+const FrameCount = core.FrameCount;
+const Texture = core.texture.Texture;
+const TextureType = core.texture.TextureType;
+const Animator = core.animation.Animator;
+const AnimationClip = core.animation.AnimationClip;
+const AnimationRepeat = core.animation.AnimationRepeat;
 
 const Window = glfw.Window;
 
 const VIEW_PORT_WIDTH: f32 = 1500.0;
 const VIEW_PORT_HEIGHT: f32 = 1000.0;
-
-
-
 
 // Lighting
 const LIGHT_FACTOR: f32 = 0.8;
@@ -71,7 +66,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
 
     const allocator = gpa.allocator();
-    String.init(allocator);
+    core.string.init(allocator);
 
     // var arena_state = std.heap.ArenaAllocator.init(allocator);
     // defer arena_state.deinit();

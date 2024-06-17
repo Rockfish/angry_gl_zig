@@ -218,7 +218,7 @@ pub const Animator = struct {
         return animator;
     }
 
-    pub fn play_clip(self: *Self, clip: AnimationClip) !void {
+    pub fn playClip(self: *Self, clip: AnimationClip) !void {
         self.allocator.destroy(self.current_animation);
 
         self.current_animation = try self.allocator.create(PlayingAnimation);

@@ -7,14 +7,13 @@ const math = @import("math");
 
 const gl = zopengl.bindings;
 
-const Assimp = core.Assimp;
+const Assimp = core.assimp.Assimp;
 const Model = core.Model;
 const ModelBuilder = core.ModelBuilder;
-const Animation = core.Animation;
-const Texture = core.Texture;
+const animation = core.animation;
 const Camera = core.Camera;
 const Shader = core.Shader;
-const String = core.String;
+const String = core.string.String;
 const FrameCount = core.FrameCount;
 
 const Vec2 = math.Vec2;
@@ -24,10 +23,11 @@ const vec2 = math.vec2;
 const vec3 = math.vec3;
 const Mat4 = math.Mat4;
 
-const TextureType = Texture.TextureType;
-const Animator = Animation.Animator;
-const AnimationClip = Animation.AnimationClip;
-const AnimationRepeat = Animation.AnimationRepeat;
+const Texture = core.texture.Texture;
+const TextureType = core.texture.TextureType;
+const Animator = animation.Animator;
+const AnimationClip = animation.AnimationClip;
+const AnimationRepeat = animation.AnimationRepeat;
 
 const Window = glfw.Window;
 
@@ -61,7 +61,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
 
     const allocator = gpa.allocator();
-    String.init(allocator);
+    core.string.init(allocator);
 
     // var arena_state = std.heap.ArenaAllocator.init(allocator);
     // defer arena_state.deinit();

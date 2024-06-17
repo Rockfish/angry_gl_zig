@@ -3,17 +3,21 @@ const math = @import("math");
 const core = @import("core");
 const zopengl = @import("zopengl");
 
-const Allocator = std.mem.Allocator;
-const gl = zopengl.bindings;
-const Texture = core.Texture;
-const Shader = core.Shader;
-
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
 const vec2 = math.vec2;
 const vec3 = math.vec3;
 const Mat4 = math.Mat4;
+
+const Allocator = std.mem.Allocator;
+const gl = zopengl.bindings;
+const Shader = core.Shader;
+const Texture = core.texture.Texture;
+const TextureConfig = core.texture.TextureConfig;
+const TextureType = core.texture.TextureType;
+const TextureWrap = core.texture.TextureWrap;
+const TextureFilter = core.texture.TextureFilter;
 
 const FLOOR_SIZE: f32 = 100.0;
 const TILE_SIZE: f32 = 1.0;
@@ -47,17 +51,17 @@ pub const Floor = struct {
     }
 
     pub fn new(allocator: Allocator) !Self {
-        const texture_config = Texture.TextureConfig {
+        const texture_config = TextureConfig {
             .flip_v = false,
             .gamma_correction = false,
-            .filter = Texture.TextureFilter.Linear,
-            .texture_type = Texture.TextureType.None,
-            .wrap = Texture.TextureWrap.Repeat,
+            .filter = TextureFilter.Linear,
+            .texture_type = TextureType.None,
+            .wrap = TextureWrap.Repeat,
         };
 
-        const texture_floor_diffuse = try Texture.new(allocator, "assets/Models/Floor D.png", &texture_config);
-        const texture_floor_normal = try Texture.new(allocator, "assets/Models/Floor N.png", &texture_config);
-        const texture_floor_spec = try Texture.new(allocator, "assets/Models/Floor M.png", &texture_config);
+        const texture_floor_diffuse = try Texture.new(allocator, "assets/Models/Floor D.png", texture_config);
+        const texture_floor_normal = try Texture.new(allocator, "assets/Models/Floor N.png", texture_config);
+        const texture_floor_spec = try Texture.new(allocator, "assets/Models/Floor M.png", texture_config);
 
         var floor_vao: gl.Uint = 0;
         var floor_vbo: gl.Uint = 0;
@@ -74,7 +78,7 @@ pub const Floor = struct {
         );
         gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), null);
         gl.enableVertexAttribArray(0);
-        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), (3 * SIZE_OF_FLOAT));
+        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), &(3 * SIZE_OF_FLOAT));
         gl.enableVertexAttribArray(1);
 
         return .{
