@@ -45,7 +45,7 @@ pub const Transform = struct {
 
     pub fn mul_transform(self: *const Self, transform: Transform) Self {
         const translation = self.transform_point(transform.translation);
-        const rotation = Quat.mulQuats(&self.rotation, &transform.rotation);
+        const rotation = Quat.mulQuat(&self.rotation, &transform.rotation);
         const scale = self.scale.mul(&transform.scale);
         return Transform{
             .translation = translation,

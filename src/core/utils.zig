@@ -88,3 +88,23 @@ pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a:
         list.items = list.items[0..count];
     }
 }
+
+pub fn removeRange(comptime T: type, list: *std.ArrayList(T), start: usize, end: usize) !void {
+    if (start >= end or end >= list.len) {
+        return error.InvalidRange;
+    }
+    const count = end - start + 1;
+
+    // Call deinit on each item in the range
+    for (start..end) |i| {
+        list.items[i].deinit();
+    }
+
+    // Move the items to fill the gap
+    for (end + 1..list.len) |i| {
+        list.items[i - count] = list.items[i];
+    }
+
+    // Update the length of the list
+    list.shrink(list.len - count);
+}

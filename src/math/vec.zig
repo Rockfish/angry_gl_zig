@@ -11,6 +11,14 @@ pub const Vec2 = struct {
     pub fn new(x: f32, y: f32) Vec2 {
         return Vec2 { .data = .{x, y} };
     }
+
+    pub fn lengthSquared(v: *const Vec2) f32 {
+        return v.dot(v);
+    }
+
+    pub fn dot(lhs: *const Vec2, rhs: *const Vec2) f32 {
+        return (lhs.data[0] * rhs.data[0]) + (lhs.data[1] * rhs.data[1]);
+    }
 };
 
 pub fn vec2(x: f32, y: f32) Vec2 {
@@ -26,6 +34,10 @@ pub const Vec3 = struct {
 
     pub fn new(x: f32, y: f32, z: f32) Vec3 {
         return Vec3 { .data = .{x, y, z} };
+    }
+
+    pub fn splat(v: f32) Vec3 {
+        return Vec3 { .data = .{v, v, v} };
     }
 
     pub fn fromArray(value: [3]f32) Vec3 {
@@ -58,8 +70,8 @@ pub const Vec3 = struct {
         return Vec3 { .data = .{a.data[0] * b, a.data[1] * b, a.data[2] * b} };
     }
 
-    pub fn dot(lhs: *const Vec3, rhs: Vec3) f32 {
-        return (lhs.x * rhs.x) + (lhs.y * rhs.y) + (lhs.z * rhs.z);
+    pub fn dot(lhs: *const Vec3, rhs: *const Vec3) f32 {
+        return (lhs.data[0] * rhs.data[0]) + (lhs.data[1] * rhs.data[1]) + (lhs.data[2] * rhs.data[2]);
     }
 
     pub fn cross(arg_a: *const Vec3, arg_b: *const Vec3) Vec3 {
@@ -90,6 +102,14 @@ pub const Vec4 = struct {
 
     pub fn new(x: f32, y: f32, z: f32, w: f32) Vec4 {
         return Vec4 { .data = .{x, y, z, w} };
+    }
+
+    pub fn splat(v: f32) Vec4 {
+        return Vec4 { .data = .{v, v, v, v} };
+    }
+
+    pub fn xyz(self: *const Vec4) Vec3 {
+        return Vec3 { .data = .{self.data[0], self.data[1], self.data[2]} };
     }
 
     pub fn scale(v: *const Vec4, s: f32) Vec4 {

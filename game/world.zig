@@ -11,20 +11,20 @@ const BulletStore = @import("bullets.zig").BulletStore;
 const BurnMarks = @import("burn_marks.zig").BurnMarks;
 const MuzzleFlash = @import("muzzle_flash.zig").MuzzleFlash;
 const Floor = @import("floor.zig").Floor;
-const SoundSystem = @import("sound_system.zig").SoundSystem;
+// const SoundSystem = @import("sound_system.zig").SoundSystem;
 const fb = @import("framebuffers.zig");
 const quads = @import("quads.zig");
 
 const ArrayList = std.ArrayList;
 
-const Assimp = core.Assimp;
+const Assimp = core.assimp.Assimp;
 const Model = core.Model;
 const ModelBuilder = core.ModelBuilder;
-const Animation = core.Animation;
-const Texture = core.Texture;
+const Animation = core.animation;
+const Texture = core.texture.Texture;
 const Camera = core.Camera;
 const Shader = core.Shader;
-const String = core.String;
+const String = core.string.String;
 const FrameCount = core.FrameCount;
 
 // Player
@@ -42,7 +42,7 @@ pub const ENEMY_SPAWN_INTERVAL: f32 = 1.0; // seconds
 pub const SPAWNS_PER_INTERVAL: i32 = 1;
 pub const SPAWN_RADIUS: f32 = 10.0; // from player
 
-const CameraType = enum {
+pub const CameraType = enum {
     Game,
     Floating,
     TopDown,
@@ -50,14 +50,18 @@ const CameraType = enum {
 };
 
 pub const State = struct {
+    viewport_width: f32,
+    viewport_height: f32,
+    scaled_width: f32,
+    scaled_height: f32,
     game_camera: *Camera,
     floating_camera: *Camera,
     ortho_camera: *Camera,
     active_camera: CameraType,
     player: *Player,
-    enemies: std.ArrayList(*Enemy),
     burn_marks: *BurnMarks,
-    sound_system: *SoundSystem,
+    enemies: std.ArrayList(Enemy),
+    // sound_system: *SoundSystem,
     game_projection: math.Mat4,
     floating_projection: math.Mat4,
     orthographic_projection: math.Mat4,

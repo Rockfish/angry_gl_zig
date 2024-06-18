@@ -121,7 +121,12 @@ pub const Player = struct {
 
     const Self = @This();
 
-    pub fn new(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !Self {
+    pub fn deinit(self: *Self) void {
+        self.anim_hash.deinit();
+        self.allocator.destroy(self);
+    }
+
+    pub fn new(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !*Self {
         const model_path = "assets/Models/Player/Player.fbx";
 
         var builder = try ModelBuilder.init(allocator, texture_cache, "Player", model_path);
@@ -151,7 +156,8 @@ pub const Player = struct {
         try anim_hash.put(.left, AnimationClip.new(209.0, 229.0, AnimationRepeat.Forever));
         try anim_hash.put(.dead, AnimationClip.new(234.0, 293.0, AnimationRepeat.Once));
 
-        const player = Player {
+        const player = try allocator.create(Player);
+        player.* = Player {
             .allocator = allocator,
             .model = model,
             .last_fire_time = 0.0,
@@ -179,28 +185,23 @@ pub const Player = struct {
         }
     }
 
-    pub fn get_muzzle_position(self: *Self, player_model_transform: *Mat4) Mat4 {
+    pub fn get_muzzle_position(self: *const Self, player_model_transform: *const Mat4) Mat4 {
         // Position in original model of gun muzzle
         // const point_vec = vec3(197.0, 76.143, -3.054);
         const point_vec = vec3(191.04, 79.231, -3.4651); // center of muzzle
 
-        const animator = self.model.animator.borrow();
-
-        const gun_mesh: ModelMesh = undefined;
+        var gun_mesh: *ModelMesh = undefined;
         for (self.model.meshes.items) |m| {
             if (std.mem.eql(u8, m.name, "Gun")) {
                 gun_mesh = m;
             }
         }
 
-        const final_node_matrices = animator.final_node_matrices.borrow();
-
-        const gun_transform = final_node_matrices.get(gun_mesh.id);
-
-        const muzzle = *gun_transform * Mat4.from_translation(point_vec);
+        const gun_transform = self.model.animator.final_node_matrices[@intCast(gun_mesh.id)];
+        const muzzle = gun_transform.mulMat4(&Mat4.fromTranslation(&point_vec));
 
         // muzzle_transform
-        return *player_model_transform * muzzle;
+        return player_model_transform.mulMat4(&muzzle);
     }
 
     pub fn set_player_death_time(self: *Self, time: f32) void {
@@ -209,21 +210,20 @@ pub const Player = struct {
         }
     }
 
-    pub fn render(self: *Self, shader: *Shader) void {
-        self.model.render(shader);
+    pub fn render(self: *Self, shader: *const Shader) !void {
+        try self.model.render(shader);
     }
 
-    pub fn update(self: *Self, state: *State, aim_theta: f32) void {
+    pub fn update(self: *Self, state: *State, aim_theta: f32) !void {
         const weight_animations = self.update_animation_weights(self.direction, aim_theta, state.frame_time);
-        self.model.play_weight_animations(weight_animations.as_slice(), state.frame_time);
+        try self.model.play_weight_animations(&weight_animations, state.frame_time);
     }
 
     fn update_animation_weights(self: *Self, move_vec: Vec2, aim_theta: f32, frame_time: f32) [6]WeightedAnimation {
-        const is_moving = move_vec.length_squared() > 0.1;
-
-        const move_theta = (move_vec.x / move_vec.y).atan() + if (move_vec.y < 0.0) math.pi else 0.0;
+        const is_moving = move_vec.lengthSquared() > 0.1;
+        const move_theta = math.atan(move_vec.data[0] / move_vec.data[1]) + if (move_vec.data[1] < @as(f32, 0.0)) math.pi else @as(f32, 0.0);
         const theta_delta = move_theta - aim_theta;
-        const anim_move = vec2(theta_delta.sin(), theta_delta.cos());
+        const anim_move = vec2(math.sin(theta_delta), math.cos(theta_delta));
 
         const anim_delta_time = frame_time - self.anim_weights.last_anim_time;
         self.anim_weights.last_anim_time = frame_time;
@@ -236,12 +236,12 @@ pub const Player = struct {
         self.anim_weights.prev_back_weight = max(0.0, self.anim_weights.prev_back_weight - anim_delta_time / ANIM_TRANSITION_TIME);
         self.anim_weights.prev_left_weight = max(0.0, self.anim_weights.prev_left_weight - anim_delta_time / ANIM_TRANSITION_TIME);
 
-        var dead_weight = if (is_dead) 1.0 else 0.0;
-        var idle_weight = self.anim_weights.prev_idle_weight + if (is_moving || is_dead) 0.0 else 1.0;
-        var right_weight = self.anim_weights.prev_right_weight + if (is_moving) clamp0(-anim_move.x) else 0.0;
-        var forward_weight = self.anim_weights.prev_forward_weight + if (is_moving) clamp0(anim_move.y) else 0.0;
-        var back_weight = self.anim_weights.prev_back_weight + if (is_moving) clamp0(-anim_move.y) else 0.0;
-        var left_weight = self.anim_weights.prev_left_weight + if (is_moving) clamp0(anim_move.x) else 0.0;
+        var dead_weight: f32 = if (is_dead) @as(f32, 1.0) else @as(f32, 0.0);
+        var idle_weight = self.anim_weights.prev_idle_weight + if (is_moving or is_dead) @as(f32, 0.0) else @as(f32, 1.0);
+        var right_weight = self.anim_weights.prev_right_weight + if (is_moving) clamp0(-anim_move.data[0]) else @as(f32, 0.0);
+        var forward_weight = self.anim_weights.prev_forward_weight + if (is_moving) clamp0(anim_move.data[1]) else @as(f32, 0.0);
+        var back_weight = self.anim_weights.prev_back_weight + if (is_moving) clamp0(-anim_move.data[1]) else @as(f32, 0.0);
+        var left_weight = self.anim_weights.prev_left_weight + if (is_moving) clamp0(anim_move.data[0]) else @as(f32, 0.0);
 
         const weight_sum = dead_weight + idle_weight + forward_weight + back_weight + right_weight + left_weight;
         dead_weight /= weight_sum;

@@ -252,7 +252,7 @@ pub const Animator = struct {
         try self.transitions.append(transition);
     }
 
-    pub fn play_weight_animations(self: *Self, weighted_animation: *ArrayList(WeightedAnimation), frame_time: f32) void {
+    pub fn play_weight_animations(self: *Self, weighted_animation: []const WeightedAnimation, frame_time: f32) void {
         // reset node transforms
         var iterator = self.node_transforms.valueIterator();
         while (iterator.next()) |node_transform| {
@@ -260,7 +260,7 @@ pub const Animator = struct {
         }
         self.node_transforms.clearAndFree();
 
-        const inverse_transform = Transform.from_matrix(self.global_inverse_transform);
+        const inverse_transform = Transform.from_matrix(&self.global_inverse_transform);
 
         for (weighted_animation) |weighted| {
             if (weighted.weight == 0.0) {

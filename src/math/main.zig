@@ -27,21 +27,25 @@ pub const get_world_ray_from_mouse = utils.get_world_ray_from_mouse;
 pub const ray_plane_intersection = utils.ray_plane_intersection;
 pub const screen_to_model_glam = utils.screen_to_model_glam;
 
+// @abs
 pub const inf = std.math.inf;
 pub const sqrt = std.math.sqrt;
 pub const pow = std.math.pow;
 pub const sin = std.math.sin;
 pub const cos = std.math.cos;
 pub const acos = std.math.acos;
+pub const tan = std.math.tan;
+pub const atan = std.math.atan;
 pub const isNan = std.math.isNan;
 pub const isInf = std.math.isInf;
-pub const pi = std.math.pi;
 pub const clamp = std.math.clamp;
 pub const log10 = std.math.log10;
 pub const degreesToRadians = std.math.degreesToRadians;
 pub const radiansToDegrees = std.math.radiansToDegrees;
 pub const maxInt = std.math.maxInt;
 pub const lerp = std.math.lerp;
+
+pub const pi: f32 = @as(f32, std.math.pi);
 
 /// 2/sqrt(π)
 pub const two_sqrtpi = std.math.two_sqrtpi;

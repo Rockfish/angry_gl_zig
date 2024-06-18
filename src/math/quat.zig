@@ -36,11 +36,19 @@ pub const Quat = struct {
         return Quat { .data = result, };
     }
 
+    pub fn fromAxisAngle(axis: *const Vec3, angle: f32) Quat {
+        // glam_assert!(axis.is_normalized());
+        const s = std.math.sin(angle * 0.5);
+        const c = std.math.cos(angle * 0.5);
+        const v = axis.mulScalar(s);
+        return new(v.data[0], v.data[1], v.data[2], c);
+    }
+
     pub fn normalize(self: *Self) void {
         cglm.glmc_quat_normalize(&self.data);
     }
 
-    pub fn mulQuats(p: *const Quat, q: *const Quat) Quat {
+    pub fn mulQuat(p: *const Quat, q: *const Quat) Quat {
         var result: [4]f32 align(16) = undefined;
         cglm.glmc_quat_mul(@constCast(&p.data), @constCast(&q.data), &result);
         return Quat { .data = result };

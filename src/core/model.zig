@@ -8,6 +8,8 @@ const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
 const Animator = animation.Animator;
+const WeightedAnimation = animation.WeightedAnimation;
+
 const MAX_BONES = animation.MAX_BONES;
 const MAX_NODES = animation.MAX_NODES;
 
@@ -48,6 +50,10 @@ pub const Model = struct {
 
     pub fn play_clip_with_transition(self: *Self, clip: AnimationClip, transition_duration: f32) !void {
         try self.animator.play_clip_with_transition(clip, transition_duration);
+    }
+
+    pub fn play_weight_animations(self: *Self, weighted_animation: []const WeightedAnimation, frame_time: f32) !void {
+        try self.animator.play_weight_animations(weighted_animation, frame_time);
     }
 
     pub fn render(self: *Self, shader: *const Shader) !void {

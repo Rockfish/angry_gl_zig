@@ -6,14 +6,17 @@ const gl = @import("zopengl").bindings;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
-const Texture = core.Texture;
-const Shader = core.Shader;
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
 const vec2 = math.vec2;
 const vec3 = math.vec3;
 const Mat4 = math.Mat4;
+
+const Texture = core.texture.Texture;
+const TextureConfig = core.texture.TextureConfig;
+const TextureWrap = core.texture.TextureWrap;
+const Shader = core.Shader;
 
 const BURN_MARK_TIME: f32 = 5.0;
 
@@ -23,22 +26,32 @@ pub const BurnMark = struct {
 };
 
 pub const BurnMarks = struct {
-    unit_square_vao: i32,
+    unit_square_vao: c_uint,
     mark_texture: Texture,
     marks: ArrayList(BurnMark),
     allocator: Allocator,
 
     const Self = @This();
 
-    pub fn new(allocator: Allocator, unit_square_vao: i32) Self {
-        const texture_config = Texture.TextureConfig.new().set_wrap(Texture.TextureWrap.Repeat);
-        const mark_texture = Texture.new("angrygl_assets/bullet/burn_mark.png", &texture_config);
+    pub fn deinit(self: *Self) void {
+        self.marks.deinit();
+        self.allocator.destroy(self);
+    }
 
-        return .{
+    pub fn new(allocator: Allocator, unit_square_vao: c_uint) !*Self {
+        var texture_config = TextureConfig.default();
+        texture_config.set_wrap(TextureWrap.Repeat);
+
+        const mark_texture = try Texture.new(allocator, "angrygl_assets/bullet/burn_mark.png", texture_config);
+
+        const burn_marks = try allocator.create(BurnMarks);
+        burn_marks.* = .{
             .unit_square_vao = unit_square_vao,
             .mark_texture = mark_texture,
             .marks = ArrayList(BurnMark).init(allocator),
+            .allocator = allocator,
         };
+        return burn_marks;
     }
 
     pub fn add_mark(self: *Self, position: Vec3) void {

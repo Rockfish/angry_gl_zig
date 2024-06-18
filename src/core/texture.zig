@@ -112,11 +112,12 @@ pub const Texture = struct {
     width: u32,
     height: u32,
     allocator: std.mem.Allocator,
+
     const Self = @This();
 
     pub fn deinit(self: *Texture) void {
         self.allocator.free(self.texture_path);
-        self.allocator.destroy(self);
+        // self.allocator.destroy(self);
     }
 
     pub fn new(allocator: std.mem.Allocator, path: []const u8, texture_config: TextureConfig) !Texture {

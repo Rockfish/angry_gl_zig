@@ -90,7 +90,7 @@ pub const Floor = struct {
         };
     }
 
-    pub fn draw(self: *Self, shader: *Shader, projection_view: *Mat4) void {
+    pub fn draw(self: *Self, shader: *const Shader, projection_view: *const Mat4) void {
         shader.use_shader();
 
         shader.bind_texture(0, "texture_diffuse", &self.texture_floor_diffuse);

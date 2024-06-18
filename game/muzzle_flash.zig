@@ -16,12 +16,23 @@ const TextureType = core.texture.TextureType;
 const TextureWrap = core.texture.TextureWrap;
 const TextureFilter = core.texture.TextureFilter;
 
+const SpriteAge = struct {
+    age: f32,
+    pub fn init(allocator: Allocator, age: f32) !*SpriteAge {
+        const sprite_age = try allocator.create(SpriteAge);
+        sprite_age.* = .{ .age = age };
+        return sprite_age;
+    }
+    pub fn deinit(self: *SpriteAge) void {
+       _ = self;
+    }
+};
 
 pub const MuzzleFlash = struct {
     unit_square_vao: c_uint,
     muzzle_flash_impact_sprite: SpriteSheet,
-    muzzle_flash_sprites_age: ArrayList(f32),
-    // allocator: Allocator,
+    muzzle_flash_sprites_age: ArrayList(?*SpriteAge),
+    allocator: Allocator,
 
     const Self = @This();
 
@@ -35,41 +46,46 @@ pub const MuzzleFlash = struct {
         return .{
             .unit_square_vao = unit_square_vao,
             .muzzle_flash_impact_sprite = muzzle_flash_impact_sprite,
-            .muzzle_flash_sprites_age = ArrayList(f32).init(allocator),
-            // .allocator = allocator,
+            .muzzle_flash_sprites_age = ArrayList(?*SpriteAge).init(allocator),
+            .allocator = allocator,
         };
     }
 
     pub fn update(self: *Self, delta_time: f32) void {
-        if (self.muzzle_flash_sprites_age.len != 0) {
-            for (0..self.muzzle_flash_sprites_age.len) |i| {
-                self.muzzle_flash_sprites_age[i] += delta_time;
+        if (self.muzzle_flash_sprites_age.items.len != 0) {
+            for (0..self.muzzle_flash_sprites_age.items.len) |i| {
+                self.muzzle_flash_sprites_age.items[i].?.age += delta_time;
             }
             const max_age = self.muzzle_flash_impact_sprite.num_columns * self.muzzle_flash_impact_sprite.time_per_sprite;
 
-            const predicate = struct {
-                pub fn func (age: f32) bool {
-                    return age < max_age;
+            const Predicate = struct {
+                pub const _max_age: f32 = 0.0;
+                pub fn func (spriteAge: *SpriteAge) bool {
+                    return spriteAge.age < _max_age;
                 }
-           };
-
-           self.muzzle_flash_sprites_age.retain(predicate.func);
+            };
+            Predicate._max_age = max_age;
+            var predicate = Predicate{};
+            predicate._max_age = max_age;
+            // need different retain for T = f32
+            core.utils.retain(SpriteAge, &self.muzzle_flash_sprites_age, predicate.func, self.allocator);
         }
     }
 
-    pub fn get_min_age(self: *Self) f32 {
+    pub fn get_min_age(self: *const Self) f32 {
         var min_age: f32 = 1000;
-        for (self.muzzle_flash_sprites_age.items) |age| {
-            min_age = min_age.min(age);
+        for (self.muzzle_flash_sprites_age.items) |spriteAge| {
+            min_age = @min(min_age, spriteAge.?.age);
         }
         return min_age;
     }
 
-    pub fn add_flash(self: *Self) void {
-        self.muzzle_flash_sprites_age.push(0.0);
+    pub fn add_flash(self: *Self) !void {
+        const sprite_age = try SpriteAge.init(self.allocator, 0.0);
+        try self.muzzle_flash_sprites_age.append(sprite_age);
     }
 
-    pub fn draw(self: *Self, sprite_shader: *Shader, projection_view: *Mat4, muzzle_transform: *Mat4) void {
+    pub fn draw(self: *const Self, sprite_shader: *Shader, projection_view: *Mat4, muzzle_transform: *Mat4) void {
         if (self.muzzle_flash_sprites_age.len == 0) {
             return;
         }

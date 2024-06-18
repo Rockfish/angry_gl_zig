@@ -50,8 +50,8 @@ pub fn get_world_ray_from_mouse(
     mouse_y: f32,
     viewport_width: f32,
     viewport_height: f32,
-    view_matrix: *Mat4,
-    projection: *Mat4,
+    view_matrix: *const Mat4,
+    projection: *const Mat4,
 ) Vec3 {
     // normalize device coordinates
     const ndc_x = (2.0 * mouse_x) / viewport_width - 1.0;
@@ -59,27 +59,27 @@ pub fn get_world_ray_from_mouse(
     const ndc_z = -1.0; // face the same direction as the opengl camera
     const ndc = Vec4.new(ndc_x, ndc_y, ndc_z, 1.0);
 
-    const projection_inverse = projection.inverse();
-    const view_inverse = view_matrix.inverse();
+    const projection_inverse = projection.getInverse();
+    const view_inverse = view_matrix.getInverse();
 
     // eye space
-    var ray_eye = projection_inverse * ndc;
-    ray_eye = vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+    var ray_eye = projection_inverse.mulVec4(&ndc);
+    ray_eye = vec4(ray_eye.data[0], ray_eye.data[1], -1.0, 0.0);
 
     // world space
-    const ray_world = (view_inverse * ray_eye).xyz();
+    const ray_world = (view_inverse.mulVec4(&ray_eye)).xyz();
 
     // ray from camera
-    return ray_world.normalize_or_zero();
+    return ray_world.normalize();
 }
 
-pub fn ray_plane_intersection(ray_origin: Vec3, ray_direction: Vec3, plane_point: Vec3, plane_normal: Vec3) ?Vec3 {
+pub fn ray_plane_intersection(ray_origin: *const Vec3, ray_direction: *const Vec3, plane_point: *const Vec3, plane_normal: *const Vec3) ?Vec3 {
     const denom = plane_normal.dot(ray_direction);
-    if (denom.abs() > epsilon) {
-        const p0l0 = plane_point - ray_origin;
+    if (@abs(denom) > epsilon) {
+        const p0l0 = plane_point.sub(ray_origin);
         const t = p0l0.dot(plane_normal) / denom;
         if (t >= 0.0) {
-            return ray_origin + t * ray_direction;
+            return ray_origin.add(&ray_direction.mulScalar(t));
         }
     }
     return null;

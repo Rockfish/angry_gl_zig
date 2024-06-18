@@ -1,26 +1,41 @@
 const std = @import("std");
 const core = @import("core");
 const math = @import("math");
+const aabb = @import("aabb.zig");
 const geom = @import("geom.zig");
+const sprites = @import("sprite_sheet.zig");
+const world = @import("world.zig");
+const gl = @import("zopengl").bindings;
+const Capsule = @import("capsule.zig").Capsule;
+const Enemy = @import("enemy.zig").Enemy;
 
 const ArrayList = std.ArrayList;
 const HashMap = std.AutoArrayHashMap;
 
+const Aabb = aabb.Aabb;
+const State = world.State;
+const Shader = core.Shader;
 const Model = core.Model;
 const ModelBuilder = core.ModelBuilder;
-const Texture = core.Texture;
-const Animation = core.Animation;
-const WeightedAnimation = core.Animation.WeightedAnimation;
+const Animation = core.animation;
+const WeightedAnimation = core.animation.WeightedAnimation;
+const SpriteSheet = sprites.SpriteSheet;
+const SpriteSheetSprite = sprites.SpriteSheetSprite;
 
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
 const vec2 = math.vec2;
 const vec3 = math.vec3;
+const vec4 = math.vec4;
 const Mat4 = math.Mat4;
 const Quat = math.Quat;
 
-const TextureType = Texture.TextureType;
+const Texture = core.texture.Texture;
+const TextureType = core.texture.TextureType;
+const TextureConfig = core.texture.TextureConfig;
+const TextureWrap = core.texture.TextureWrap;
+const TextureFilter = core.texture.TextureFilter;
 const Animator = Animation.Animator;
 const AnimationClip = Animation.AnimationClip;
 const AnimationRepeat = Animation.AnimationRepeat;
@@ -29,12 +44,12 @@ const Allocator = std.mem.Allocator;
 
 pub const BulletGroup = struct {
     start_index: usize,
-    group_size: i32,
+    group_size: u32,
     time_to_live: f32,
 
     const Self = @This();
 
-    pub fn new(start_index: usize, group_size: i32, time_to_live: f32) Self {
+    pub fn new(start_index: usize, group_size: u32, time_to_live: f32) Self {
         return .{
             .start_index = start_index,
             .group_size = group_size,
@@ -43,6 +58,9 @@ pub const BulletGroup = struct {
     }
 };
 
+const SIZE_OF_FLOAT = @sizeOf(f32);
+const SIZE_OF_VEC3 = @sizeOf([3]f32);
+const SIZE_OF_QUAT = @sizeOf([4]f32);
 
 // const BULLET_SCALE: f32 = 0.3;
 const BULLET_SCALE: f32 = 0.3;
@@ -51,7 +69,7 @@ const BULLET_LIFETIME: f32 = 1.0;
 const BULLET_SPEED: f32 = 15.0;
 // const BULLET_SPEED: f32 = 1.0;
 // Game units per second
-const ROTATION_PER_BULLET: f32 = 3.0 * PI / 180.0;
+const ROTATION_PER_BULLET: f32 = 3.0 * math.pi / 180.0;
 
 const SCALE_VEC: Vec3 = vec3(BULLET_SCALE, BULLET_SCALE, BULLET_SCALE);
 const BULLET_NORMAL: Vec3 = vec3(0.0, 1.0, 0.0);
@@ -59,7 +77,7 @@ const CANONICAL_DIR: Vec3 = vec3(0.0, 0.0, 1.0);
 
 const BULLET_COLLIDER: Capsule = Capsule { .height = 0.3, .radius = 0.03 };
 
-const BULLET_ENEMY_MAX_COLLISION_DIST: f32 = BULLET_COLLIDER.height / 2.0 + BULLET_COLLIDER.radius + ENEMY_COLLIDER.height / 2.0 + ENEMY_COLLIDER.radius;
+const BULLET_ENEMY_MAX_COLLISION_DIST: f32 = BULLET_COLLIDER.height / 2.0 + BULLET_COLLIDER.radius + world.ENEMY_COLLIDER.height / 2.0 + world.ENEMY_COLLIDER.radius;
 
 // Trim off margin around the bullet image
 // const TEXTURE_MARGIN: f32 = 0.0625;
@@ -122,12 +140,21 @@ pub const BulletStore = struct {
     bullet_texture: Texture,
     bullet_impact_spritesheet: SpriteSheet,
     bullet_impact_sprites: ArrayList(SpriteSheetSprite),
-    unit_square_vao: i32,
+    unit_square_vao: c_uint,
     allocator: Allocator,
 
     const Self = @This();
 
-    pub fn new(allocator: Allocator, unit_square_vao: i32) Self {
+    pub fn deinit(self: *Self) void {
+        self.all_bullet_positions.deinit();
+        self.all_bullet_rotations.deinit();
+        self.all_bullet_directions.deinit();
+        self.bullet_groups.deinit();
+        self.bullet_impact_sprites.deinit();
+        self.bullet_texture.deinit();
+    }
+
+    pub fn new(allocator: Allocator, unit_square_vao: c_uint) !Self {  // keep on heap or stack, hmm
         // initialize_buffer_and_create
         var bullet_vao: gl.Uint = 0;
         var bullet_vertices_vbo: gl.Uint = 0;
@@ -138,14 +165,14 @@ pub const BulletStore = struct {
 
         const texture_config = TextureConfig {
             .flip_v = false,
-            .flip_h = true,
+            // .flip_h = true,
             .gamma_correction = false,
             .filter = TextureFilter.Nearest,
             .texture_type = TextureType.None,
             .wrap = TextureWrap.Repeat,
         };
 
-        const bullet_texture = Texture.new("angrygl_assets/bullet/bullet_texture_transparent.png", &texture_config);
+        const bullet_texture = try Texture.new(allocator, "angrygl_assets/bullet/bullet_texture_transparent.png", texture_config);
         // const bullet_texture = Texture.new("angrygl_assets/bullet/red_bullet_transparent.png", &texture_config);
         // const bullet_texture = Texture.new("angrygl_assets/bullet/red_and_green_bullet_transparent.png", &texture_config);
 
@@ -163,8 +190,8 @@ pub const BulletStore = struct {
         // vertices data
         gl.bufferData(
             gl.ARRAY_BUFFER,
-            (vertices.len() * SIZE_OF_FLOAT),
-            vertices.as_ptr(),
+            (vertices.len * SIZE_OF_FLOAT),
+            &vertices,
             gl.STATIC_DRAW,
         );
 
@@ -172,8 +199,8 @@ pub const BulletStore = struct {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bullet_indices_ebo);
         gl.bufferData(
             gl.ELEMENT_ARRAY_BUFFER,
-            (indices.len() * SIZE_OF_FLOAT),
-            indices.as_ptr(),
+            (indices.len * SIZE_OF_FLOAT),
+            &indices,
             gl.STATIC_DRAW,
         );
 
@@ -183,7 +210,7 @@ pub const BulletStore = struct {
 
         // location 1: texture coordinates
         gl.enableVertexAttribArray(1);
-        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), (3 * SIZE_OF_FLOAT));
+        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), &(3 * SIZE_OF_FLOAT));
 
         // Per instance data
 
@@ -205,94 +232,106 @@ pub const BulletStore = struct {
         gl.vertexAttribPointer(3, 3, gl.FLOAT, gl.FALSE, SIZE_OF_VEC3, null);
         gl.vertexAttribDivisor(3, 1); // one offset per bullet instance
 
-        const texture_impact_sprite_sheet = Texture.new("angrygl_assets/bullet/impact_spritesheet_with_00.png", &texture_config);
+        const texture_impact_sprite_sheet = try Texture.new(allocator, "angrygl_assets/bullet/impact_spritesheet_with_00.png", texture_config);
         const bullet_impact_spritesheet = SpriteSheet.new(texture_impact_sprite_sheet, 11, 0.05);
 
         return .{
             .all_bullet_positions = ArrayList(Vec3).init(allocator),
             .all_bullet_rotations = ArrayList(Quat).init(allocator),
             .all_bullet_directions = ArrayList(Vec3).init(allocator),
+            .bullet_groups = ArrayList(BulletGroup).init(allocator),
+            .bullet_impact_sprites = ArrayList(SpriteSheetSprite).init(allocator),
             .bullet_vao = bullet_vao,
             .rotation_vbo = instance_rotation_vbo,
             .offset_vbo = instance_offset_vbo,
-            .bullet_groups = ArrayList(BulletGroup).init(allocator),
             .bullet_texture = bullet_texture,
             .bullet_impact_spritesheet = bullet_impact_spritesheet,
-            .bullet_impact_sprites = ArrayList(SpriteSheetSprite).init(allocator),
             .unit_square_vao = unit_square_vao,
+            .allocator = allocator,
         };
     }
 
-    pub fn create_bullets(self: *Self, dx: f32, dz: f32, muzzle_transform: *Mat4, spread_amount: i32) void {
+    pub fn create_bullets(self: *Self, dx: f32, dz: f32, muzzle_transform: *const Mat4, spread_amount: u32) !bool {
+        @setFloatMode(.optimized);
         // const spreadAmount = 100;
+        // limit number of bullet groups
+        if (self.bullet_groups.items.len > 9) { // this is from the parallel version
+            return false;
+        }
 
-        const muzzle_world_position = *muzzle_transform * vec4(0.0, 0.0, 0.0, 1.0);
+        const muzzle_world_position = muzzle_transform.mulVec4(&vec4(0.0, 0.0, 0.0, 1.0));
 
         const projectile_spawn_point = muzzle_world_position.xyz();
 
         const mid_direction = vec3(dx, 0.0, dz).normalize();
 
-        const normalized_direction = mid_direction.normalize_or_zero();
+        const normalized_direction = mid_direction.normalize();
 
         const rot_vec = vec3(0.0, 1.0, 0.0); // rotate around y
 
-        const x = vec3(CANONICAL_DIR.x, 0.0, CANONICAL_DIR.z).normalize_or_zero();
-        const y = vec3(normalized_direction.x, 0.0, normalized_direction.z).normalize_or_zero();
+        const x: Vec3 = vec3(CANONICAL_DIR.data[0], 0.0, CANONICAL_DIR.data[2]).normalize();
+        const y: Vec3 = vec3(normalized_direction.data[0], 0.0, normalized_direction.data[2]).normalize();
 
         // direction angle with respect to the canonical direction
-        const theta = oriented_angle(x, y, rot_vec) * -1.0;
+        const theta = geom.oriented_angle(&x, &y, &rot_vec) * -1.0;
 
-        var mid_dir_quat = Quat.from_xyzw(1.0, 0.0, 0.0, 0.0);
+        var mid_dir_quat = Quat.new(1.0, 0.0, 0.0, 0.0);
 
-        mid_dir_quat *= Quat.from_axis_angle(rot_vec, theta.to_radians());
+        mid_dir_quat = mid_dir_quat.mulQuat(&Quat.fromAxisAngle(&rot_vec, math.degreesToRadians(theta)));
 
-        const start_index = self.all_bullet_positions.len();
+        const start_index: u32 = @intCast(self.all_bullet_positions.items.len);
 
-        const bullet_group_size = spread_amount * spread_amount;
+        const bullet_group_size: u32 = spread_amount * spread_amount;
 
         const bullet_group = BulletGroup.new(start_index, bullet_group_size, BULLET_LIFETIME);
 
-        self.all_bullet_positions.resize(start_index + bullet_group_size, Vec3.default());
-        self.all_bullet_rotations.resize(start_index + bullet_group_size, Quat.default());
-        self.all_bullet_directions.resize(start_index + bullet_group_size, Vec3.default());
+        const size: usize = start_index + bullet_group_size;
+        try self.all_bullet_positions.resize(size);
+        try self.all_bullet_rotations.resize(size);
+        try self.all_bullet_directions.resize(size);
 
         const i_start = 0;
         const i_end = spread_amount;
+        const spread_amount_f32: f32 = @floatFromInt(spread_amount);
 
-        const spread_centering = ROTATION_PER_BULLET * (spread_amount - 1.0) / 4.0;
+        const spread_centering = ROTATION_PER_BULLET * (spread_amount_f32 - @as(f32, 1.0)) / @as(f32, 4.0);
 
         for (i_start..i_end) |i| {
-            const y_quat = mid_dir_quat
-                * Quat.from_axis_angle(
-                    vec3(0.0, 1.0, 0.0),
-                    ROTATION_PER_BULLET.mul_add((i - spread_amount) / 2.0, spread_centering),
-                );
+            const y_quat = mid_dir_quat.mulQuat(
+                &Quat.fromAxisAngle(
+                    &vec3(0.0, 1.0, 0.0),
+                    ROTATION_PER_BULLET * (@as(f32, @floatFromInt(i)) - spread_amount_f32) / @as(f32, 2.0) + spread_centering
+                )
+            );
 
             for (0..spread_amount) |j| {
-                const rot_quat = y_quat
-                    * Quat.from_axis_angle(
-                        vec3(1.0, 0.0, 0.0),
-                        ROTATION_PER_BULLET.mul_add((j - spread_amount) / 2.0, spread_centering),
-                    );
+                const rot_quat = y_quat.mulQuat(
+                    &Quat.fromAxisAngle(
+                        &vec3(1.0, 0.0, 0.0),
+                        ROTATION_PER_BULLET * (@as(f32, @floatFromInt(j)) - spread_amount_f32) / @as(f32, 2.0) + spread_centering
+                    )
+                );
 
-                const direction = rot_quat.mul_vec3(CANONICAL_DIR * -1.0);
+                const direction = rot_quat.rotateVec(&CANONICAL_DIR.mulScalar(-1.0));
 
                 const index = (i * spread_amount + j) + start_index;
 
-                self.all_bullet_positions[index] = projectile_spawn_point;
-                self.all_bullet_directions[index] = direction;
-                self.all_bullet_rotations[index] = rot_quat;
+                self.all_bullet_positions.items[index] = projectile_spawn_point;
+                self.all_bullet_directions.items[index] = direction;
+                self.all_bullet_rotations.items[index] = rot_quat;
             }
         }
 
-        self.bullet_groups.push(bullet_group);
+        try self.bullet_groups.append(bullet_group);
+
+        return true;
     }
 
     pub fn update_bullets(self: *Self, state: *State) void {
         //}, bulletImpactSprites: &ArrayList(SpriteSheetSprite>) {
 
-        const use_aabb = !state.enemies.is_empty();
-        var num_sub_groups = undefined;
+        const use_aabb = state.enemies.items.len != 0;
+        var num_sub_groups: u32 = undefined;
         
         if (use_aabb) { 
             num_sub_groups = 9; 
@@ -304,7 +343,7 @@ pub const BulletStore = struct {
 
         var first_live_bullet_group: usize = 0;
 
-        for (self.bullet_groups.items) |group| {
+        for (self.bullet_groups.items) |*group| {
             group.time_to_live -= state.delta_time;
 
             if (group.time_to_live <= 0.0) {
@@ -313,7 +352,7 @@ pub const BulletStore = struct {
                 // could make this async
                 const bullet_group_start_index = group.start_index;
                 const num_bullets_in_group = group.group_size;
-                const sub_group_size = num_bullets_in_group / num_sub_groups;
+                const sub_group_size = @divTrunc(num_bullets_in_group, num_sub_groups);
 
                 for (0..num_sub_groups) |sub_group| {
                     var bullet_start = sub_group_size * sub_group;
@@ -327,14 +366,14 @@ pub const BulletStore = struct {
                     bullet_end += bullet_group_start_index;
 
                     for (bullet_start..bullet_end) |bullet_index| {
-                        self.all_bullet_positions[bullet_index] += self.all_bullet_directions[bullet_index] * delta_position_magnitude;
+                        self.all_bullet_positions.items[bullet_index] = self.all_bullet_positions.items[bullet_index].add(&self.all_bullet_directions.items[bullet_index].mulScalar(delta_position_magnitude));
                     }
 
                     var subgroup_bound_box = Aabb.new();
 
                     if (use_aabb) {
                         for (bullet_start..bullet_end) |bullet_index| {
-                            subgroup_bound_box.expand_to_include(self.all_bullet_positions[bullet_index]);
+                            subgroup_bound_box.expand_to_include(self.all_bullet_positions.items[bullet_index]);
                         }
 
                         subgroup_bound_box.expand_by(BULLET_ENEMY_MAX_COLLISION_DIST);
@@ -367,13 +406,17 @@ pub const BulletStore = struct {
         if (first_live_bullet_group != 0) {
             first_live_bullet =
                 self.bullet_groups[first_live_bullet_group - 1].start_index + self.bullet_groups[first_live_bullet_group - 1].group_size;
-            self.bullet_groups.drain(0..first_live_bullet_group);
+            // self.bullet_groups.drain(0..first_live_bullet_group);
+            core.utils.removeRange(BulletGroup, self.bullet_group, 0, first_live_bullet_group);
         }
 
         if (first_live_bullet != 0) {
-            self.all_bullet_positions.drain(0..first_live_bullet);
-            self.all_bullet_directions.drain(0..first_live_bullet);
-            self.all_bullet_rotations.drain(0..first_live_bullet);
+            // self.all_bullet_positions.drain(0..first_live_bullet);
+            // self.all_bullet_directions.drain(0..first_live_bullet);
+            // self.all_bullet_rotations.drain(0..first_live_bullet);
+            core.utils.removeRange(Vec3, self.all_bullet_positions, 0, first_live_bullet);
+            core.utils.removeRange(Vec3, self.all_bullet_directions, 0, first_live_bullet);
+            core.utils.removeRange(Quat, self.all_bullet_rotations, 0, first_live_bullet);
 
             for (self.bullet_groups.items) |group| {
                 group.start_index -= first_live_bullet;
@@ -386,7 +429,14 @@ pub const BulletStore = struct {
             }
             const sprite_duration = self.bullet_impact_spritesheet.num_columns * self.bullet_impact_spritesheet.time_per_sprite;
 
-            self.bullet_impact_sprites.retain(|sprite| sprite.age < sprite_duration);
+            const predicate = struct {
+                pub fn func(sprite: SpriteSheetSprite) bool {
+                   return sprite.age < sprite_duration;
+                }
+            };
+
+            // self.bullet_impact_sprites.retain(|sprite| sprite.age < sprite_duration);
+            core.utils.retain(SpriteSheetSprite, self.bullet_impact_sprites, predicate.func, self.allocator);
         }
 
         for (state.enemies.items) |enemy| {
@@ -397,11 +447,18 @@ pub const BulletStore = struct {
             }
         }
 
-        state.enemies.retain(|e| e.is_alive);
+        const predicate = struct {
+            pub fn func(enemy: Enemy) bool {
+                return enemy.is_alive;
+            }
+        };
+
+        // state.enemies.retain(|e| e.is_alive);
+        core.utils.retain(Enemy, state.enemies, predicate.func, self.allocator);
     }
 
-    pub fn draw_bullets(self: *Self, shader: *Shader, projection_view: *Mat4) void {
-        if (self.all_bullet_positions.len == 0) {
+    pub fn draw_bullets(self: *Self, shader: *Shader, projection_view: *const Mat4) void {
+        if (self.all_bullet_positions.items.len == 0) {
             return;
         }
 
@@ -416,11 +473,10 @@ pub const BulletStore = struct {
         shader.set_mat4("PV", projection_view);
         shader.set_bool("useLight", false);
 
-        bind_texture(shader, 0, "texture_diffuse", self.bullet_texture);
-        bind_texture(shader, 1, "texture_normal", self.bullet_texture);
+        shader.bind_texture(0, "texture_diffuse", self.bullet_texture);
+        shader.bind_texture(1, "texture_normal", self.bullet_texture);
 
         self.render_bullet_sprites();
-
 
         gl.disable(gl.BLEND);
         gl.enable(gl.CULL_FACE);
@@ -452,7 +508,7 @@ pub const BulletStore = struct {
             gl.TRIANGLES,
             12, // 6,
             gl.UNSIGNED_INT,
-            NULL,
+            null,
             self.all_bullet_positions.len(),
         );
     }
@@ -464,7 +520,7 @@ pub const BulletStore = struct {
         sprite_shader.set_int("numCols", self.bullet_impact_spritesheet.num_columns);
         sprite_shader.set_float("timePerSprite", self.bullet_impact_spritesheet.time_per_sprite);
 
-        bind_texture(sprite_shader, 0, "spritesheet", &self.bullet_impact_spritesheet.texture);
+        sprite_shader.bind_texture(0, "spritesheet", &self.bullet_impact_spritesheet.texture);
 
         gl.enable(gl.BLEND);
         // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -509,17 +565,17 @@ fn bullet_collides_with_enemy(position: *Vec3, direction: *Vec3, enemy: *Enemy) 
 
     const a0 = *position - *direction * (BULLET_COLLIDER.height / 2.0);
     const a1 = *position + *direction * (BULLET_COLLIDER.height / 2.0);
-    const b0 = enemy.position - enemy.dir * (ENEMY_COLLIDER.height / 2.0);
-    const b1 = enemy.position + enemy.dir * (ENEMY_COLLIDER.height / 2.0);
+    const b0 = enemy.position - enemy.dir * (world.ENEMY_COLLIDER.height / 2.0);
+    const b1 = enemy.position + enemy.dir * (world.ENEMY_COLLIDER.height / 2.0);
 
     const closet_distance = geom.distance_between_line_segments(&a0, &a1, &b0, &b1);
 
-    return closet_distance <= (BULLET_COLLIDER.radius + ENEMY_COLLIDER.radius);
+    return closet_distance <= (BULLET_COLLIDER.radius + world.ENEMY_COLLIDER.radius);
 }
 
 pub fn rotate_by_quat(v: *Vec3, q: *Quat) Vec3 {
     const q_prime = Quat.from_xyzw(q.w, -q.x, -q.y, -q.z);
-    partial_hamilton_product(&partial_hamilton_product2(q, v), &q_prime)
+    return partial_hamilton_product(&partial_hamilton_product2(q, v), &q_prime);
 }
 
 pub fn partial_hamilton_product2(quat: *Quat, vec: *Vec3) Quat {
@@ -573,12 +629,12 @@ fn hamilton_product_quat_quat(first: Quat, other: *Quat) Quat {
 //
 //             const direction = vec3(x, 0.0, z);
 //
-//             const normalized_direction = direction; //.normalize_or_zero();
+//             const normalized_direction = direction; //.normalize();
 //
 //             const rot_vec = vec3(0.0, 1.0, 0.0); // rotate around y
 //
-//             const x = vec3(canonical_dir.x, 0.0, canonical_dir.z).normalize_or_zero();
-//             const y = vec3(normalized_direction.x, 0.0, normalized_direction.z).normalize_or_zero();
+//             const x = vec3(canonical_dir.x, 0.0, canonical_dir.z).normalize();
+//             const y = vec3(normalized_direction.x, 0.0, normalized_direction.z).normalize();
 //
 //             // direction angle with respect to the canonical direction
 //             const theta = oriented_angle(x, y, rot_vec) * -1.0;
