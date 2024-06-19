@@ -1,7 +1,7 @@
 const std = @import("std");
 const gl = @import("zopengl").bindings;
 const math = @import("math");
-const Texture = @import("texture.zig");
+const Texture = @import("texture.zig").Texture;
 
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
@@ -121,17 +121,17 @@ pub const Shader = struct {
         return shader;
     }
 
-    pub fn use_shader(self: *Shader) void {
+    pub fn use_shader(self: *const Shader) void {
         gl.useProgram(self.id);
     }
 
-    pub fn use_shader_with(self: *Shader, projection: *Mat4, view: *Mat4) void {
+    pub fn use_shader_with(self: *const Shader, projection: *Mat4, view: *Mat4) void {
         gl.useProgram(self.id);
         self.set_mat4("projection", projection);
         self.set_mat4("view", view);
     }
 
-    pub fn get_uniform_location(self: *Shader, uniform: [:0]const u8) gl.Int {
+    pub fn get_uniform_location(self: *const Shader, uniform: [:0]const u8) gl.Int {
         return gl.getUniformLocation(self.id, uniform);
     }
 
@@ -227,8 +227,8 @@ pub const Shader = struct {
         gl.bindTexture(gl.TEXTURE_2D, texture_id);
     }
 
-    pub fn bind_texture(self: *const Shader, texture_unit: i32, uniform_name: [:0]const u8, texture: *Texture) void {
-        gl.activeTexture(gl.TEXTURE0 + texture_unit);
+    pub fn bind_texture(self: *const Shader, texture_unit: i32, uniform_name: [:0]const u8, texture: *const Texture) void {
+        gl.activeTexture(gl.TEXTURE0 + @as(c_uint, @intCast(texture_unit)));
         gl.bindTexture(gl.TEXTURE_2D, texture.id);
         self.set_int(uniform_name, texture_unit);
     }

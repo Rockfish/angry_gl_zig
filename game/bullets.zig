@@ -379,16 +379,16 @@ pub const BulletStore = struct {
                         subgroup_bound_box.expand_by(BULLET_ENEMY_MAX_COLLISION_DIST);
                     }
 
-                    for (0..state.enemies.len) |i| {
-                        const enemy = &state.enemies[i];
+                    for (0..state.enemies.items.len) |i| {
+                        const enemy = &state.enemies.items[i];
 
                         if (use_aabb and !subgroup_bound_box.contains_point(enemy.position)) {
                             continue;
                         }
                         for (bullet_start..bullet_end) |bullet_index| {
                             if (bullet_collides_with_enemy(
-                                &self.all_bullet_positions[bullet_index],
-                                &self.all_bullet_directions[bullet_index],
+                                &self.all_bullet_positions.items[bullet_index],
+                                &self.all_bullet_directions.items[bullet_index],
                                 enemy,
                             )) {
                                 // println!("killed enemy!");
@@ -473,8 +473,8 @@ pub const BulletStore = struct {
         shader.set_mat4("PV", projection_view);
         shader.set_bool("useLight", false);
 
-        shader.bind_texture(0, "texture_diffuse", self.bullet_texture);
-        shader.bind_texture(1, "texture_normal", self.bullet_texture);
+        shader.bind_texture(0, "texture_diffuse", &self.bullet_texture);
+        shader.bind_texture(1, "texture_normal", &self.bullet_texture);
 
         self.render_bullet_sprites();
 
@@ -490,8 +490,8 @@ pub const BulletStore = struct {
 
         gl.bufferData(
             gl.ARRAY_BUFFER,
-            (self.all_bullet_rotations.len() * SIZE_OF_QUAT),
-            self.all_bullet_rotations.ptr,
+            @as(isize, @intCast(self.all_bullet_rotations.items.len * SIZE_OF_QUAT)),
+            @as(?*anyopaque, @ptrCast(&self.all_bullet_rotations.items)),
             gl.STREAM_DRAW,
         );
 
@@ -499,8 +499,8 @@ pub const BulletStore = struct {
 
         gl.bufferData(
             gl.ARRAY_BUFFER,
-            (self.all_bullet_positions.len() * SIZE_OF_VEC3),
-            self.all_bullet_positions.ptr,
+            @as(isize, @intCast(self.all_bullet_positions.items.len * SIZE_OF_VEC3)),
+            @as(?*anyopaque, @ptrCast(&self.all_bullet_positions.items)),
             gl.STREAM_DRAW,
         );
 
@@ -509,7 +509,7 @@ pub const BulletStore = struct {
             12, // 6,
             gl.UNSIGNED_INT,
             null,
-            self.all_bullet_positions.len(),
+            @as(c_int, @intCast(self.all_bullet_positions.items.len)),
         );
     }
 
@@ -559,14 +559,14 @@ pub const BulletStore = struct {
 };
 
 fn bullet_collides_with_enemy(position: *Vec3, direction: *Vec3, enemy: *Enemy) bool {
-    if (position.distance(enemy.position) > BULLET_ENEMY_MAX_COLLISION_DIST) {
+    if (position.distance(&enemy.position) > BULLET_ENEMY_MAX_COLLISION_DIST) {
         return false;
     }
 
-    const a0 = *position - *direction * (BULLET_COLLIDER.height / 2.0);
-    const a1 = *position + *direction * (BULLET_COLLIDER.height / 2.0);
-    const b0 = enemy.position - enemy.dir * (world.ENEMY_COLLIDER.height / 2.0);
-    const b1 = enemy.position + enemy.dir * (world.ENEMY_COLLIDER.height / 2.0);
+    const a0 = position.sub(&direction.mulScalar(BULLET_COLLIDER.height / 2.0));
+    const a1 = position.add(&direction.mulScalar(BULLET_COLLIDER.height / 2.0));
+    const b0 = enemy.position.sub(&enemy.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
+    const b1 = enemy.position.add(&enemy.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
 
     const closet_distance = geom.distance_between_line_segments(&a0, &a1, &b0, &b1);
 

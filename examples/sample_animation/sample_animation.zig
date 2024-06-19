@@ -22,6 +22,7 @@ const Vec4 = math.Vec4;
 const vec2 = math.vec2;
 const vec3 = math.vec3;
 const Mat4 = math.Mat4;
+const Quat = math.Quat;
 
 const Texture = core.texture.Texture;
 const TextureType = core.texture.TextureType;
@@ -62,6 +63,11 @@ pub fn main() !void {
 
     const allocator = gpa.allocator();
     core.string.init(allocator);
+
+    const SIZE_OF_4f32 = @sizeOf([4]f32);
+    const SIZE_OF_QUAT = @sizeOf(Quat);
+
+    std.debug.print("4f32 = {d}  quat = {d}\n", .{SIZE_OF_4f32, SIZE_OF_QUAT});
 
     // var arena_state = std.heap.ArenaAllocator.init(allocator);
     // defer arena_state.deinit();

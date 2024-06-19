@@ -548,7 +548,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         player_shader.set_bool("useEmissive", true);
         player_shader.set_bool("depth_mode", false);
 
-        player.render(&player_shader);
+        try player.render(player_shader);
 
         muzzle_flash.draw(sprite_shader, &projection_view, &muzzle_transform);
 

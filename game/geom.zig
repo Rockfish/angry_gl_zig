@@ -6,31 +6,31 @@ const vec3 = math.vec3;
 const Mat3 = math.Mat3;
 const mat3 = math.mat3;
 
-pub fn distance_between_point_and_line_segment(point: *Vec3, a: *Vec3, b: *Vec3) f32 {
-    const ab = *b - *a;
-    const ap = *point - *a;
-    if (ap.dot(ab) <= 0.0) {
+pub fn distance_between_point_and_line_segment(point: *const Vec3, a: *const Vec3, b: *const Vec3) f32 {
+    const ab = b.sub(a);
+    const ap = point.sub(a);
+    if (ap.dot(&ab) <= 0.0) {
         return ap.length();
     }
-    const bp = *point - *b;
-    if (bp.dot(ab) >= 0.0) {
+    const bp = point.sub(b);
+    if (bp.dot(&ab) >= 0.0) {
         return bp.length();
     }
-    return ab.cross(ap).length() / ab.length();
+    return ab.cross(&ap).length() / ab.length();
 }
 
-pub fn distance_between_line_segments(a0: *Vec3, a1: *Vec3, b0: *Vec3, b1: *Vec3) f32 {
+pub fn distance_between_line_segments(a0: *const Vec3, a1: *const Vec3, b0: *const Vec3, b1: *const Vec3) f32 {
     const eps: f32 = 0.001;
 
-    var a = *a1 - *a0;
-    var b = *b1 - *b0;
+    var a = a1.sub(a0);
+    var b = b1.sub(b0);
     const mag_a = a.length();
     const mag_b = b.length();
 
     a = a / mag_a;
     b = b / mag_b;
 
-    const cross = a.cross(b);
+    const cross = a.cross(&b);
     const cl = cross.length();
     const denom = cl * cl;
 
@@ -38,24 +38,24 @@ pub fn distance_between_line_segments(a0: *Vec3, a1: *Vec3, b0: *Vec3, b1: *Vec3
     // If they don't overlap then there is a closest point solution.
     // If they do overlap, there are infinite closest positions, but there is a closest distance
     if (denom < eps) {
-        const d0 = a.dot(*b0 - *a0);
-        const d1 = a.dot(*b1 - *a0);
+        const d0 = a.dot(b0.sub(a0));
+        const d1 = a.dot(b1.sub(a0));
 
         // Is segment B before A?
         if (d0 <= 0.0 and 0.0 >= d1) {
-            if (d0.abs() < d1.abs()) {
-                return (*a0 - *b0).length();
+            if (d0.abs() < @abs(d1)) {
+                return a0.sub(b0).length();
             }
-            return (*a0 - *b1).length();
+            return a0.sub(b1).length();
         } else if (d0 >= mag_a and mag_a <= d1) {
             if (d0.abs() < d1.abs()) {
-                return (*a1 - *b0).length();
+                return a1.sub(b0).length();
             }
-            return (*a1 - *b1).length();
+            return a1.sub(b1).length();
         }
 
         // Segments overlap, return distance between parallel segments
-        return (((d0 * a) + *a0) - *b0).length();
+        return a.mulScalar(d0).add(a0).sub(b0).length();
     }
 
     // Lines criss-cross: Calculate the projected closest points

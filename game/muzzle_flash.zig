@@ -51,6 +51,14 @@ pub const MuzzleFlash = struct {
         };
     }
 
+    const Predicate = struct {
+        pub var _max_age: f32 = 0.0;
+        pub fn init(m_age: f32) void { _max_age = m_age; }
+        pub fn func (spriteAge: *SpriteAge) bool {
+            return spriteAge.age < _max_age;
+        }
+    };
+
     pub fn update(self: *Self, delta_time: f32) void {
         if (self.muzzle_flash_sprites_age.items.len != 0) {
             for (0..self.muzzle_flash_sprites_age.items.len) |i| {
@@ -58,15 +66,9 @@ pub const MuzzleFlash = struct {
             }
             const max_age = self.muzzle_flash_impact_sprite.num_columns * self.muzzle_flash_impact_sprite.time_per_sprite;
 
-            const Predicate = struct {
-                pub const _max_age: f32 = 0.0;
-                pub fn func (spriteAge: *SpriteAge) bool {
-                    return spriteAge.age < _max_age;
-                }
-            };
-            Predicate._max_age = max_age;
-            var predicate = Predicate{};
-            predicate._max_age = max_age;
+            const predicate = Predicate{};
+            Predicate.init(max_age);
+
             // need different retain for T = f32
             core.utils.retain(SpriteAge, &self.muzzle_flash_sprites_age, predicate.func, self.allocator);
         }

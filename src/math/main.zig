@@ -42,10 +42,11 @@ pub const clamp = std.math.clamp;
 pub const log10 = std.math.log10;
 pub const degreesToRadians = std.math.degreesToRadians;
 pub const radiansToDegrees = std.math.radiansToDegrees;
-pub const maxInt = std.math.maxInt;
 pub const lerp = std.math.lerp;
 
 pub const pi: f32 = @as(f32, std.math.pi);
+pub const minFloat: f32 = std.math.floatMin(f32);
+pub const maxFloat: f32 = std.math.floatMax(f32);
 
 /// 2/sqrt(π)
 pub const two_sqrtpi = std.math.two_sqrtpi;

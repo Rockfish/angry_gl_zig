@@ -86,6 +86,14 @@ pub const Vec3 = struct {
         return Vec3 { .data = c };
     }
 
+    pub fn length(v: *const Vec3) f32 {
+        return std.math.sqrt(v.dot(v));
+    }
+
+    pub fn distance(self: *Vec3, rhs: *Vec3) f32 {
+        return self.sub(rhs).length();
+    }
+
     pub fn lerp(from: *const Vec3, to: *const Vec3, t: f32) Vec3 {
         var result: [3]f32 align(16) = undefined;
         cglm.glm_vec3_lerp(@constCast(&from.data), @constCast(&to.data),  t, &result);

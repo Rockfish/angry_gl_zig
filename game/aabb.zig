@@ -17,23 +17,23 @@ pub const Aabb = struct {
 
     pub fn new() Self {
         return .{
-            .x_min = std.math.maxInt,
-            .x_max = std.math.minInt,
-            .y_min = std.math.maxInt,
-            .y_max = std.math.minInt,
-            .z_min = std.math.maxInt,
-            .z_max = std.math.minInt,
+            .x_min = math.maxFloat,
+            .x_max = math.minFloat,
+            .y_min = math.maxFloat,
+            .y_max = math.minFloat,
+            .z_min = math.maxFloat,
+            .z_max = math.minFloat,
             .is_initialize = false,
         };
     }
 
     pub fn expand_to_include(self: *Self, v: Vec3) void {
-        self.x_min = self.x_min.min(v.x);
-        self.x_max = self.x_max.max(v.x);
-        self.y_min = self.y_min.min(v.y);
-        self.y_max = self.y_max.max(v.y);
-        self.z_min = self.z_min.min(v.z);
-        self.z_max = self.z_max.max(v.z);
+        self.x_min = @min(self.x_min, v.data[0]);
+        self.x_max = @max(self.x_max, v.data[0]);
+        self.y_min = @min(self.y_min, v.data[1]);
+        self.y_max = @max(self.y_max, v.data[1]);
+        self.z_min = @min(self.z_min, v.data[2]);
+        self.z_max = @max(self.z_max, v.data[2]);
         self.is_initialize = true;
     }
 

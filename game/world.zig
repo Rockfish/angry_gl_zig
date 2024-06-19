@@ -14,6 +14,7 @@ const Floor = @import("floor.zig").Floor;
 // const SoundSystem = @import("sound_system.zig").SoundSystem;
 const fb = @import("framebuffers.zig");
 const quads = @import("quads.zig");
+const Capsule = @import("capsule.zig").Capsule;
 
 const ArrayList = std.ArrayList;
 
@@ -41,6 +42,8 @@ pub const MONSTER_SPEED: f32 = 0.6;
 pub const ENEMY_SPAWN_INTERVAL: f32 = 1.0; // seconds
 pub const SPAWNS_PER_INTERVAL: i32 = 1;
 pub const SPAWN_RADIUS: f32 = 10.0; // from player
+
+pub const ENEMY_COLLIDER: Capsule = Capsule { .height = 0.4, .radius = 0.08 };
 
 pub const CameraType = enum {
     Game,

@@ -252,7 +252,7 @@ pub const Animator = struct {
         try self.transitions.append(transition);
     }
 
-    pub fn play_weight_animations(self: *Self, weighted_animation: []const WeightedAnimation, frame_time: f32) void {
+    pub fn play_weight_animations(self: *Self, weighted_animation: []const WeightedAnimation, frame_time: f32) !void {
         // reset node transforms
         var iterator = self.node_transforms.valueIterator();
         while (iterator.next()) |node_transform| {
@@ -272,15 +272,15 @@ pub const Animator = struct {
             var target_anim_ticks = if (weighted.optional_start > 0.0) blk1: {
                 const tick = (frame_time - weighted.optional_start) * self.model_animation.ticks_per_second + weighted.offset;
                 break :blk1 @min(tick, tick_range);
-            } else (frame_time * self.model_animation.ticks_per_second + weighted.offset) % tick_range;
+            } else @mod((frame_time * self.model_animation.ticks_per_second + weighted.offset), tick_range);
 
             target_anim_ticks += weighted.start_tick;
 
-            if ((target_anim_ticks < (weighted.start_tick - 0.01)) || (target_anim_ticks > (weighted.end_tick + 0.01))) {
+            if ((target_anim_ticks < (weighted.start_tick - 0.01)) or (target_anim_ticks > (weighted.end_tick + 0.01))) {
                 panic("target_anim_ticks out of range: {}", target_anim_ticks);
             }
 
-            calculate_transform_maps(
+            try self.calculate_transform_maps(
                 self.root_node,
                 self.model_animation.node_animations,
                 self.node_transforms,
@@ -290,7 +290,7 @@ pub const Animator = struct {
             );
         }
 
-        self.update_final_transforms();
+        try self.update_final_transforms();
     }
 
     pub fn update_animation(self: *Self, delta_time: f32) !void {

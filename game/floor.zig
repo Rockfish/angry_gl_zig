@@ -90,7 +90,7 @@ pub const Floor = struct {
         };
     }
 
-    pub fn draw(self: *Self, shader: *const Shader, projection_view: *const Mat4) void {
+    pub fn draw(self: *const Self, shader: *const Shader, projection_view: *const Mat4) void {
         shader.use_shader();
 
         shader.bind_texture(0, "texture_diffuse", &self.texture_floor_diffuse);
@@ -100,7 +100,7 @@ pub const Floor = struct {
         // angle floor
         // const _model = Mat4.from_axis_angle(vec3(0.0, 1.0, 0.0), math.degreesToRadians(45.0));
 
-        const model = Mat4.IDENTITY;
+        const model = Mat4.identity();
 
         shader.set_mat4("PV", projection_view);
         shader.set_mat4("model", &model);

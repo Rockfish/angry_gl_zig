@@ -3,7 +3,7 @@ const math = @import("math");
 const core = @import("core");
 const world = @import("world.zig");
 const geom = @import("geom.zig");
-const Capsule = @import("capsule.zig").Capsule;
+
 // const gl = @import("zopengl").bindings;
 
 const Allocator = std.mem.Allocator;
@@ -26,8 +26,6 @@ const TextureConfig = core.texture.TextureConfig;
 const TextureType = core.texture.TextureType;
 const TextureWrap = core.texture.TextureWrap;
 const TextureFilter = core.texture.TextureFilter;
-
-pub const ENEMY_COLLIDER: Capsule = Capsule { .height = 0.4, .radius = 0.08 };
 
 pub const Enemy = struct {
     position: Vec3,
@@ -101,11 +99,11 @@ pub const EnemySystem = struct {
             enemy.position = enemy.position.add(&enemy.dir.mulScalar(state.delta_time * world.MONSTER_SPEED));
 
             if (player.is_alive) {
-                const p1 = enemy.position.sub(&enemy.dir.mulScalar(ENEMY_COLLIDER.height / 2.0));
-                const p2 = enemy.position.sub(&enemy.dir.mulScalar(ENEMY_COLLIDER.height / 2.0));
+                const p1 = enemy.position.sub(&enemy.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
+                const p2 = enemy.position.sub(&enemy.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
                 const dist = geom.distance_between_point_and_line_segment(&player_collision_position, &p1, &p2);
 
-                if (dist <= (world.PLAYER_COLLISION_RADIUS + ENEMY_COLLIDER.radius)) {
+                if (dist <= (world.PLAYER_COLLISION_RADIUS + world.ENEMY_COLLIDER.radius)) {
                     // println!("GOTTEM!");
                     player.is_alive = false;
                     player.set_player_death_time(state.frame_time);
@@ -125,16 +123,16 @@ pub const EnemySystem = struct {
             const val =if (e.dir.data[2] < zero) zero else math.pi;
             const monster_theta = math.atan(e.dir.data[0] / e.dir.data[2]) + val;
 
-            var model_transform = Mat4.fromTranslation(e.position);
+            var model_transform = Mat4.fromTranslation(&e.position);
 
-            model_transform *= Mat4.fromScale(Vec3.splat(0.01));
-            model_transform *= Mat4.fromAxisAngle(vec3(0.0, 1.0, 0.0), monster_theta);
-            model_transform *= Mat4.fromAxisAngle(vec3(0.0, 0.0, 1.0), math.pi);
-            model_transform *= Mat4.fromAxisAngle(vec3(1.0, 0.0, 0.0), math.degreesToRadians(90));
+            model_transform = model_transform.mulMat4(&Mat4.fromScale(&Vec3.splat(0.01)));
+            model_transform = model_transform.mulMat4(&Mat4.fromAxisAngle(&vec3(0.0, 1.0, 0.0), monster_theta));
+            model_transform = model_transform.mulMat4(&Mat4.fromAxisAngle(&vec3(0.0, 0.0, 1.0), math.pi));
+            model_transform = model_transform.mulMat4(&Mat4.fromAxisAngle(&vec3(1.0, 0.0, 0.0), math.degreesToRadians(90)));
 
             // var rot_only = Mat4.from_axis_angle(vec3(0.0, 1.0, 0.0), monster_theta);
             // rot_only = Mat4.from_axis_angle(vec3(0.0, 0.0, 1.0), PI);
-            const rot_only = Mat4.fromAxisAngle(vec3(1.0, 0.0, 0.0), math.degreesToRadians(90));
+            const rot_only = Mat4.fromAxisAngle(&vec3(1.0, 0.0, 0.0), math.degreesToRadians(90));
 
             shader.set_mat4("aimRot", &rot_only);
             shader.set_mat4("model", &model_transform);
