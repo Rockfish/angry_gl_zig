@@ -405,18 +405,18 @@ pub const BulletStore = struct {
 
         if (first_live_bullet_group != 0) {
             first_live_bullet =
-                self.bullet_groups[first_live_bullet_group - 1].start_index + self.bullet_groups[first_live_bullet_group - 1].group_size;
+                self.bullet_groups.items[first_live_bullet_group - 1].start_index + self.bullet_groups.items[first_live_bullet_group - 1].group_size;
             // self.bullet_groups.drain(0..first_live_bullet_group);
-            core.utils.removeRange(BulletGroup, self.bullet_group, 0, first_live_bullet_group);
+            try core.utils.removeRange(BulletGroup, &self.bullet_groups, 0, first_live_bullet_group);
         }
 
         if (first_live_bullet != 0) {
             // self.all_bullet_positions.drain(0..first_live_bullet);
             // self.all_bullet_directions.drain(0..first_live_bullet);
             // self.all_bullet_rotations.drain(0..first_live_bullet);
-            core.utils.removeRange(Vec3, self.all_bullet_positions, 0, first_live_bullet);
-            core.utils.removeRange(Vec3, self.all_bullet_directions, 0, first_live_bullet);
-            core.utils.removeRange(Quat, self.all_bullet_rotations, 0, first_live_bullet);
+            try core.utils.removeRange(Vec3, self.all_bullet_positions, 0, first_live_bullet);
+            try core.utils.removeRange(Vec3, self.all_bullet_directions, 0, first_live_bullet);
+            try core.utils.removeRange(Quat, self.all_bullet_rotations, 0, first_live_bullet);
 
             for (self.bullet_groups.items) |group| {
                 group.start_index -= first_live_bullet;
@@ -513,11 +513,11 @@ pub const BulletStore = struct {
         );
     }
 
-    pub fn draw_bullet_impacts(self: *Self, sprite_shader: *Shader, projection_view: *Mat4) void {
+    pub fn draw_bullet_impacts(self: *Self, sprite_shader: *Shader, projection_view: *const Mat4) void {
         sprite_shader.use_shader();
         sprite_shader.set_mat4("PV", projection_view);
 
-        sprite_shader.set_int("numCols", self.bullet_impact_spritesheet.num_columns);
+        sprite_shader.set_int("numCols", @intFromFloat(self.bullet_impact_spritesheet.num_columns));
         sprite_shader.set_float("timePerSprite", self.bullet_impact_spritesheet.time_per_sprite);
 
         sprite_shader.bind_texture(0, "spritesheet", &self.bullet_impact_spritesheet.texture);
@@ -532,8 +532,8 @@ pub const BulletStore = struct {
         const scale: f32 = 2.0; // 0.25f32;
 
         for (self.bullet_impact_sprites.items) |sprite| {
-            var model = Mat4.from_translation(sprite.world_position);
-            model *= Mat4.from_rotation_x(math.degressToRadians(-90.0));
+            var model = Mat4.fromTranslation(&sprite.world_position);
+            model = model.mulMat4(&Mat4.fromRotationX(math.degreesToRadians(-90.0)));
 
             // TODO: Billboarding
             // for (int i = 0; i < 3; i++)
@@ -544,7 +544,7 @@ pub const BulletStore = struct {
             //     }
             // }
 
-            model *= Mat4.from_scale(vec3(scale, scale, scale));
+            model = model.mulMat4(&Mat4.fromScale(&vec3(scale, scale, scale)));
 
             sprite_shader.set_float("age", sprite.age);
             sprite_shader.set_mat4("model", &model);

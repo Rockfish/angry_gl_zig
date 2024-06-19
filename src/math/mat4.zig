@@ -93,6 +93,27 @@ pub const Mat4 = struct {
         return Mat4 { .data = result, };
     }
 
+    pub fn fromRotationX(angle: f32) Mat4 {
+        var result: [4][4]f32 align(16) = undefined;
+        const axis: [3]f32 = .{1.0, 0.0, 0.0};
+        cglm.glm_rotate_make(&result, angle, @as(*[3]f32, @ptrCast(@alignCast(@constCast(&axis)))));
+        return Mat4 { .data = result, };
+    }
+
+    pub fn fromRotationY(angle: f32) Mat4 {
+        var result: [4][4]f32 align(16) = undefined;
+        const axis: [3]f32 = .{0.0, 1.0, 0.0};
+        cglm.glm_rotate_make(&result, angle, @as(*[3]f32, @ptrCast(@alignCast(@constCast(&axis)))));
+        return Mat4 { .data = result, };
+    }
+
+    pub fn fromRotationZ(angle: f32) Mat4 {
+        var result: [4][4]f32 align(16) = undefined;
+        const axis: [3]f32 = .{0.0, 0.0, 1.0};
+        cglm.glm_rotate_make(&result, angle, @as(*[3]f32, @ptrCast(@alignCast(@constCast(&axis)))));
+        return Mat4 { .data = result, };
+    }
+
     pub fn perspectiveRhGl(fov: f32, aspect: f32, near: f32, far: f32) Self {
         var projection: [4][4]f32 align(16) = undefined;
         cglm.glmc_perspective_rh_no(fov, aspect, near, far, &projection);

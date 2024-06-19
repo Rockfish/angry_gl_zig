@@ -89,6 +89,10 @@ pub const Vec3 = struct {
         return .{.x = a.x * b, .y = a.y * b, .z = a.z * b};
     }
 
+    pub fn divScalar(a: *const Vec3, b: f32) Vec3 {
+        return .{.x = a.x / b, .y = a.y / b, .z = a.z / b};
+    }
+
     pub fn dot(lhs: *const Vec3, rhs: *const Vec3) f32 {
         return (lhs.x * rhs.x) + (lhs.y * rhs.y) + (lhs.z * rhs.z);
     }

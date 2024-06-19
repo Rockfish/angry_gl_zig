@@ -61,8 +61,8 @@ pub const BurnMarks = struct {
         });
     }
 
-    pub fn draw_marks(self: *Self, shader: *Shader, projection_view: *Mat4, delta_time: f32) void {
-        if (self.marks.len == 0) {
+    pub fn draw_marks(self: *Self, shader: *Shader, projection_view: *const Mat4, delta_time: f32) void {
+        if (self.marks.items.len == 0) {
             return;
         }
 
@@ -78,15 +78,15 @@ pub const BurnMarks = struct {
 
         gl.bindVertexArray(self.unit_square_vao);
 
-        for (self.marks.items) |mark| {
+        for (self.marks.items) |*mark| {
             const scale: f32 = 0.5 * mark.time_left;
             mark.time_left -= delta_time;
 
             // model *= Mat4.from_translation(vec3(mark.x, 0.01, mark.z));
-            var model = Mat4.from_translation(mark.position);
+            var model = Mat4.fromTranslation(&mark.position);
 
-            model *= Mat4.from_rotation_x(math.degreesToRadians(-90.0));
-            model *= Mat4.from_scale(vec3(scale, scale, scale));
+            model = model.mulMat4(&Mat4.fromRotationX(math.degreesToRadians(-90.0)));
+            model = model.mulMat4(&Mat4.fromScale(&vec3(scale, scale, scale)));
 
             shader.set_mat4("model", &model);
 

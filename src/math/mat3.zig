@@ -17,17 +17,19 @@ pub const Mat3 = struct {
     const Self = @This();
 
     pub fn from_cols(x_axis: Vec3, y_axis: Vec3, z_axis: Vec3) Self {
-        return .{
-            x_axis.data,
-            y_axis.data,
-            z_axis.data,
+        return Mat3 {
+            .data = .{
+                x_axis.asArray(),
+                y_axis.asArray(),
+                z_axis.asArray(),
+            }
         };
     }
 
-    pub fn determinant(self: *Self) f32 {
+    pub fn determinant(self: *const Self) f32 {
         const x_axis = Vec3.fromArray(self.data[0]);
         const y_axis = Vec3.fromArray(self.data[1]);
         const z_axis = Vec3.fromArray(self.data[2]);
-        return z_axis.dot(x_axis.cross(y_axis));
+        return z_axis.dot(&x_axis.cross(&y_axis));
     }
 };

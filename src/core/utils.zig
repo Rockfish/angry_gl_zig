@@ -90,7 +90,7 @@ pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a:
 }
 
 pub fn removeRange(comptime T: type, list: *std.ArrayList(T), start: usize, end: usize) !void {
-    if (start >= end or end >= list.len) {
+    if (start >= end or end >= list.items.len) {
         return error.InvalidRange;
     }
     const count = end - start + 1;

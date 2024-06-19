@@ -87,8 +87,8 @@ pub const MuzzleFlash = struct {
         try self.muzzle_flash_sprites_age.append(sprite_age);
     }
 
-    pub fn draw(self: *const Self, sprite_shader: *Shader, projection_view: *Mat4, muzzle_transform: *Mat4) void {
-        if (self.muzzle_flash_sprites_age.len == 0) {
+    pub fn draw(self: *const Self, sprite_shader: *Shader, projection_view: *const Mat4, muzzle_transform: *const Mat4) void {
+        if (self.muzzle_flash_sprites_age.items.len == 0) {
             return;
         }
 
@@ -101,21 +101,23 @@ pub const MuzzleFlash = struct {
 
         sprite_shader.bind_texture(0, "spritesheet", &self.muzzle_flash_impact_sprite.texture);
 
-        sprite_shader.set_int("numCols", self.muzzle_flash_impact_sprite.num_columns);
+        sprite_shader.set_int("numCols", @intFromFloat(self.muzzle_flash_impact_sprite.num_columns));
         sprite_shader.set_float("timePerSprite", self.muzzle_flash_impact_sprite.time_per_sprite);
 
         const scale: f32 = 50.0;
 
-        var model = *muzzle_transform * Mat4.from_scale(vec3(scale, scale, scale));
+        var model = muzzle_transform.mulMat4(&Mat4.fromScale(&vec3(scale, scale, scale)));
 
-        model *= Mat4.from_rotation_x(math.degreeToRadians(-90.0));
-        model *= Mat4.from_translation(vec3(0.7, 0.0, 0.0)); // adjust for position in the texture
+        model = model.mulMat4(&Mat4.fromRotationX(math.degreesToRadians(-90.0)));
+        model = model.mulMat4(&Mat4.fromTranslation(&vec3(0.7, 0.0, 0.0))); // adjust for position in the texture
 
         sprite_shader.set_mat4("model", &model);
 
         for (self.muzzle_flash_sprites_age.items) |sprite_age| {
-            sprite_shader.set_float("age", sprite_age);
-            gl.drawArrays(gl.TRIANGLES, 0, 6);
+            if (sprite_age) |s_age| {
+                sprite_shader.set_float("age", s_age.age);
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+            }
         }
 
         gl.disable(gl.BLEND);

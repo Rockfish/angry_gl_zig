@@ -453,7 +453,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         wiggly_shader.set_mat4("lightSpaceMatrix", &light_space_matrix);
         wiggly_shader.set_bool("depth_mode", true);
 
-        enemies.draw_enemies(wiggly_shader, &state);
+        try enemies.draw_enemies(wiggly_shader, &state);
 
         // shadows end
 
@@ -557,7 +557,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         wiggly_shader.set_bool("useEmissive", false);
         wiggly_shader.set_bool("depth_mode", false);
 
-        enemies.draw_enemies(wiggly_shader, &state);
+        try enemies.draw_enemies(wiggly_shader, &state);
 
         state.burn_marks.draw_marks(basic_texture_shader, &projection_view, state.delta_time);
         bullet_store.draw_bullet_impacts(sprite_shader, &projection_view);
@@ -571,7 +571,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             // gl.Disable(gl.DEPTH_TEST);
 
             // view port for blur effect
-            gl.viewport(0, 0, viewport_width / BLUR_SCALE, viewport_height / BLUR_SCALE);
+            gl.viewport(0, 0, @intFromFloat(viewport_width / BLUR_SCALE), @intFromFloat(viewport_height / BLUR_SCALE));
 
             // Draw horizontal blur
             gl.bindFramebuffer(gl.FRAMEBUFFER, horizontal_blur_fbo.framebuffer_id);
@@ -584,7 +584,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             blur_shader.set_int("image", emission_texture_unit);
             blur_shader.set_bool("horizontal", true);
 
-            gl.DrawArrays(gl.TRIANGLES, 0, 6);
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
 
             // Draw vertical blur
             gl.bindFramebuffer(gl.FRAMEBUFFER, vertical_blur_fbo.framebuffer_id);
@@ -600,7 +600,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             gl.drawArrays(gl.TRIANGLES, 0, 6);
 
             // view port for final draw combining everything
-            gl.viewport(0, 0, viewport_width, viewport_height);
+            gl.viewport(0, 0, @intFromFloat(viewport_width), @intFromFloat(viewport_height));
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, 0);
             gl.bindVertexArray(more_obnoxious_quad_vao);
@@ -628,7 +628,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
                 const texture_unit = 0;
                 gl.bindFramebuffer(gl.FRAMEBUFFER, 0);
 
-                gl.viewport(0, 0, viewport_width, viewport_height);
+                gl.viewport(0, 0, @intFromFloat(viewport_width), @intFromFloat(viewport_height));
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
                 gl.activeTexture(gl.TEXTURE0 + texture_unit);

@@ -79,7 +79,7 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     core.string.init(allocator);
 
-    math_test.transform_operations();
+    // math_test.transform_operations();
 
     // const SIZE_OF_4f32 = @sizeOf([4]f32);
     // const SIZE_OF_QUAT = @sizeOf(Quat);
