@@ -5,6 +5,10 @@ const zstbi = @import("zstbi");
 const core = @import("core");
 const math = @import("math");
 
+const math_test = @import("math_testing.zig");
+
+const cglm = math.cglm;
+
 const gl = zopengl.bindings;
 
 const Assimp = core.assimp.Assimp;
@@ -57,6 +61,17 @@ const content_dir = "angrygl_assets";
 
 var state: State = undefined;
 
+const V4 = struct {
+    x: f32,
+    y: f32,
+    z: f32,
+    w: f32,
+
+    pub fn new(x: f32, y: f32, z: f32, w: f32) V4 {
+        return .{ .x = x, .y = y, .z = z, .w = w };
+    }
+};
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -64,10 +79,35 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     core.string.init(allocator);
 
-    const SIZE_OF_4f32 = @sizeOf([4]f32);
-    const SIZE_OF_QUAT = @sizeOf(Quat);
+    math_test.transform_operations();
 
-    std.debug.print("4f32 = {d}  quat = {d}\n", .{SIZE_OF_4f32, SIZE_OF_QUAT});
+    // const SIZE_OF_4f32 = @sizeOf([4]f32);
+    // const SIZE_OF_QUAT = @sizeOf(Quat);
+
+    // const v4 = Vec4.new(1, 2, 3, 4);
+    // const v4n = V4.new(1, 2, 3, 4);
+    // const m4 = Mat4.identity();
+    //
+    // const v4nDataPtr: *[4]f32 = @as(*[4]f32, @ptrFromInt(@intFromPtr(&v4n)));
+    // const v4nData: [4]f32 = v4nDataPtr.*;
+    //
+    // std.debug.print("4f32 = {d}  quat = {d}\n", .{SIZE_OF_4f32, SIZE_OF_QUAT});
+    //
+    // std.debug.print("&v4.data = {any}  &v4 = {any}\n", .{&v4.data, &v4});
+    // std.debug.print("&v4.data = {any}  &v4 = {any}\n", .{@intFromPtr(&v4.data), @intFromPtr(&v4)});
+    // std.debug.print("&m4.data = {any}  &m4 = {any}\n", .{@intFromPtr(&m4.data), @intFromPtr(&m4)});
+    //
+    // std.debug.print("&v4n = {any}\n", .{&v4n});
+    // std.debug.print("&v4n = {any}\n", .{ @intFromPtr(&v4n)});
+    // std.debug.print("&v4nData = {any}\n", .{&v4nData});
+    // std.debug.print("&v4nData = {any}\n", .{@intFromPtr(&v4nData)});
+    // std.debug.print("v4nDataPtr = {any}\n", .{v4nDataPtr});
+    //
+    // var result: [4]f32 align(16) = undefined;
+    // const d = @as(*[4]f32, @ptrCast(&v4n));
+    // cglm.glmc_vec4_scale(@as(*[4]f32, @ptrCast(@constCast(&v4n))), 10.0, &result);
+    // const v4n_scaled: V4 = @as(*V4, @ptrCast(&result)).*;
+    // std.debug.print("result = {any}  v4n_scaled = {any}\n", .{result, v4n_scaled});
 
     // var arena_state = std.heap.ArenaAllocator.init(allocator);
     // defer arena_state.deinit();

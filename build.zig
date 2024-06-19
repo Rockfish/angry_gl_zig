@@ -94,14 +94,12 @@ pub fn build(b: *std.Build) void {
     });
 
     game.addIncludePath(b.path("src/include"));
-
     game.root_module.addImport("math", math);
     game.root_module.addImport("core", core);
     game.root_module.addImport("cglm", cglm.module("root"));
     game.root_module.addImport("zglfw", zglfw.module("root"));
     game.root_module.addImport("zopengl", zopengl.module("root"));
     game.root_module.addImport("ziglangSet", ziglangSet.module("ziglangSet"));
-
     game.linkLibrary(zglfw.artifact("glfw"));
     game.linkLibrary(cglm.artifact("cglm"));
 

@@ -9,6 +9,10 @@ const Mat4 = mat4_.Mat4;
 
 pub const Versor = [4]f32;
 
+pub fn quat(x: f32, y: f32, z: f32, w: f32) Quat {
+    return Quat { .data = .{x, y, z, w} };
+}
+
 pub const Quat = struct {
     data: [4]f32,
 
@@ -41,7 +45,7 @@ pub const Quat = struct {
         const s = std.math.sin(angle * 0.5);
         const c = std.math.cos(angle * 0.5);
         const v = axis.mulScalar(s);
-        return new(v.data[0], v.data[1], v.data[2], c);
+        return new(v.x, v.y, v.z, c);
     }
 
     pub fn normalize(self: *Self) void {
@@ -62,7 +66,7 @@ pub const Quat = struct {
 
     pub fn rotateVec(self: *const Self, v: *const Vec3) Vec3 {
         var result: [3]f32 align(16) = undefined;
-        cglm.glmc_quat_rotatev(@constCast(&self.data), @constCast(&v.data), &result);
+        cglm.glmc_quat_rotatev(@constCast(&self.data), @as(*[3]f32, @ptrCast(@alignCast(@constCast(v)))), &result);
         return Vec3.fromArray(result);
     }
 
@@ -91,9 +95,9 @@ pub const Quat = struct {
         const wy = w * y2;
         const wz = w * z2;
 
-        const x_axis: Vec4 = Vec4 { .data = .{1.0 - (yy + zz), xy + wz, xz - wy, 0.0} };
-        const y_axis: Vec4 = Vec4 { .data = .{xy - wz, 1.0 - (xx + zz), yz + wx, 0.0} };
-        const z_axis: Vec4 = Vec4 { .data = .{xz + wy, yz - wx, 1.0 - (xx + yy), 0.0} };
+        const x_axis: Vec4 = Vec4.new(1.0 - (yy + zz), xy + wz, xz - wy, 0.0);
+        const y_axis: Vec4 = Vec4.new(xy - wz, 1.0 - (xx + zz), yz + wx, 0.0);
+        const z_axis: Vec4 = Vec4.new(xz + wy, yz - wx, 1.0 - (xx + yy), 0.0);
         return .{ x_axis, y_axis, z_axis };
     }
 };

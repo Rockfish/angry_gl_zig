@@ -13,5 +13,5 @@ pub const Camera = @import("camera.zig").Camera;
 pub const Shader = @import("shader.zig").Shader;
 pub const FrameCount = @import("frame_count.zig").FrameCount;
 pub const Random = @import("random.zig").Random;
-
+pub const Transform = @import("transform.zig").Transform;
 

@@ -23,7 +23,6 @@ pub fn main() !void {
 }
 
 fn transform_operations() void {
-    {
         const node_transform = Transform{
             .translation = vec4(-25.559093, 119.46429, 43.18399, 0.0),
             .rotation = quat4(0.26961806, -0.7235087, -0.587351, 0.24261194),
@@ -264,7 +263,6 @@ fn transform_operations() void {
         // node_name: Gun -
         //     node_transform = core.animator.NodeTransform{ .transform = core.transform.Transform{ .translation = { -5.6490044e1, 5.6790943e1, -8.172132e1, 0e0 }, .rotation = { -5.565513e-2, -6.668501e-1, -1.1682964e-1, 7.3386943e-1 }, .scale = { 1e0, 1e0, 1e0, 0e0 } }, .meshes = array_list.ArrayListAligned(u32,null){ .items = { 1 }, .capacity = 8, .allocator = mem.Allocator{ .ptr = anyopaque@16dcf6ca0, .vtable = mem.Allocator.VTable{ ... } } } }
         //     final_node_matrices[1] = { { 8.33236e-2, -9.724815e-2, 9.9176615e-1, 0e0 }, { 2.4570267e-1, 9.6650666e-1, 7.412852e-2, 0e0 }, { -9.657574e-1, 2.3750292e-1, 1.0442692e-1, 0e0 }, { -5.6490044e1, 5.6790943e1, -8.172132e1, 0e0 } }
-    }
 
 }
 

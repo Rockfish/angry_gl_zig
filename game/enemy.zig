@@ -82,19 +82,19 @@ pub const EnemySystem = struct {
 
     pub fn spawn_enemy(self: *Self, state: *State) !void {
         const theta = math.degreesToRadians(self.random.rand_float() * 360.0);
-        const x = state.player.position.data[0] + math.sin(theta) * world.SPAWN_RADIUS;
-        const z = state.player.position.data[2] + math.cos(theta) * world.SPAWN_RADIUS;
+        const x = state.player.position.x + math.sin(theta) * world.SPAWN_RADIUS;
+        const z = state.player.position.z + math.cos(theta) * world.SPAWN_RADIUS;
         try state.enemies.append(Enemy.new(vec3(x, self.monster_y, z), vec3(0.0, 0.0, 1.0)));
     }
 
     pub fn chase_player(self: *Self, state: *State) void {
         _ = self;
         var player = state.player;
-        const player_collision_position = vec3(player.position.data[0], world.MONSTER_Y, player.position.data[2]);
+        const player_collision_position = vec3(player.position.x, world.MONSTER_Y, player.position.z);
 
         for (state.enemies.items) |*enemy| {
             var dir = player.position.sub(&enemy.position);
-            dir.data[1] = 0.0;
+            dir.y = 0.0;
             enemy.dir = dir.normalize();
             enemy.position = enemy.position.add(&enemy.dir.mulScalar(state.delta_time * world.MONSTER_SPEED));
 
@@ -120,8 +120,8 @@ pub const EnemySystem = struct {
 
         for (state.enemies.items) |e| {
             const zero: f32 = 0.0;
-            const val =if (e.dir.data[2] < zero) zero else math.pi;
-            const monster_theta = math.atan(e.dir.data[0] / e.dir.data[2]) + val;
+            const val =if (e.dir.z < zero) zero else math.pi;
+            const monster_theta = math.atan(e.dir.x / e.dir.z) + val;
 
             var model_transform = Mat4.fromTranslation(&e.position);
 

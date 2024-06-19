@@ -28,12 +28,12 @@ pub const Aabb = struct {
     }
 
     pub fn expand_to_include(self: *Self, v: Vec3) void {
-        self.x_min = @min(self.x_min, v.data[0]);
-        self.x_max = @max(self.x_max, v.data[0]);
-        self.y_min = @min(self.y_min, v.data[1]);
-        self.y_max = @max(self.y_max, v.data[1]);
-        self.z_min = @min(self.z_min, v.data[2]);
-        self.z_max = @max(self.z_max, v.data[2]);
+        self.x_min = @min(self.x_min, v.x);
+        self.x_max = @max(self.x_max, v.x);
+        self.y_min = @min(self.y_min, v.y);
+        self.y_max = @max(self.y_max, v.y);
+        self.z_min = @min(self.z_min, v.z);
+        self.z_max = @max(self.z_max, v.z);
         self.is_initialize = true;
     }
 

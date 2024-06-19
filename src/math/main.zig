@@ -1,9 +1,9 @@
 const std = @import("std");
-const cglm = @import("cglm.zig").CGLM;
+pub const cglm = @import("cglm.zig").CGLM;
 const vec = @import("vec.zig");
 const mat3_ = @import("mat3.zig");
 const mat4_ = @import("mat4.zig");
-const quat = @import("quat.zig");
+const quat_ = @import("quat.zig");
 const utils = @import("utils.zig");
 
 pub const Versor = cglm.versor;
@@ -15,10 +15,11 @@ pub const Vec4 = vec.Vec4;
 pub const vec2 = vec.vec2;
 pub const vec3 = vec.vec3;
 pub const vec4 = vec.vec4;
+pub const quat = quat_.quat;
 
 pub const Mat3 = mat3_.Mat3;
 pub const Mat4 = mat4_.Mat4;
-pub const Quat = quat.Quat;
+pub const Quat = quat_.Quat;
 
 pub const mat3 = mat3_.mat3;
 pub const mat4 = mat4_.mat4;

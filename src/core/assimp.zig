@@ -28,7 +28,7 @@ pub fn mat4_from_aiMatrix(aiMat: *const Assimp.aiMatrix4x4) Mat4 {
 }
 
 pub fn vec3_from_aiVector3D(vec3d: Assimp.aiVector3D) Vec3 {
-    return Vec3 { .data = .{vec3d.x, vec3d.y, vec3d.z } };
+    return .{.x = vec3d.x, .y = vec3d.y, .z = vec3d.z };
 }
 
 pub fn quat_from_aiQuaternion(aiQuat: Assimp.aiQuaternion) Quat {

@@ -269,8 +269,8 @@ pub const BulletStore = struct {
 
         const rot_vec = vec3(0.0, 1.0, 0.0); // rotate around y
 
-        const x: Vec3 = vec3(CANONICAL_DIR.data[0], 0.0, CANONICAL_DIR.data[2]).normalize();
-        const y: Vec3 = vec3(normalized_direction.data[0], 0.0, normalized_direction.data[2]).normalize();
+        const x: Vec3 = vec3(CANONICAL_DIR.x, 0.0, CANONICAL_DIR.z).normalize();
+        const y: Vec3 = vec3(normalized_direction.x, 0.0, normalized_direction.z).normalize();
 
         // direction angle with respect to the canonical direction
         const theta = geom.oriented_angle(&x, &y, &rot_vec) * -1.0;

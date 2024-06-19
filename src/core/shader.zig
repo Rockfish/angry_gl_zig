@@ -159,7 +159,7 @@ pub const Shader = struct {
     // ------------------------------------------------------------------------
     pub fn set_vec2(self: *const Shader, uniform: [:0]const u8, value: *const Vec2) void {
         const location = gl.getUniformLocation(self.id, uniform);
-        gl.uniform2fv(location, 1, &value);
+        gl.uniform2fv(location, 1, value.asArrayPtr());
     }
 
     // ------------------------------------------------------------------------
@@ -171,7 +171,7 @@ pub const Shader = struct {
     // ------------------------------------------------------------------------
     pub fn set_vec3(self: *const Shader, uniform: [:0]const u8, value: *const Vec3) void {
         const location = gl.getUniformLocation(self.id, uniform);
-        gl.uniform3fv(location, 1, &value.data);
+        gl.uniform3fv(location, 1, value.asArrayPtr());
     }
 
     // ------------------------------------------------------------------------
@@ -183,7 +183,7 @@ pub const Shader = struct {
     // ------------------------------------------------------------------------
     pub fn set_vec4(self: *const Shader, uniform: [:0]const u8, value: *const Vec4) void {
         const location = gl.getUniformLocation(self.id, uniform);
-        gl.uniform4fv(location, 1, &value.data);
+        gl.uniform4fv(location, 1, value.asArrayPtr());
     }
 
     // ------------------------------------------------------------------------

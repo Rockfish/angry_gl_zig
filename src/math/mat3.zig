@@ -25,9 +25,9 @@ pub const Mat3 = struct {
     }
 
     pub fn determinant(self: *Self) f32 {
-        const x_axis = Vec3 { .data = self.data[0] };
-        const y_axis = Vec3 { .data = self.data[1] };
-        const z_axis = Vec3 { .data = self.data[2] };
+        const x_axis = Vec3.fromArray(self.data[0]);
+        const y_axis = Vec3.fromArray(self.data[1]);
+        const z_axis = Vec3.fromArray(self.data[2]);
         return z_axis.dot(x_axis.cross(y_axis));
     }
 };

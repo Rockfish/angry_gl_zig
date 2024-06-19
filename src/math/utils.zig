@@ -64,7 +64,7 @@ pub fn get_world_ray_from_mouse(
 
     // eye space
     var ray_eye = projection_inverse.mulVec4(&ndc);
-    ray_eye = vec4(ray_eye.data[0], ray_eye.data[1], -1.0, 0.0);
+    ray_eye = vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
 
     // world space
     const ray_world = (view_inverse.mulVec4(&ray_eye)).xyz();

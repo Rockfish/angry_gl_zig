@@ -322,7 +322,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             },
             CameraType.TopDown => {
                 const view = Mat4.lookAtRhGl(
-                    &vec3(player.position.data[0], 1.0, player.position.data[1]),
+                    &vec3(player.position.x, 1.0, player.position.y),
                     &player.position,
                     &vec3(0.0, 0.0, -1.0),
                 );
@@ -354,8 +354,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
             const world_point = math.ray_plane_intersection(&state.game_camera.position, &world_ray, &xz_plane_point, &xz_plane_normal);
 
-            dx = world_point.?.data[0] - player.position.data[0];
-            dz = world_point.?.data[1] - player.position.data[1];
+            dx = world_point.?.x - player.position.x;
+            dz = world_point.?.y - player.position.y;
 
             if (dz < 0.0) {
                 aim_theta = math.atan(dx / dz) + math.pi;
@@ -403,9 +403,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             const muzzle_world_position_vec4 = muzzle_transform.mulVec4(&vec4(0.0, 0.0, 0.0, 1.0));
 
             muzzle_world_position = vec3(
-                muzzle_world_position_vec4.data[0] / muzzle_world_position_vec4.data[3],
-                muzzle_world_position_vec4.data[1] / muzzle_world_position_vec4.data[3],
-                muzzle_world_position_vec4.data[2] / muzzle_world_position_vec4.data[3],
+                muzzle_world_position_vec4.x / muzzle_world_position_vec4.w,
+                muzzle_world_position_vec4.y / muzzle_world_position_vec4.w,
+                muzzle_world_position_vec4.z / muzzle_world_position_vec4.w,
             );
 
             use_point_light = min_age < 0.03;
