@@ -134,6 +134,17 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // const _depth_shader = try Shader.new(allocator, "game/shaders/depth_shader.vert", "game/shaders/depth_shader.frag");
     // const _debug_depth_shader = try Shader.new(allocator, "game/shaders/debug_depth_quad.vert", "game/shaders/debug_depth_quad.frag");
 
+    defer player_shader.deinit();
+    defer player_emissive_shader.deinit();
+    defer wiggly_shader.deinit();
+    defer floor_shader.deinit();
+    defer instanced_texture_shader.deinit();
+    defer sprite_shader.deinit();
+    defer basic_texture_shader.deinit();
+    defer blur_shader.deinit();
+    defer scene_draw_shader.deinit();
+    defer basicer_shader.deinit();
+
     std.debug.print("game/shaders loaded\n", .{});
     // --- Lighting ---
 
@@ -194,6 +205,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const ortho_camera = try Camera.camera_vec3_up_yaw_pitch(allocator, vec3(0.0, 1.0, 0.0), vec3(0.0, 1.0, 0.0), 0.0, -90.0);
 
+    defer game_camera.deinit();
+    defer floating_camera.deinit();
+    defer ortho_camera.deinit();
+
     const ortho_width = VIEW_PORT_WIDTH / 130.0;
     const ortho_height = VIEW_PORT_HEIGHT / 130.0;
     const aspect_ratio = VIEW_PORT_WIDTH / VIEW_PORT_HEIGHT;
@@ -205,17 +220,40 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // Models and systems
 
     var texture_cache = ArrayList(*Texture).init(allocator);
+    defer {
+        for (texture_cache.items) |_texture| {
+            _texture.deinit();
+        }
+        texture_cache.deinit();
+    }
 
     var player = try Player.new(allocator, &texture_cache);
     std.debug.print("player loaded\n", .{});
-    var enemies = try EnemySystem.new(allocator, &texture_cache);
+    var enemy_system = try EnemySystem.new(allocator, &texture_cache);
     std.debug.print("enemies loaded\n", .{});
     var muzzle_flash = try MuzzleFlash.new(allocator, unit_square_quad);
     std.debug.print("muzzle_flash loaded\n", .{});
     var bullet_store = try BulletStore.new(allocator, unit_square_quad);
     std.debug.print("bullet_store loaded\n", .{});
-    const floor = try Floor.new(allocator);
+    var floor = try Floor.new(allocator);
     std.debug.print("floor loaded\n", .{});
+    var burn_marks = try BurnMarks.new(allocator, unit_square_quad);
+
+    const enemies = ArrayList(?*Enemy).init(allocator);
+
+    defer player.deinit();
+    defer enemy_system.deinit();
+    defer muzzle_flash.deinit();
+    defer bullet_store.deinit();
+    defer floor.deinit();
+    defer burn_marks.deinit();
+
+    defer for (enemies.items) |enemy| {
+        if (enemy) |e| {
+            e.deinit();
+        }
+        enemies.deinit();
+    };
 
     std.debug.print("models loaded\n", .{});
 
@@ -233,7 +271,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .floating_projection = floating_projection,
         .orthographic_projection = orthographic_projection,
         .player = player,
-        .enemies = ArrayList(?*Enemy).init(allocator),
+        .enemies = enemies,
         .light_postion = vec3(1.2, 1.0, 2.0),
         .delta_time = 0.0,
         .last_frame = 0.0,
@@ -242,7 +280,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .last_y = VIEW_PORT_HEIGHT / 2.0,
         .mouse_x = scaled_width / 2.0,
         .mouse_y = scaled_height / 2.0,
-        .burn_marks = try BurnMarks.new(allocator, unit_square_quad),
+        .burn_marks = burn_marks,
         // .sound_system = undefined,
         .key_presses = set.Set(glfw.Key).init(allocator),
         .frame_time = 0.0,
@@ -387,6 +425,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             }
         }
 
+        std.debug.print("getting muzzle position\n", .{});
+
         const aim_rot = Mat4.fromAxisAngle(&vec3(0.0, 1.0, 0.0), aim_theta);
 
         var player_transform = Mat4.fromTranslation(&player.position);
@@ -403,15 +443,19 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             }
         }
 
+        std.debug.print("updating muzzle_flash\n", .{});
         muzzle_flash.update(state.delta_time);
+        std.debug.print("updating bullet_store\n", .{});
         try bullet_store.update_bullets(&state);
 
-        if (player.is_alive) {
-            try enemies.update(&state);
-            enemies.chase_player(&state);
-        }
+        // if (player.is_alive) {
+        //     std.debug.print("updating enemies\n", .{});
+        //     try enemies.update(&state);
+        //     enemies.chase_player(&state);
+        // }
 
         // Update Player
+        std.debug.print("updating player\n", .{});
         try player.update(&state, aim_theta);
 
         var use_point_light = false;
@@ -439,6 +483,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         const light_view = Mat4.lookAtRhGl(&player_position.sub(&player_light_dir.mulScalar(-20)), &player_position, &vec3(0.0, 1.0, 0.0));
         const light_space_matrix = light_projection.mulMat4(&light_view);
 
+        std.debug.print("updating shaders\n", .{});
         player_shader.use_shader();
         player_shader.set_mat4("projectionView", &projection_view);
         player_shader.set_mat4("model", &player_transform);
@@ -465,6 +510,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         player_shader.set_bool("depth_mode", true);
         player_shader.set_bool("useLight", false);
 
+        std.debug.print("rendering player\n", .{});
         try player.render(player_shader);
 
         wiggly_shader.use_shader();
@@ -472,7 +518,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         wiggly_shader.set_mat4("lightSpaceMatrix", &light_space_matrix);
         wiggly_shader.set_bool("depth_mode", true);
 
-        try enemies.draw_enemies(wiggly_shader, &state);
+        std.debug.print("rendering enemies\n", .{});
+        try enemy_system.draw_enemies(wiggly_shader, &state);
 
         // shadows end
 
@@ -488,6 +535,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             player_emissive_shader.set_mat4("projectionView", &projection_view);
             player_emissive_shader.set_mat4("model", &player_transform);
 
+            std.debug.print("rendering player with emissive shader\n", .{});
             try player.render(player_emissive_shader);
 
             // doesn't seem to do anything
@@ -508,6 +556,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             //     }
             // }
 
+            std.debug.print("rendering bullet_store \n", .{});
             bullet_store.draw_bullets(instanced_texture_shader, &projection_view);
 
             const debug_emission = false;
@@ -524,6 +573,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
                 basicer_shader.set_bool("greyscale", false);
                 basicer_shader.set_int("tex", texture_unit);
 
+                std.debug.print("rendering quads \n", .{});
                 quads.render_quad(&quad_vao);
 
                 buffer_ready = true;
@@ -560,6 +610,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         floor_shader.set_bool("useLight", true);
         floor_shader.set_bool("useSpec", true);
 
+        std.debug.print("rendering floor\n", .{});
         floor.draw(floor_shader, &projection_view);
 
         player_shader.use_shader();
@@ -567,6 +618,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         player_shader.set_bool("useEmissive", true);
         player_shader.set_bool("depth_mode", false);
 
+        std.debug.print("rendering player\n", .{});
         try player.render(player_shader);
 
         muzzle_flash.draw(sprite_shader, &projection_view, &muzzle_transform);
@@ -576,9 +628,13 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         wiggly_shader.set_bool("useEmissive", false);
         wiggly_shader.set_bool("depth_mode", false);
 
-        try enemies.draw_enemies(wiggly_shader, &state);
+        std.debug.print("rendering enemies\n", .{});
+        try enemy_system.draw_enemies(wiggly_shader, &state);
 
+        std.debug.print("rendering burn_marks\n", .{});
         state.burn_marks.draw_marks(basic_texture_shader, &projection_view, state.delta_time);
+
+        std.debug.print("rendering bullet_impacts\n", .{});
         bullet_store.draw_bullet_impacts(sprite_shader, &projection_view);
 
         if (!use_framebuffers) {
@@ -672,13 +728,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     std.debug.print("\nRun completed.\n\n", .{});
 
-    // shader.deinit();
-    game_camera.deinit();
-    // model.deinit();
-    for (texture_cache.items) |_texture| {
-        _texture.deinit();
-    }
-    texture_cache.deinit();
+
 }
 
 inline fn toRadians(degrees: f32) f32 {

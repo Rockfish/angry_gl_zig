@@ -122,6 +122,7 @@ pub const Player = struct {
     const Self = @This();
 
     pub fn deinit(self: *Self) void {
+        self.model.deinit();
         self.anim_hash.deinit();
         self.allocator.destroy(self);
     }
@@ -130,6 +131,7 @@ pub const Player = struct {
         const model_path = "assets/Models/Player/Player.fbx";
 
         var builder = try ModelBuilder.init(allocator, texture_cache, "Player", model_path);
+        defer builder.deinit();
 
         const texture_diffuse = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
         const texture_specular = .{ .texture_type = .Specular, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
@@ -147,7 +149,6 @@ pub const Player = struct {
 
         std.debug.print("player builder created\n", .{});
         const model = try builder.build();
-        builder.deinit();
         std.debug.print("player model built\n", .{});
 
         var anim_hash = HashMap(AnimationName, AnimationClip).init(allocator);

@@ -150,12 +150,13 @@ pub const BulletStore = struct {
     const Self = @This();
 
     pub fn deinit(self: *Self) void {
+        self.bullet_texture.deinit();
         self.all_bullet_positions.deinit();
         self.all_bullet_rotations.deinit();
         self.all_bullet_directions.deinit();
         self.bullet_groups.deinit();
         self.bullet_impact_sprites.deinit();
-        self.bullet_texture.deinit();
+        self.bullet_impact_spritesheet.deinit();
     }
 
     pub fn new(allocator: Allocator, unit_square_vao: c_uint) !Self {  // keep on heap or stack, hmm

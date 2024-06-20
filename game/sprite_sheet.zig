@@ -19,6 +19,10 @@ pub const SpriteSheet = struct {
 
     const Self = @This();
 
+    pub fn deinit(self: *const Self) void {
+        self.texture.deinit();
+    }
+
     pub fn new(texture_unit: Texture, num_columns: i32, time_per_sprite: f32) Self {
         return .{
             .texture = texture_unit,

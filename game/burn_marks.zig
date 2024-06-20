@@ -39,6 +39,7 @@ pub const BurnMarks = struct {
     const Self = @This();
 
     pub fn deinit(self: *Self) void {
+        self.mark_texture.deinit();
         self.marks.deinit();
         self.allocator.destroy(self);
     }

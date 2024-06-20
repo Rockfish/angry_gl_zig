@@ -36,6 +36,16 @@ pub const MuzzleFlash = struct {
 
     const Self = @This();
 
+    pub fn deinit(self: *const Self) void {
+        self.muzzle_flash_impact_sprite.texture.deinit();
+        for (self.muzzle_flash_sprites_age.items) |sprite_age| {
+           if (sprite_age) |sprite| {
+               sprite.deinit();
+           }
+        }
+        self.muzzle_flash_sprites_age.deinit();
+    }
+
     pub fn new(allocator: Allocator, unit_square_vao: c_uint) !Self {
         var texture_config = TextureConfig.default();
         texture_config.set_wrap(TextureWrap.Repeat);

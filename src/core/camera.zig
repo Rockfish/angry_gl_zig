@@ -49,7 +49,8 @@ pub const Camera = struct {
 
     const Self = @This();
 
-    pub fn deinit(self: *Self) void {
+    pub fn deinit(self: *const Self) void {
+        std.debug.print("Camera deinit\n", .{});
         self.allocator.destroy(self);
     }
 

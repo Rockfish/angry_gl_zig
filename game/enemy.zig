@@ -35,7 +35,7 @@ pub const Enemy = struct {
 
     const Self = @This();
 
-    pub fn deinit(self: *Self) void {
+    pub fn deinit(self: *const Self) void {
         self.allocator.destroy(self);
     }
 
@@ -66,6 +66,7 @@ pub const EnemySystem = struct {
 
     pub fn new(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !Self {
         const builder = try ModelBuilder.init(allocator, texture_cache,"enemy", "assets/Models/Eeldog/EelDog.FBX");
+        defer builder.deinit();
 
         builder.skip_textures();
         const texture_diffuse = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };

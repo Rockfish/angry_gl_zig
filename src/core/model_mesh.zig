@@ -91,6 +91,23 @@ pub const ModelMesh = struct {
 
     const Self = @This();
 
+    pub fn deinit(self: *ModelMesh) void {
+        gl.deleteVertexArrays(1, &self.vao);
+        gl.deleteBuffers(1, &self.vbo);
+        gl.deleteBuffers(1, &self.ebo);
+        self.vertices.deinit();
+        self.allocator.destroy(self.vertices);
+        self.indices.deinit();
+        self.allocator.destroy(self.indices);
+        for (self.textures.items) |texture| {
+            texture.deinit();
+        }
+        self.textures.deinit();
+        self.allocator.destroy(self.textures);
+        self.allocator.free(self.name);
+        self.allocator.destroy(self);
+    }
+
     pub fn init(allocator: Allocator, id: i32, name: []const u8, vertices: *ArrayList(ModelVertex), indices: *ArrayList(u32), textures: *ArrayList(*Texture)) !*ModelMesh {
         const model_mesh = try allocator.create(ModelMesh);
         model_mesh.* = ModelMesh{
@@ -109,20 +126,6 @@ pub const ModelMesh = struct {
         model_mesh.setupMesh();
         // print_model_mesh(model_mesh);
         return model_mesh;
-    }
-
-    pub fn deinit(self: *ModelMesh) void {
-        gl.deleteVertexArrays(1, &self.vao);
-        gl.deleteBuffers(1, &self.vbo);
-        gl.deleteBuffers(1, &self.ebo);
-        self.vertices.deinit();
-        self.allocator.destroy(self.vertices);
-        self.indices.deinit();
-        self.allocator.destroy(self.indices);
-        self.textures.deinit();
-        self.allocator.destroy(self.textures);
-        self.allocator.free(self.name);
-        self.allocator.destroy(self);
     }
 
     pub fn render(self: *ModelMesh, shader: *const Shader) void {

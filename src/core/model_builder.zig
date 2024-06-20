@@ -45,10 +45,28 @@ pub const ModelBuilder = struct {
 
     const Self = @This();
 
+    pub fn deinit(self: *Self) void {
+        self.allocator.free(self.name);
+        self.allocator.free(self.filepath);
+        self.allocator.free(self.directory);
+        for (self.added_textures.items) |added| {
+            self.allocator.free(added.mesh_name);
+            self.allocator.free(added.texture_filename);
+        }
+        self.added_textures.deinit();
+        self.allocator.destroy(self);
+    }
+
     const AddedTexture = struct {
         mesh_name: []const u8,
         texture_config: TextureConfig,
         texture_filename: []const u8,
+        // allocator: Allocator,
+        //
+        // pub fn deinit(self: *AddedTexture) void {
+        //     self.allocator.free(self.mesh_name);
+        //     self.allocator.free(self.texture_filename);
+        // }
     };
 
     pub fn init(allocator: Allocator, texture_cache: *ArrayList(*Texture), name: []const u8, path: []const u8) !*Self {
@@ -77,18 +95,6 @@ pub const ModelBuilder = struct {
         };
 
         return builder;
-    }
-
-    pub fn deinit(self: *Self) void {
-        self.allocator.free(self.name);
-        self.allocator.free(self.filepath);
-        self.allocator.free(self.directory);
-        for (self.added_textures.items) |added| {
-            self.allocator.free(added.mesh_name);
-            self.allocator.free(added.texture_filename);
-        }
-        self.added_textures.deinit();
-        self.allocator.destroy(self);
     }
 
     pub fn flipv(self: *Self) *Self {
@@ -268,6 +274,7 @@ pub const ModelBuilder = struct {
 
     fn loadTexture(self: *Self, texture_config: TextureConfig, file_path: []const u8) !*Texture {
         const filename = try utils.getExistsFilename(self.allocator, self.directory, file_path);
+        defer self.allocator.free(filename);
 
         for (self.texture_cache.items) |cached_texture| {
             if (std.mem.eql(u8, cached_texture.texture_path, file_path)) {
