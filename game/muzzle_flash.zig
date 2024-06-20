@@ -51,11 +51,11 @@ pub const MuzzleFlash = struct {
         };
     }
 
-    const Predicate = struct {
-        pub var _max_age: f32 = 0.0;
-        pub fn init(m_age: f32) void { _max_age = m_age; }
-        pub fn func (spriteAge: *SpriteAge) bool {
-            return spriteAge.age < _max_age;
+    const Tester = struct {
+        max_age: f32 = 0.0,
+        const This = @This();
+        pub fn predicate(self: *const This, spriteAge: *SpriteAge) bool {
+            return spriteAge.age < self.max_age;
         }
     };
 
@@ -66,11 +66,10 @@ pub const MuzzleFlash = struct {
             }
             const max_age = self.muzzle_flash_impact_sprite.num_columns * self.muzzle_flash_impact_sprite.time_per_sprite;
 
-            const predicate = Predicate{};
-            Predicate.init(max_age);
+            const predicate = Tester{ .max_age = max_age };
 
             // need different retain for T = f32
-            core.utils.retain(SpriteAge, &self.muzzle_flash_sprites_age, predicate.func, self.allocator);
+            try core.utils.retain(SpriteAge, Tester, &self.muzzle_flash_sprites_age, predicate, self.allocator);
         }
     }
 

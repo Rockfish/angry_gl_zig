@@ -103,6 +103,9 @@ pub fn main() !void {
 }
 
 pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
+
+    std.debug.print("Running game\n", .{});
+
     var buffer: [1024]u8 = undefined;
     const root_path = std.fs.selfExeDirPath(buffer[0..]) catch ".";
     _ = root_path;
@@ -129,6 +132,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // const _depth_shader = try Shader.new(allocator, "shaders/depth_shader.vert", "shaders/depth_shader.frag");
     // const _debug_depth_shader = try Shader.new(allocator, "shaders/debug_depth_quad.vert", "shaders/debug_depth_quad.frag");
 
+    std.debug.print("shaders loaded\n", .{});
     // --- Lighting ---
 
     const light_dir = vec3(-0.8, 0.0, -1.0).normalize();
@@ -156,12 +160,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var horizontal_blur_fbo = fb.create_horizontal_blur_fbo(viewport_width, viewport_height);
     var vertical_blur_fbo = fb.create_vertical_blur_fbo(viewport_width, viewport_height);
 
+    std.debug.print("framebuffers loaded\n", .{});
     // --- quads ---
 
     const unit_square_quad = quads.create_unit_square_vao();
     // const _obnoxious_quad_vao = quads.create_obnoxious_quad_vao();
     const more_obnoxious_quad_vao = quads.create_more_obnoxious_quad_vao();
 
+    std.debug.print("quads loaded\n", .{});
 
     // --- Cameras ---
 
@@ -193,6 +199,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const floating_projection = Mat4.perspectiveRhGl(math.degreesToRadians(floating_camera.zoom), aspect_ratio, 0.1, 100.0);
     const orthographic_projection = Mat4.orthographicRhGl(-ortho_width, ortho_width, -ortho_height, ortho_height, 0.1, 100.0);
 
+    std.debug.print("camers loaded\n", .{});
     // Models and systems
 
     var texture_cache = ArrayList(*Texture).init(allocator);
@@ -202,6 +209,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var muzzle_flash = try MuzzleFlash.new(allocator, unit_square_quad);
     var bullet_store = try BulletStore.new(allocator, unit_square_quad);
     const floor = try Floor.new(allocator);
+
+    std.debug.print("models loaded\n", .{});
 
     // Initialize the world state
     state = State{
@@ -217,7 +226,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .floating_projection = floating_projection,
         .orthographic_projection = orthographic_projection,
         .player = player,
-        .enemies = ArrayList(Enemy).init(allocator),
+        .enemies = ArrayList(?*Enemy).init(allocator),
         .light_postion = vec3(1.2, 1.0, 2.0),
         .delta_time = 0.0,
         .last_frame = 0.0,
@@ -258,6 +267,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     wiggly_shader.set_vec3("directionLight.color", &light_color);
     wiggly_shader.set_vec3("ambient", &ambient_color);
 
+    std.debug.print("shaders initilized\n", .{});
     // --------------------------------
 
     const use_framebuffers = true;
@@ -279,6 +289,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     _ = window.setFramebufferSizeCallback(framebuffer_size_handler);
     _ = window.setCursorPosCallback(cursor_position_handler);
     _ = window.setScrollCallback(scroll_handler);
+
+    std.debug.print("Starting game loop!\n", .{});
 
     while (!window.shouldClose()) {
         glfw.pollEvents();
@@ -385,7 +397,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         }
 
         muzzle_flash.update(state.delta_time);
-        bullet_store.update_bullets(&state);
+        try bullet_store.update_bullets(&state);
 
         if (player.is_alive) {
             try enemies.update(&state);

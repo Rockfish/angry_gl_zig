@@ -23,7 +23,7 @@ pub fn bufCopyZ(buf: []u8, source: []const u8) [:0]const u8 {
 //     Err(PathError(format!("filename not found: {:?}", filename.to_os_string())))
 // }
 
-pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a: *T) bool, allocator: std.mem.Allocator) !void {
+pub fn retain(comptime TA: type, comptime TS: type, list: *std.ArrayList(?*TA), tester: TS, allocator: std.mem.Allocator) !void {
     _ = allocator;
     const length = list.items.len;
     var i: usize = 0;
@@ -33,13 +33,13 @@ pub fn retain(comptime T: type, list: *std.ArrayList(?*T), testFn: *const fn (a:
 
     while (true) {
         // test if false
-        if (i < length and (list.items[i] == null or !testFn(list.items[i].?))) {
+        if (i < length and (list.items[i] == null or !tester.predicate(list.items[i].?))) {
             if (flag) {
                 f = i;
                 flag = false;
             }
 
-            while (i < length and (list.items[i] == null or !testFn(list.items[i].?))) {
+            while (i < length and (list.items[i] == null or !tester.predicate(list.items[i].?))) {
                 i += 1;
             }
 
@@ -96,15 +96,15 @@ pub fn removeRange(comptime T: type, list: *std.ArrayList(T), start: usize, end:
     const count = end - start + 1;
 
     // Call deinit on each item in the range
-    for (start..end) |i| {
-        list.items[i].deinit();
-    }
+    // for (start..end) |i| {
+    //     list.items[i].deinit();
+    // }
 
     // Move the items to fill the gap
-    for (end + 1..list.len) |i| {
+    for (end + 1..list.items.len) |i| {
         list.items[i - count] = list.items[i];
     }
 
     // Update the length of the list
-    list.shrink(list.len - count);
+    list.shrinkAndFree(list.items.len - count);
 }

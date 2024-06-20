@@ -47,6 +47,10 @@ pub const BulletGroup = struct {
     group_size: u32,
     time_to_live: f32,
 
+    pub fn deinit(self: *BulletGroup) void {
+        _ = self;
+    }
+
     const Self = @This();
 
     pub fn new(start_index: usize, group_size: u32, time_to_live: f32) Self {
@@ -139,7 +143,7 @@ pub const BulletStore = struct {
     bullet_groups: ArrayList(BulletGroup),
     bullet_texture: Texture,
     bullet_impact_spritesheet: SpriteSheet,
-    bullet_impact_sprites: ArrayList(SpriteSheetSprite),
+    bullet_impact_sprites: ArrayList(?*SpriteSheetSprite),
     unit_square_vao: c_uint,
     allocator: Allocator,
 
@@ -240,7 +244,7 @@ pub const BulletStore = struct {
             .all_bullet_rotations = ArrayList(Quat).init(allocator),
             .all_bullet_directions = ArrayList(Vec3).init(allocator),
             .bullet_groups = ArrayList(BulletGroup).init(allocator),
-            .bullet_impact_sprites = ArrayList(SpriteSheetSprite).init(allocator),
+            .bullet_impact_sprites = ArrayList(?*SpriteSheetSprite).init(allocator),
             .bullet_vao = bullet_vao,
             .rotation_vbo = instance_rotation_vbo,
             .offset_vbo = instance_offset_vbo,
@@ -327,7 +331,7 @@ pub const BulletStore = struct {
         return true;
     }
 
-    pub fn update_bullets(self: *Self, state: *State) void {
+    pub fn update_bullets(self: *Self, state: *State) !void {
         //}, bulletImpactSprites: &ArrayList(SpriteSheetSprite>) {
 
         const use_aabb = state.enemies.items.len != 0;
@@ -382,17 +386,17 @@ pub const BulletStore = struct {
                     for (0..state.enemies.items.len) |i| {
                         const enemy = &state.enemies.items[i];
 
-                        if (use_aabb and !subgroup_bound_box.contains_point(enemy.position)) {
+                        if (use_aabb and !subgroup_bound_box.contains_point(enemy.*.?.position)) {
                             continue;
                         }
                         for (bullet_start..bullet_end) |bullet_index| {
                             if (bullet_collides_with_enemy(
                                 &self.all_bullet_positions.items[bullet_index],
                                 &self.all_bullet_directions.items[bullet_index],
-                                enemy,
+                                enemy.*.?,
                             )) {
                                 // println!("killed enemy!");
-                                enemy.is_alive = false;
+                                enemy.*.?.is_alive = false;
                                 break;
                             }
                         }
@@ -414,48 +418,54 @@ pub const BulletStore = struct {
             // self.all_bullet_positions.drain(0..first_live_bullet);
             // self.all_bullet_directions.drain(0..first_live_bullet);
             // self.all_bullet_rotations.drain(0..first_live_bullet);
-            try core.utils.removeRange(Vec3, self.all_bullet_positions, 0, first_live_bullet);
-            try core.utils.removeRange(Vec3, self.all_bullet_directions, 0, first_live_bullet);
-            try core.utils.removeRange(Quat, self.all_bullet_rotations, 0, first_live_bullet);
+            try core.utils.removeRange(Vec3, &self.all_bullet_positions, 0, first_live_bullet);
+            try core.utils.removeRange(Vec3, &self.all_bullet_directions, 0, first_live_bullet);
+            try core.utils.removeRange(Quat, &self.all_bullet_rotations, 0, first_live_bullet);
 
-            for (self.bullet_groups.items) |group| {
+            for (self.bullet_groups.items) |*group| {
                 group.start_index -= first_live_bullet;
             }
         }
 
-        if (self.bullet_impact_sprites.len != 0) {
-            for (self.bullet_impact_sprites.items) |sheet| {
-                sheet.age += &state.delta_time;
+        if (self.bullet_impact_sprites.items.len != 0) {
+            for (self.bullet_impact_sprites.items) |*sheet| {
+                sheet.*.?.age = sheet.*.?.age + state.delta_time;
             }
             const sprite_duration = self.bullet_impact_spritesheet.num_columns * self.bullet_impact_spritesheet.time_per_sprite;
 
-            const predicate = struct {
-                pub fn func(sprite: SpriteSheetSprite) bool {
-                   return sprite.age < sprite_duration;
-                }
-            };
+            const sprite_tester = SpriteAgeTester { .sprite_duration = sprite_duration };
 
-            // self.bullet_impact_sprites.retain(|sprite| sprite.age < sprite_duration);
-            core.utils.retain(SpriteSheetSprite, self.bullet_impact_sprites, predicate.func, self.allocator);
+            try core.utils.retain(SpriteSheetSprite, SpriteAgeTester, &self.bullet_impact_sprites, sprite_tester, self.allocator);
         }
 
         for (state.enemies.items) |enemy| {
-            if (!enemy.is_alive) {
-                self.bullet_impact_sprites.push(SpriteSheetSprite.new(enemy.position));
-                state.burn_marks.add_mark(enemy.position);
-                state.sound_system.play_enemy_destroyed();
+            if (!enemy.?.is_alive) {
+                const sprite_sheet_sprite = try self.allocator.create(SpriteSheetSprite);
+                sprite_sheet_sprite.* = SpriteSheetSprite.new(self.allocator, enemy.?.position);
+                try self.bullet_impact_sprites.append(sprite_sheet_sprite);
+                try state.burn_marks.add_mark(enemy.?.position);
+                // state.sound_system.play_enemy_destroyed();
             }
         }
 
-        const predicate = struct {
-            pub fn func(enemy: Enemy) bool {
-                return enemy.is_alive;
-            }
-        };
-
+        const enemyTester = EnemyTester {};
         // state.enemies.retain(|e| e.is_alive);
-        core.utils.retain(Enemy, state.enemies, predicate.func, self.allocator);
+        try core.utils.retain(Enemy, EnemyTester, &state.enemies, enemyTester, self.allocator);
     }
+
+    const SpriteAgeTester = struct {
+        sprite_duration: f32,
+        pub fn predicate(self: *const SpriteAgeTester, sprite: *SpriteSheetSprite) bool {
+            return sprite.age < self.sprite_duration;
+        }
+    };
+
+    const EnemyTester = struct {
+        pub fn predicate(self: *const EnemyTester, enemy: *Enemy) bool {
+            _ = self;
+            return enemy.is_alive;
+        }
+    };
 
     pub fn draw_bullets(self: *Self, shader: *Shader, projection_view: *const Mat4) void {
         if (self.all_bullet_positions.items.len == 0) {
@@ -532,7 +542,7 @@ pub const BulletStore = struct {
         const scale: f32 = 2.0; // 0.25f32;
 
         for (self.bullet_impact_sprites.items) |sprite| {
-            var model = Mat4.fromTranslation(&sprite.world_position);
+            var model = Mat4.fromTranslation(&sprite.?.world_position);
             model = model.mulMat4(&Mat4.fromRotationX(math.degreesToRadians(-90.0)));
 
             // TODO: Billboarding
@@ -546,7 +556,7 @@ pub const BulletStore = struct {
 
             model = model.mulMat4(&Mat4.fromScale(&vec3(scale, scale, scale)));
 
-            sprite_shader.set_float("age", sprite.age);
+            sprite_shader.set_float("age", sprite.?.age);
             sprite_shader.set_mat4("model", &model);
 
             gl.drawArrays(gl.TRIANGLES, 0, 6);

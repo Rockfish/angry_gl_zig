@@ -1,5 +1,8 @@
+const std = @import("std");
 const math = @import("math");
 const core = @import("core");
+
+const Allocator = std.mem.Allocator;
 
 const Vec3 = math.Vec3;
 
@@ -28,10 +31,19 @@ pub const SpriteSheet = struct {
 pub const SpriteSheetSprite = struct {
     world_position: Vec3,
     age: f32,
+    allocator: Allocator,
 
     const Self = @This();
 
-    pub fn new(world_position: Vec3) Self {
-        return .{ .world_position = world_position, .age = 0.0 };
+    pub fn deinit(self: *Self) void {
+        self.allocator.destroy(self);
+    }
+
+    pub fn new(allocator: Allocator, world_position: Vec3) Self {
+        return .{
+            .world_position = world_position,
+            .age = 0.0,
+            .allocator = allocator,
+        };
     }
 };

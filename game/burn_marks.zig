@@ -23,12 +23,17 @@ const BURN_MARK_TIME: f32 = 5.0;
 pub const BurnMark = struct {
     position: Vec3,
     time_left: f32,
+    allocator: Allocator,
+
+    pub fn deinit(self: *BurnMark) void {
+        self.allocator.destroy(self);
+    }
 };
 
 pub const BurnMarks = struct {
     unit_square_vao: c_uint,
     mark_texture: Texture,
-    marks: ArrayList(BurnMark),
+    marks: ArrayList(?*BurnMark),
     allocator: Allocator,
 
     const Self = @This();
@@ -48,17 +53,20 @@ pub const BurnMarks = struct {
         burn_marks.* = .{
             .unit_square_vao = unit_square_vao,
             .mark_texture = mark_texture,
-            .marks = ArrayList(BurnMark).init(allocator),
+            .marks = ArrayList(?*BurnMark).init(allocator),
             .allocator = allocator,
         };
         return burn_marks;
     }
 
-    pub fn add_mark(self: *Self, position: Vec3) void {
-        self.marks.push(BurnMark {
+    pub fn add_mark(self: *Self, position: Vec3) !void {
+        const burn_mark = try self.allocator.create(BurnMark);
+        burn_mark.* = BurnMark {
             .position = position,
             .time_left = BURN_MARK_TIME,
-        });
+            .allocator = self.allocator,
+        };
+        try self.marks.append(burn_mark);
     }
 
     pub fn draw_marks(self: *Self, shader: *Shader, projection_view: *const Mat4, delta_time: f32) void {
@@ -79,11 +87,11 @@ pub const BurnMarks = struct {
         gl.bindVertexArray(self.unit_square_vao);
 
         for (self.marks.items) |*mark| {
-            const scale: f32 = 0.5 * mark.time_left;
-            mark.time_left -= delta_time;
+            const scale: f32 = 0.5 * mark.*.?.time_left;
+            mark.*.?.time_left -= delta_time;
 
             // model *= Mat4.from_translation(vec3(mark.x, 0.01, mark.z));
-            var model = Mat4.fromTranslation(&mark.position);
+            var model = Mat4.fromTranslation(&mark.*.?.position);
 
             model = model.mulMat4(&Mat4.fromRotationX(math.degreesToRadians(-90.0)));
             model = model.mulMat4(&Mat4.fromScale(&vec3(scale, scale, scale)));
@@ -93,16 +101,19 @@ pub const BurnMarks = struct {
             gl.drawArrays(gl.TRIANGLES, 0, 6);
         }
 
-        const predicate = struct {
-           pub fn func(m: *BurnMark) bool {
-              return m.time_left > 0.0;
-           }
-        };
+        const predicate = Tester {};
 
-        self.marks.retain(predicate.func);
+        try core.utils.retain(BurnMark, Tester, &self.marks, predicate, self.allocator);
 
         gl.disable(gl.BLEND);
         gl.depthMask(gl.TRUE);
         gl.enable(gl.CULL_FACE);
     }
+
+    const Tester = struct {
+        pub fn predicate(self: *const Tester, m: *BurnMark) bool {
+            _ = self;
+            return m.time_left > 0.0;
+        }
+    };
 };

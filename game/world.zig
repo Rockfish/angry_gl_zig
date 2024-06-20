@@ -63,7 +63,7 @@ pub const State = struct {
     active_camera: CameraType,
     player: *Player,
     burn_marks: *BurnMarks,
-    enemies: std.ArrayList(Enemy),
+    enemies: std.ArrayList(?*Enemy),
     // sound_system: *SoundSystem,
     game_projection: math.Mat4,
     floating_projection: math.Mat4,

@@ -277,7 +277,7 @@ pub const Animator = struct {
             target_anim_ticks += weighted.start_tick;
 
             if ((target_anim_ticks < (weighted.start_tick - 0.01)) or (target_anim_ticks > (weighted.end_tick + 0.01))) {
-                panic("target_anim_ticks out of range: {}", target_anim_ticks);
+                panic("target_anim_ticks out of range: {any}", .{target_anim_ticks});
             }
 
             try self.calculate_transform_maps(
@@ -300,15 +300,20 @@ pub const Animator = struct {
         try self.update_final_transforms();
     }
 
-    fn hasCurrentWeight(animation: *AnimationTransition) bool {
-        return animation.current_weight > 0.0;
-    }
+    const Tester = struct {
+        // hasCurrentWeight
+        pub fn predicate(self: *const Tester, animation: *AnimationTransition) bool {
+            _ = self;
+            return animation.current_weight > 0.0;
+        }
+    };
 
     fn update_transitions(self: *Self, delta_time: f32) !void {
         for (self.transitions.items) |animation| {
             animation.?.current_weight -= animation.?.weight_decline_per_sec * delta_time;
         }
-        try utils.retain(AnimationTransition, self.transitions, hasCurrentWeight, self.allocator);
+        const tester = Tester{};
+        try utils.retain(AnimationTransition, Tester, self.transitions, tester, self.allocator);
     }
 
     fn update_node_map(self: *Self, delta_time: f32) !void {
