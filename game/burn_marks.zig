@@ -32,7 +32,7 @@ pub const BurnMark = struct {
 
 pub const BurnMarks = struct {
     unit_square_vao: c_uint,
-    mark_texture: Texture,
+    mark_texture: *Texture,
     marks: ArrayList(?*BurnMark),
     allocator: Allocator,
 
@@ -78,8 +78,8 @@ pub const BurnMarks = struct {
         shader.use_shader();
         shader.set_mat4("PV", projection_view);
 
-        shader.bind_texture(0, "texture_diffuse", &self.mark_texture);
-        shader.bind_texture(1, "texture_normal", &self.mark_texture);
+        shader.bind_texture(0, "texture_diffuse", self.mark_texture);
+        shader.bind_texture(1, "texture_normal", self.mark_texture);
 
         gl.enable(gl.BLEND);
         gl.depthMask(gl.FALSE);

@@ -278,22 +278,13 @@ pub const ModelBuilder = struct {
 
         for (self.texture_cache.items) |cached_texture| {
             if (std.mem.eql(u8, cached_texture.texture_path, file_path)) {
-                const texture = try self.allocator.create(Texture);
-                texture.* = .{
-                    .id = cached_texture.id,
-                    .texture_path = try cached_texture.allocator.dupe(u8, cached_texture.texture_path),
-                    .texture_type = texture_config.texture_type,
-                    .height = cached_texture.height,
-                    .width = cached_texture.width,
-                    .allocator = cached_texture.allocator,
-                };
-                // std.debug.print("ModelBuilder loadTexture- id: {d}  type: {any}  path: {s}\n", .{texture.id, texture.texture_type, texture.texture_path});
+                const texture = try cached_texture.clone();
+                texture.texture_type = texture_config.texture_type;
                 return texture;
             }
         }
 
-        const texture = try self.allocator.create(Texture);
-        texture.* = try Texture.new(self.allocator, filename, texture_config);
+        const texture = try Texture.new(self.allocator, filename, texture_config);
         try self.texture_cache.append(texture);
 
         // std.debug.print("Builder: created a new texture: {s}\n", .{texture.texture_path});

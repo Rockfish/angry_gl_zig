@@ -108,7 +108,7 @@ pub const MuzzleFlash = struct {
         gl.depthMask(gl.FALSE);
         gl.bindVertexArray(self.unit_square_vao);
 
-        sprite_shader.bind_texture(0, "spritesheet", &self.muzzle_flash_impact_sprite.texture);
+        sprite_shader.bind_texture(0, "spritesheet", self.muzzle_flash_impact_sprite.texture);
 
         sprite_shader.set_int("numCols", @intFromFloat(self.muzzle_flash_impact_sprite.num_columns));
         sprite_shader.set_float("timePerSprite", self.muzzle_flash_impact_sprite.time_per_sprite);

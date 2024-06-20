@@ -141,7 +141,7 @@ pub const BulletStore = struct {
     rotation_vbo: gl.Uint,
     offset_vbo: gl.Uint,
     bullet_groups: ArrayList(BulletGroup),
-    bullet_texture: Texture,
+    bullet_texture: *Texture,
     bullet_impact_spritesheet: SpriteSheet,
     bullet_impact_sprites: ArrayList(?*SpriteSheetSprite),
     unit_square_vao: c_uint,
@@ -484,8 +484,8 @@ pub const BulletStore = struct {
         shader.set_mat4("PV", projection_view);
         shader.set_bool("useLight", false);
 
-        shader.bind_texture(0, "texture_diffuse", &self.bullet_texture);
-        shader.bind_texture(1, "texture_normal", &self.bullet_texture);
+        shader.bind_texture(0, "texture_diffuse", self.bullet_texture);
+        shader.bind_texture(1, "texture_normal", self.bullet_texture);
 
         self.render_bullet_sprites();
 
@@ -531,7 +531,7 @@ pub const BulletStore = struct {
         sprite_shader.set_int("numCols", @intFromFloat(self.bullet_impact_spritesheet.num_columns));
         sprite_shader.set_float("timePerSprite", self.bullet_impact_spritesheet.time_per_sprite);
 
-        sprite_shader.bind_texture(0, "spritesheet", &self.bullet_impact_spritesheet.texture);
+        sprite_shader.bind_texture(0, "spritesheet", self.bullet_impact_spritesheet.texture);
 
         gl.enable(gl.BLEND);
         // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);

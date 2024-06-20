@@ -100,6 +100,8 @@ pub fn main() !void {
     try zopengl.loadCoreProfile(glfw.getProcAddress, gl_major, gl_minor);
 
     try run(allocator, window);
+
+    std.debug.print("Exiting main\n", .{});
 }
 
 pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
@@ -220,12 +222,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // Models and systems
 
     var texture_cache = ArrayList(*Texture).init(allocator);
-    defer {
-        for (texture_cache.items) |_texture| {
-            _texture.deinit();
-        }
-        texture_cache.deinit();
-    }
+    defer texture_cache.deinit();
 
     var player = try Player.new(allocator, &texture_cache);
     std.debug.print("player loaded\n", .{});
@@ -727,8 +724,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     }
 
     std.debug.print("\nRun completed.\n\n", .{});
-
-
 }
 
 inline fn toRadians(degrees: f32) f32 {

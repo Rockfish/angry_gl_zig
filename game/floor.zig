@@ -38,9 +38,9 @@ const FLOOR_VERTICES: [30]f32 = .{
 pub const Floor = struct {
     floor_vao: gl.Uint,
     floor_vbo: gl.Uint,
-    texture_floor_diffuse: Texture,
-    texture_floor_normal: Texture,
-    texture_floor_spec: Texture,
+    texture_floor_diffuse: *Texture,
+    texture_floor_normal: *Texture,
+    texture_floor_spec: *Texture,
 
     const Self = @This();
 
@@ -93,9 +93,9 @@ pub const Floor = struct {
     pub fn draw(self: *const Self, shader: *const Shader, projection_view: *const Mat4) void {
         shader.use_shader();
 
-        shader.bind_texture(0, "texture_diffuse", &self.texture_floor_diffuse);
-        shader.bind_texture(1, "texture_normal", &self.texture_floor_normal);
-        shader.bind_texture(2, "texture_spec", &self.texture_floor_spec);
+        shader.bind_texture(0, "texture_diffuse", self.texture_floor_diffuse);
+        shader.bind_texture(1, "texture_normal", self.texture_floor_normal);
+        shader.bind_texture(2, "texture_spec", self.texture_floor_spec);
 
         // angle floor
         // const _model = Mat4.from_axis_angle(vec3(0.0, 1.0, 0.0), math.degreesToRadians(45.0));

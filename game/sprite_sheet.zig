@@ -13,7 +13,7 @@ const TextureWrap = core.texture.TextureWrap;
 const TextureFilter = core.texture.TextureFilter;
 
 pub const SpriteSheet = struct {
-    texture: Texture,
+    texture: *Texture,
     num_columns: f32,
     time_per_sprite: f32,
 
@@ -23,9 +23,9 @@ pub const SpriteSheet = struct {
         self.texture.deinit();
     }
 
-    pub fn new(texture_unit: Texture, num_columns: i32, time_per_sprite: f32) Self {
+    pub fn new(texture: *Texture, num_columns: i32, time_per_sprite: f32) Self {
         return .{
-            .texture = texture_unit,
+            .texture = texture,
             .num_columns = @floatFromInt(num_columns),
             .time_per_sprite = time_per_sprite,
         };

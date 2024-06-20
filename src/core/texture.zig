@@ -117,9 +117,10 @@ pub const Texture = struct {
 
     pub fn deinit(self: *const Texture) void {
         self.allocator.free(self.texture_path);
+        self.allocator.destroy(self);
     }
 
-    pub fn new(allocator: std.mem.Allocator, path: []const u8, texture_config: TextureConfig) !Texture {
+    pub fn new(allocator: std.mem.Allocator, path: []const u8, texture_config: TextureConfig) !*Texture {
         zstbi.init(allocator);
         defer zstbi.deinit();
 
@@ -179,8 +180,8 @@ pub const Texture = struct {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         }
 
-        // std.debug.print("Texture: returning texture\n", .{});
-        return Texture{
+        const texture = try allocator.create(Texture);
+        texture.* = Texture{
             .id = texture_id,
             .texture_path = try allocator.dupe(u8, path),
             .texture_type = texture_config.texture_type,
@@ -188,5 +189,19 @@ pub const Texture = struct {
             .height = image.height,
             .allocator = allocator,
         };
+        return texture;
+    }
+
+    pub fn clone(self: *const Self) !*Texture {
+        const texture = try self.allocator.create(Texture);
+        texture.* = Texture{
+            .id = self.id,
+            .texture_path = try self.allocator.dupe(u8, self.texture_path),
+            .texture_type = self.texture_type,
+            .width = self.width,
+            .height = self.height,
+            .allocator = self.allocator,
+        };
+        return texture;
     }
 };
