@@ -73,6 +73,10 @@ const V4 = struct {
 };
 
 pub fn main() !void {
+    var buf: [512]u8 = undefined;
+    const cwd = try std.fs.selfExeDirPath(&buf);
+    std.debug.print("Running sample_animation. cwd = {s}\n", .{cwd});
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 

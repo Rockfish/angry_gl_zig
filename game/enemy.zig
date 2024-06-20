@@ -66,7 +66,9 @@ pub const EnemySystem = struct {
 
     pub fn new(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !Self {
         const model_builder = try ModelBuilder.init(allocator, texture_cache,"enemy", "assets/Models/Eeldog/EelDog.FBX");
+        std.debug.print("enemy builder created\n", .{});
         const enemy_model = try model_builder.build();
+        std.debug.print("enemy model built\n", .{});
         return .{
             .count_down = world.ENEMY_SPAWN_INTERVAL,
             .monster_y = world.MONSTER_Y,

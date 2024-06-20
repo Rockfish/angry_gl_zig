@@ -145,8 +145,10 @@ pub const Player = struct {
         try builder.addTexture("Gun", texture_emissive, "assets/Models/Player/Textures/Gun_E.tga");
         try builder.addTexture("Gun", texture_normals, "assets/Models/Player/Textures/Gun_NRM.tga");
 
+        std.debug.print("player builder created\n", .{});
         const model = try builder.build();
         builder.deinit();
+        std.debug.print("player model built\n", .{});
 
         var anim_hash = HashMap(AnimationName, AnimationClip).init(allocator);
         try anim_hash.put(.idle, AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever));

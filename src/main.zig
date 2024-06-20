@@ -57,6 +57,10 @@ const content_dir = "angrygl_assets";
 var state: State = undefined;
 
 pub fn main() !void {
+    var buf: [512]u8 = undefined;
+    const cwd = try std.fs.selfExeDirPath(&buf);
+    std.debug.print("Running src/main. cwd = {s}\n", .{cwd});
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 

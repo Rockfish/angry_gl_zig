@@ -110,6 +110,11 @@ pub fn build(b: *std.Build) void {
 
     const run_game = b.addRunArtifact(game);
     run_game.step.dependOn(&install_game.step);
+
+    if (b.args) |args| {
+        run_game.addArgs(args);
+    }
+
     b.step("game-run", "Run game").dependOn(&run_game.step);
 
     // examples/sample_animation

@@ -103,8 +103,10 @@ pub fn main() !void {
 }
 
 pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
-
-    std.debug.print("Running game\n", .{});
+    var buf: [512]u8 = undefined;
+    const exe_dir = try std.fs.selfExeDirPath(&buf);
+    // const cwd = try std.os.getFdPath(&buf);
+    std.debug.print("Running game. exe_dir = {s} \n", .{exe_dir});
 
     var buffer: [1024]u8 = undefined;
     const root_path = std.fs.selfExeDirPath(buffer[0..]) catch ".";
@@ -113,26 +115,26 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     // Shaders
 
-    const player_shader = try Shader.new( allocator, "game/shaders/player_shader.vert", "game/shaders/player_shader.frag");
-    const player_emissive_shader = try Shader.new(allocator, "shaders/player_shader.vert", "shaders/texture_emissive_shader.frag");
-    const wiggly_shader = try Shader.new(allocator, "shaders/wiggly_shader.vert", "shaders/player_shader.frag");
-    const floor_shader = try Shader.new(allocator, "shaders/basic_texture_shader.vert", "shaders/floor_shader.frag");
+    const player_shader = try Shader.new(allocator, "game/shaders/player_shader.vert", "game/shaders/player_shader.frag");
+    const player_emissive_shader = try Shader.new(allocator, "game/shaders/player_shader.vert", "game/shaders/texture_emissive_shader.frag");
+    const wiggly_shader = try Shader.new(allocator, "game/shaders/wiggly_shader.vert", "game/shaders/player_shader.frag");
+    const floor_shader = try Shader.new(allocator, "game/shaders/basic_texture_shader.vert", "game/shaders/floor_shader.frag");
 
     // bullets, muzzle flash, burn marks
-    const instanced_texture_shader = try Shader.new(allocator, "shaders/instanced_texture_shader.vert", "shaders/basic_texture_shader.frag");
-    const sprite_shader = try Shader.new(allocator, "shaders/geom_shader2.vert", "shaders/sprite_shader.frag");
-    const basic_texture_shader = try Shader.new(allocator, "shaders/basic_texture_shader.vert", "shaders/basic_texture_shader.frag");
+    const instanced_texture_shader = try Shader.new(allocator, "game/shaders/instanced_texture_shader.vert", "game/shaders/basic_texture_shader.frag");
+    const sprite_shader = try Shader.new(allocator, "game/shaders/geom_shader2.vert", "game/shaders/sprite_shader.frag");
+    const basic_texture_shader = try Shader.new(allocator, "game/shaders/basic_texture_shader.vert", "game/shaders/basic_texture_shader.frag");
 
     // blur and scene
-    const blur_shader = try Shader.new(allocator, "shaders/basicer_shader.vert", "shaders/blur_shader.frag");
-    const scene_draw_shader = try Shader.new(allocator, "shaders/basicer_shader.vert", "shaders/texture_merge_shader.frag");
+    const blur_shader = try Shader.new(allocator, "game/shaders/basicer_shader.vert", "game/shaders/blur_shader.frag");
+    const scene_draw_shader = try Shader.new(allocator, "game/shaders/basicer_shader.vert", "game/shaders/texture_merge_shader.frag");
 
     // for debug
-    const basicer_shader = try Shader.new(allocator, "shaders/basicer_shader.vert", "shaders/basicer_shader.frag");
-    // const _depth_shader = try Shader.new(allocator, "shaders/depth_shader.vert", "shaders/depth_shader.frag");
-    // const _debug_depth_shader = try Shader.new(allocator, "shaders/debug_depth_quad.vert", "shaders/debug_depth_quad.frag");
+    const basicer_shader = try Shader.new(allocator, "game/shaders/basicer_shader.vert", "game/shaders/basicer_shader.frag");
+    // const _depth_shader = try Shader.new(allocator, "game/shaders/depth_shader.vert", "game/shaders/depth_shader.frag");
+    // const _debug_depth_shader = try Shader.new(allocator, "game/shaders/debug_depth_quad.vert", "game/shaders/debug_depth_quad.frag");
 
-    std.debug.print("shaders loaded\n", .{});
+    std.debug.print("game/shaders loaded\n", .{});
     // --- Lighting ---
 
     const light_dir = vec3(-0.8, 0.0, -1.0).normalize();
@@ -205,10 +207,15 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var texture_cache = ArrayList(*Texture).init(allocator);
 
     var player = try Player.new(allocator, &texture_cache);
+    std.debug.print("player loaded\n", .{});
     var enemies = try EnemySystem.new(allocator, &texture_cache);
+    std.debug.print("enemies loaded\n", .{});
     var muzzle_flash = try MuzzleFlash.new(allocator, unit_square_quad);
+    std.debug.print("muzzle_flash loaded\n", .{});
     var bullet_store = try BulletStore.new(allocator, unit_square_quad);
+    std.debug.print("bullet_store loaded\n", .{});
     const floor = try Floor.new(allocator);
+    std.debug.print("floor loaded\n", .{});
 
     std.debug.print("models loaded\n", .{});
 
@@ -267,7 +274,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     wiggly_shader.set_vec3("directionLight.color", &light_color);
     wiggly_shader.set_vec3("ambient", &ambient_color);
 
-    std.debug.print("shaders initilized\n", .{});
+    std.debug.print("game/shaders initilized\n", .{});
     // --------------------------------
 
     const use_framebuffers = true;
