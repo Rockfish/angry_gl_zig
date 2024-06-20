@@ -136,14 +136,14 @@ pub const Player = struct {
         const texture_emissive = .{ .texture_type = .Emissive, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
         const texture_normals = .{ .texture_type = .Normals, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
 
-        try builder.addTexture("Player", texture_diffuse, "assets/Models/Player/Textures/Player_D.tga");
-        try builder.addTexture("Player", texture_specular, "assets/Models/Player/Textures/Player_M.tga");
-        try builder.addTexture("Player", texture_emissive, "assets/Models/Player/Textures/Player_E.tga");
-        try builder.addTexture("Player", texture_normals, "assets/Models/Player/Textures/Player_NRM.tga");
-        try builder.addTexture("Gun", texture_diffuse, "assets/Models/Player/Textures/Gun_D.tga");
-        try builder.addTexture("Gun", texture_specular, "assets/Models/Player/Textures/Gun_M.tga");
-        try builder.addTexture("Gun", texture_emissive, "assets/Models/Player/Textures/Gun_E.tga");
-        try builder.addTexture("Gun", texture_normals, "assets/Models/Player/Textures/Gun_NRM.tga");
+        try builder.addTexture("Player", texture_diffuse, "Textures/Player_D.tga");
+        try builder.addTexture("Player", texture_specular, "Textures/Player_M.tga");
+        try builder.addTexture("Player", texture_emissive, "Textures/Player_E.tga");
+        try builder.addTexture("Player", texture_normals, "Textures/Player_NRM.tga");
+        try builder.addTexture("Gun", texture_diffuse, "Textures/Gun_D.tga");
+        try builder.addTexture("Gun", texture_specular, "Textures/Gun_M.tga");
+        try builder.addTexture("Gun", texture_emissive, "Textures/Gun_E.tga");
+        try builder.addTexture("Gun", texture_normals, "Textures/Gun_NRM.tga");
 
         std.debug.print("player builder created\n", .{});
         const model = try builder.build();

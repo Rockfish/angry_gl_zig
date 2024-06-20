@@ -106,7 +106,7 @@ pub const ModelBuilder = struct {
         // return self;
     }
 
-    pub fn skip_textures(self: *Self) *Self {
+    pub fn skip_textures(self: *Self) void {
         self.load_textures = false;
     }
 
@@ -204,6 +204,7 @@ pub const ModelBuilder = struct {
         }
 
         const texture_types = [_]TextureType{ TextureType.Diffuse, TextureType.Specular, TextureType.Emissive, TextureType.Normals };
+
         var material = aiScene[0].mMaterials[aiMesh.mMaterialIndex][0];
         const textures = try self.loadMaterialTextures(&material, texture_types[0..]);
 
@@ -220,6 +221,10 @@ pub const ModelBuilder = struct {
         var material_textures = try self.allocator.create(ArrayList(*Texture));
         material_textures.* = ArrayList(*Texture).init(self.allocator);
 
+        if (self.load_textures == false) {
+            return material_textures;
+        }
+
         for (texture_types) |texture_type| {
             const texture_count = Assimp.aiGetMaterialTextureCount(material, @intFromEnum(texture_type));
 
@@ -228,11 +233,9 @@ pub const ModelBuilder = struct {
                 defer self.allocator.destroy(path);
 
                 const ai_return = GetMaterialTexture(material, texture_type, @intCast(i), path);
-                if (ai_return == Assimp.AI_SUCCESS) {
-                    const full_path = try Path.join(self.allocator, &.{ self.directory, path.data[0 .. path.length] });
-                    defer self.allocator.free(full_path);
 
-                    const texture = try self.loadTexture(TextureConfig.new(texture_type), full_path);
+                if (ai_return == Assimp.AI_SUCCESS) {
+                    const texture = try self.loadTexture(TextureConfig.new(texture_type), path.data[0 .. path.length]);
                     try material_textures.append(texture);
                 }
             }
@@ -264,6 +267,8 @@ pub const ModelBuilder = struct {
     }
 
     fn loadTexture(self: *Self, texture_config: TextureConfig, file_path: []const u8) !*Texture {
+        const filename = try utils.getExistsFilename(self.allocator, self.directory, file_path);
+
         for (self.texture_cache.items) |cached_texture| {
             if (std.mem.eql(u8, cached_texture.texture_path, file_path)) {
                 const texture = try self.allocator.create(Texture);
@@ -281,7 +286,7 @@ pub const ModelBuilder = struct {
         }
 
         const texture = try self.allocator.create(Texture);
-        texture.* = try Texture.new(self.allocator, file_path, texture_config);
+        texture.* = try Texture.new(self.allocator, filename, texture_config);
         try self.texture_cache.append(texture);
 
         // std.debug.print("Builder: created a new texture: {s}\n", .{texture.texture_path});

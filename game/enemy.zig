@@ -65,9 +65,19 @@ pub const EnemySystem = struct {
     }
 
     pub fn new(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !Self {
-        const model_builder = try ModelBuilder.init(allocator, texture_cache,"enemy", "assets/Models/Eeldog/EelDog.FBX");
+        const builder = try ModelBuilder.init(allocator, texture_cache,"enemy", "assets/Models/Eeldog/EelDog.FBX");
+
+        builder.skip_textures();
+        const texture_diffuse = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
+        try builder.addTexture("Eeldog", texture_diffuse, "Eeldog_Albedo.png");
+
         std.debug.print("enemy builder created\n", .{});
-        const enemy_model = try model_builder.build();
+
+        const enemy_model = builder.build() catch |err| {
+            std.debug.print("EnemySystem model build error: {any}\n", .{err});
+            @panic(@errorName(err));
+        };
+
         std.debug.print("enemy model built\n", .{});
         return .{
             .count_down = world.ENEMY_SPAWN_INTERVAL,

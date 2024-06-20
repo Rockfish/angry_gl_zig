@@ -129,8 +129,10 @@ pub const Texture = struct {
         const c_path: [:0]const u8 = try allocator.dupeZ(u8, path);
         defer allocator.free(c_path);
 
-        // std.debug.print("loading image\n", .{});
-        var image = try zstbi.Image.loadFromFile(c_path, 0);
+        var image = zstbi.Image.loadFromFile(c_path, 0) catch |err| {
+            std.debug.print("Texture loadFromFile error: {any}  filepath: {s}\n", .{err, path});
+            @panic(@errorName(err));
+        };
         defer image.deinit();
 
         const format: u32 = switch (image.num_components) {
