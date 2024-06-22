@@ -124,7 +124,7 @@ pub const Vec3 = extern struct {
     }
 
     pub fn lerp(from: *const Vec3, to: *const Vec3, t: f32) Vec3 {
-        var result: [3]f32 align(16) = undefined;
+        var result: [3]f32 = undefined;
         cglm.glm_vec3_lerp(@as([*c]f32, @ptrCast(@constCast(from))), @as([*c]f32, @ptrCast(@constCast(to))),  t, &result);
         return @as(*Vec3, @ptrCast(&result)).*;
     }
@@ -165,7 +165,7 @@ pub const Vec4 = struct {
     }
 
     pub fn lerp(from: *const Vec4, to: *const Vec4, t: f32) Vec4 {
-        var result: [4]f32 align(16) = undefined;
+        var result: [4]f32 = undefined;
         cglm.glmc_vec4_lerp(@as([*c]f32, @ptrCast(@constCast(from))), @as([*c]f32, @ptrCast(@constCast(to))),  t, &result);
         return @as(*Vec4, @ptrCast(&result)).*;
     }
@@ -175,7 +175,7 @@ pub const Vec4 = struct {
     }
 
     pub fn normalizeTo(v: *const Vec4) Vec4 {
-        var result: [4]f32 align(16) = undefined;
+        var result: [4]f32 = undefined;
         cglm.glmc_vec4_normalize_to(@as([*c]f32, @ptrCast(@constCast(v))), &result);
         return @as(*Vec4, @ptrCast(&result)).*;
     }

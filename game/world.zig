@@ -74,7 +74,6 @@ pub const State = struct {
     mouse_y: f32,
     delta_time: f32,
     frame_time: f32,
-    last_frame: f32,
     first_mouse: bool,
     last_x: f32,
     last_y: f32,

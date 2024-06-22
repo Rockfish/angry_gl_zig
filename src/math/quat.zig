@@ -35,7 +35,7 @@ pub const Quat = struct {
     }
 
     pub fn fromMat4(mat4: Mat4) Quat {
-        var result: [4]f32 align(16) = undefined;
+        var result: [4]f32 = undefined;
         cglm.glmc_mat4_quat(@constCast(&mat4.data), &result);
         return Quat { .data = result, };
     }
@@ -53,25 +53,25 @@ pub const Quat = struct {
     }
 
     pub fn mulQuat(p: *const Quat, q: *const Quat) Quat {
-        var result: [4]f32 align(16) = undefined;
+        var result: [4]f32 = undefined;
         cglm.glmc_quat_mul(@constCast(&p.data), @constCast(&q.data), &result);
         return Quat { .data = result };
     }
 
     pub fn mulByQuat(self: *Self, other: *const Quat) void {
-        var result: [4]f32 align(16) = undefined;
+        var result: [4]f32 = undefined;
         cglm.glmc_quat_mul(&self.data, @constCast(&other.data), &result);
         self.data = result;
     }
 
     pub fn rotateVec(self: *const Self, v: *const Vec3) Vec3 {
-        var result: [3]f32 align(16) = undefined;
+        var result: [3]f32 = undefined;
         cglm.glmc_quat_rotatev(@constCast(&self.data), @as(*[3]f32, @ptrCast(@alignCast(@constCast(v)))), &result);
         return Vec3.fromArray(result);
     }
 
     pub fn slerp(self: *const Self, rot: *const Quat, t: f32) Quat {
-        var result: [4]f32 align(16) = undefined;
+        var result: [4]f32 = undefined;
         cglm.glmc_quat_slerp(@constCast(&self.data), @constCast(&rot.data), t, &result);
         return Quat { .data = result };
     }

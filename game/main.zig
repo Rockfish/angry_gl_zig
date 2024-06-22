@@ -278,7 +278,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .enemies = enemies,
         .light_postion = vec3(1.2, 1.0, 2.0),
         .delta_time = 0.0,
-        .last_frame = 0.0,
+        .frame_time = 0.0,
         .first_mouse = true,
         .last_x = VIEW_PORT_WIDTH / 2.0,
         .last_y = VIEW_PORT_HEIGHT / 2.0,
@@ -287,7 +287,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .burn_marks = burn_marks,
         // .sound_system = undefined,
         .key_presses = set.Set(glfw.Key).init(allocator),
-        .frame_time = 0.0,
         .run = true,
     };
 
@@ -331,7 +330,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const scene_texture_unit = 3;
 
     // --- event loop
-    state.last_frame = @floatCast(glfw.getTime());
+    state.frame_time = @floatCast(glfw.getTime());
     var frame_counter = FrameCount.new();
 
     std.debug.print("Starting game loop!\n", .{});
@@ -340,8 +339,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         glfw.pollEvents();
 
         const currentFrame: f32 = @floatCast(glfw.getTime());
-        state.delta_time = currentFrame - state.last_frame;
-        state.last_frame = currentFrame;
+        state.delta_time = currentFrame - state.frame_time;
+        state.frame_time = currentFrame;
+
+        // std.debug.print("currentFrame = {d} frame_time = {d}\n", .{currentFrame, state.last_frame});
 
         frame_counter.update();
 

@@ -12,7 +12,7 @@ pub fn mat3(x_axis: Vec3, y_axis: Vec3, z_axis: Vec3) Mat3 {
 }
 
 pub const Mat3 = struct {
-    data: [3][3]f32 align(16),
+    data: [3][3]f32,
 
     const Self = @This();
 

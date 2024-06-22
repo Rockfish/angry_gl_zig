@@ -12,7 +12,7 @@ pub fn mat4(x_axis: Vec4, y_axis: Vec4, z_axis: Vec4, w_axis: Vec4) Mat4 {
 }
 
 pub const Mat4 = extern struct {
-    data: [4][4]f32 align(16),
+    data: [4][4]f32,
 
     const Self = @This();
 
@@ -76,7 +76,7 @@ pub const Mat4 = extern struct {
     }
 
     pub fn getInverse(m: *const Mat4) Self {
-        var result: [4][4]f32 align(16) = undefined;
+        var result: [4][4]f32 = undefined;
         cglm.glmc_mat4_inv(@constCast(&m.data), &result);
         return Mat4 { .data = result, };
     }
@@ -104,46 +104,46 @@ pub const Mat4 = extern struct {
     }
 
     pub fn fromRotationX(angle: f32) Mat4 {
-        var result: [4][4]f32 align(16) = undefined;
+        var result: [4][4]f32 = undefined;
         const axis: [3]f32 = .{1.0, 0.0, 0.0};
         cglm.glmc_rotate_make(&result, angle, @as([*c]f32, @ptrCast(@alignCast(@constCast(&axis)))));
         return Mat4 { .data = result, };
     }
 
     pub fn fromRotationY(angle: f32) Mat4 {
-        var result: [4][4]f32 align(16) = undefined;
+        var result: [4][4]f32 = undefined;
         const axis: [3]f32 = .{0.0, 1.0, 0.0};
         cglm.glmc_rotate_make(&result, angle, @as([*c]f32, @ptrCast(@alignCast(@constCast(&axis)))));
         return Mat4 { .data = result, };
     }
 
     pub fn fromRotationZ(angle: f32) Mat4 {
-        var result: [4][4]f32 align(16) = undefined;
+        var result: [4][4]f32 = undefined;
         const axis: [3]f32 = .{0.0, 0.0, 1.0};
         cglm.glmc_rotate_make(&result, angle, @as([*c]f32, @ptrCast(@alignCast(@constCast(&axis)))));
         return Mat4 { .data = result, };
     }
 
     pub fn perspectiveRhGl(fov: f32, aspect: f32, near: f32, far: f32) Self {
-        var projection: [4][4]f32 align(16) = undefined;
+        var projection: [4][4]f32 = undefined;
         cglm.glmc_perspective_rh_no(fov, aspect, near, far, &projection);
         return Mat4 { .data = projection, };
     }
 
     pub fn orthographicRhGl(left: f32, right: f32, top: f32, bottom: f32, near: f32, far: f32) Self {
-        var ortho: [4][4]f32 align(16) = undefined;
+        var ortho: [4][4]f32 = undefined;
         cglm.glmc_ortho_rh_no(left, right, bottom, top, near, far, &ortho);
         return Mat4 { .data = ortho, };
     }
 
     pub fn lookAtRhGl(eye: *const Vec3, center: *const Vec3, up: *const Vec3) Self {
-        var view: [4][4]f32 align(16) = undefined;
+        var view: [4][4]f32 = undefined;
         cglm.glmc_lookat_rh_no(@as([*c]f32, @ptrCast(@alignCast(@constCast(eye)))), @as([*c]f32, @ptrCast(@alignCast(@constCast(center)))), @as([*c]f32, @ptrCast(@alignCast(@constCast(up)))), &view);
         return Mat4 { .data = view, };
     }
 
     pub fn lookToRhGl(eye: *const Vec3, direction: *const Vec3, up: *const Vec3) Self {
-        var view: [4][4]f32 align(16) = undefined;
+        var view: [4][4]f32 = undefined;
         cglm.glmc_look_rh_no(@as([*c]f32, @ptrCast(@alignCast(@constCast(eye)))), @as([*c]f32, @ptrCast(@alignCast(@constCast(direction)))), @as([*c]f32, @ptrCast(@alignCast(@constCast(up)))), &view);
         return Mat4 { .data = view, };
     }
@@ -157,25 +157,25 @@ pub const Mat4 = extern struct {
     }
 
     pub fn mulMat4(self: *const Self, other: *const Mat4) Self {
-        var result: [4][4]f32 align(16) = undefined;
+        var result: [4][4]f32 = undefined;
         cglm.glmc_mat4_mul(@constCast(&self.data), @constCast(&other.data), &result);
         return Mat4 { .data = result, };
     }
 
     pub fn mulByMat4(self: *Self, other: *const Mat4) void {
-        var result: [4][4]f32 align(16) = undefined;
+        var result: [4][4]f32 = undefined;
         cglm.glmc_mat4_mul(@constCast(&self.data), @constCast(&other.data), &result);
         self.data = result;
     }
 
     pub fn mulVec4(self: *const Self, vec: *const Vec4) Vec4 {
-        var result: [4]f32 align(16) = undefined;
+        var result: [4]f32 = undefined;
         cglm.glmc_mat4_mulv(@constCast(&self.data), @as([*c]f32, @ptrCast(@alignCast(@constCast(vec)))), &result);
         return @as(*Vec4, @ptrCast(&result)).*;
     }
 
     pub fn toQuat(self: *const Self) Quat {
-        var result: [4]f32 align(16) = undefined;
+        var result: [4]f32 = undefined;
         cglm.glmc_mat4_quat(@constCast(&self.data), &result);
         return Quat { .data = result, };
     }
@@ -188,7 +188,7 @@ pub const Mat4 = extern struct {
     // @param[in]  angle angle (radians)
     // @param[in]  axis  axis
     pub fn fromAxisAngle(axis: *const Vec3, angle: f32) Mat4 {
-        var result: [4][4]f32 align(16) = undefined;
+        var result: [4][4]f32 = undefined;
         cglm.glmc_rotate_make(&result, angle,  @as([*c]f32, @ptrCast(@alignCast(@constCast(axis)))));
         return Mat4 { .data = result, };
     }
@@ -200,13 +200,13 @@ pub const Mat4 = extern struct {
     };
 
     pub fn to_scale_rotation_translation(self: *const Self) TrnRotScl {
-        var tran: [4]f32 align(16) = undefined;
-        var rota: [4][4]f32 align(16) = undefined;
-        var scal: [3]f32 align(16) = undefined;
+        var tran: [4]f32 = undefined;
+        var rota: [4][4]f32 = undefined;
+        var scal: [3]f32 = undefined;
 
         cglm.glmc_decompose(@constCast(&self.data), &tran, &rota, &scal);
 
-        var quat: [4]f32 align(16) = undefined;
+        var quat: [4]f32 = undefined;
         cglm.glmc_mat4_quat(@constCast(&self.data), &quat);
 
         return TrnRotScl{

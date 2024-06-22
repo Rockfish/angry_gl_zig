@@ -65,14 +65,14 @@ pub fn build(b: *std.Build) void {
             lib.addCSourceFiles(.{
                 .root = b.path(""),
                 .files = cglm_sources,
-                .flags = &.{ "-DCGLM_STATIC=ON", "-DCGLM_SHARED=OFF" },
+                .flags = &.{ "-DCGLM_STATIC=ON", "-DCGLM_SHARED=OFF", "-DCGLM_ALL_UNALIGNED" },
             });
         },
         .windows => {
             lib.addCSourceFiles(.{
                 .root = b.path(""),
                 .files = cglm_sources,
-                .flags = &.{ "-DCGLM_STATIC=ON", "-DCGLM_SHARED=OFF", "-D_MSC_VER" },
+                .flags = &.{ "-DCGLM_STATIC=ON", "-DCGLM_SHARED=OFF", "-DCGLM_ALL_UNALIGNED", "-D_MSC_VER" },
             });
             lib.addIncludePath(.{ .cwd_relative = "C:\\cygwin64\\usr\\x86_64-w64-mingw32\\sys-root\\mingw\\include" });
             lib.addLibraryPath(.{ .cwd_relative = "C:\\cygwin64\\usr\\x86_64-w64-mingw32\\sys-root\\mingw\\lib" });
