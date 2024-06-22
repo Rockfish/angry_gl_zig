@@ -255,9 +255,11 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // view: [[1, 0, 0.00000004371139, 0], [0, 1, -0, 0], [-0.00000004371139, 0, 1, 0], [0.0000052453665, -40, -120, 1]]
         // model: [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, -10.4, -400, 1]]
 
-        const projection = Mat4.perspectiveRhGl(toRadians(state.camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
-        const view = state.camera.get_view_matrix();
+        //const projection = Mat4.perspectiveRhGl(toRadians(state.camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
 
+        const debug_camera = try Camera.camera_vec3(allocator, vec3(0.0, 40.0, 120.0));
+        const projection = Mat4.perspectiveRhGl(toRadians(debug_camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
+        const view = state.camera.get_view_matrix();
         var modelTransform = Mat4.identity();
         modelTransform.translate(&vec3(0.0, -10.4, -400.0));
         modelTransform.scale(&vec3(1.0, 1.0, 1.0));

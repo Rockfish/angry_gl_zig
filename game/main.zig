@@ -91,7 +91,7 @@ pub fn main() !void {
     glfw.windowHintTyped(.client_api, .opengl_api);
     glfw.windowHintTyped(.doublebuffer, true);
 
-    const window = try glfw.Window.create(600, 600, "Angry ", null);
+    const window = try glfw.Window.create(VIEW_PORT_WIDTH, VIEW_PORT_HEIGHT, "Angry Monsters", null);
     defer window.destroy();
 
     glfw.makeContextCurrent(window);
@@ -114,10 +114,16 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const root_path = std.fs.selfExeDirPath(buffer[0..]) catch ".";
     _ = root_path;
 
+    // set handlers
+    _ = window.setKeyCallback(key_handler);
+    _ = window.setFramebufferSizeCallback(framebuffer_size_handler);
+    // _ = window.setCursorPosCallback(cursor_position_handler);
+    _ = window.setScrollCallback(scroll_handler);
 
     // Shaders
 
     const player_shader = try Shader.new(allocator, "game/shaders/player_shader.vert", "game/shaders/player_shader.frag");
+
     const player_emissive_shader = try Shader.new(allocator, "game/shaders/player_shader.vert", "game/shaders/texture_emissive_shader.frag");
     const wiggly_shader = try Shader.new(allocator, "game/shaders/wiggly_shader.vert", "game/shaders/player_shader.frag");
     const floor_shader = try Shader.new(allocator, "game/shaders/basic_texture_shader.vert", "game/shaders/floor_shader.frag");
@@ -214,13 +220,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const ortho_width = VIEW_PORT_WIDTH / 130.0;
     const ortho_height = VIEW_PORT_HEIGHT / 130.0;
     const aspect_ratio = VIEW_PORT_WIDTH / VIEW_PORT_HEIGHT;
+
     const game_projection = Mat4.perspectiveRhGl(math.degreesToRadians(game_camera.zoom), aspect_ratio, 0.1, 100.0);
     const floating_projection = Mat4.perspectiveRhGl(math.degreesToRadians(floating_camera.zoom), aspect_ratio, 0.1, 100.0);
     const orthographic_projection = Mat4.orthographicRhGl(-ortho_width, ortho_width, -ortho_height, ortho_height, 0.1, 100.0);
 
     std.debug.print("camers loaded\n", .{});
-    // Models and systems
 
+    // Models and systems
     var texture_cache = ArrayList(*Texture).init(allocator);
     defer texture_cache.deinit();
 
@@ -312,7 +319,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     std.debug.print("game/shaders initilized\n", .{});
     // --------------------------------
 
-    const use_framebuffers = true;
+    const use_framebuffers = false;
 
     var buffer_ready = false;
     var aim_theta: f32 = 0.0;
@@ -326,11 +333,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // --- event loop
     state.last_frame = @floatCast(glfw.getTime());
     var frame_counter = FrameCount.new();
-
-    _ = window.setKeyCallback(key_handler);
-    _ = window.setFramebufferSizeCallback(framebuffer_size_handler);
-    _ = window.setCursorPosCallback(cursor_position_handler);
-    _ = window.setScrollCallback(scroll_handler);
 
     std.debug.print("Starting game loop!\n", .{});
 
@@ -390,9 +392,20 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         const projection_view = pv.projection.mulMat4(&pv.view);
 
+        // std.debug.print("camera.position = {any}\ncamera.up = {any}\ncamera.front = {any}\nprojection = {any}\nview = {any}\nprojection_view = {any}\n\n",
+        //     .{
+        //         state.game_camera.position,
+        //         state.game_camera.front,
+        //         state.game_camera.up,
+        //         pv.projection,
+        //         pv.view,
+        //         projection_view,
+        //     });
+
         var dx: f32 = 0.0;
         var dz: f32 = 0.0;
 
+        buffer_ready = false;
         if (player.is_alive and buffer_ready) {
             const world_ray = math.get_world_ray_from_mouse(
                 state.mouse_x,
@@ -422,13 +435,26 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             }
         }
 
-        std.debug.print("getting muzzle position\n", .{});
+        // std.debug.print("getting muzzle position\n", .{});
 
         const aim_rot = Mat4.fromAxisAngle(&vec3(0.0, 1.0, 0.0), aim_theta);
 
+        var player_scale = Vec3.splat(world.PLAYER_MODEL_SCALE);
+        var scale_mat4 = Mat4.fromScale(&player_scale);
         var player_transform = Mat4.fromTranslation(&player.position);
-        player_transform.mulByMat4(&Mat4.fromScale(&Vec3.splat(world.PLAYER_MODEL_SCALE)));
-        player_transform.mulByMat4(&aim_rot);
+
+        // std.debug.print("player_transfrom translation = {any}\ninverse = {any}\n", .{player_transform, Mat4.getInverse(&player_transform)});
+
+        player_transform = player_transform.mulMat4(&scale_mat4);
+        player_transform = player_transform.mulMat4(&aim_rot);
+
+        // std.debug.print("player.position = {any}\nplayer_scale = {any}\nscale_mat4 = {any}\nplayer_transform = {any}\naim_rot = {any}\n\n", .{
+        //     player.position,
+        //     player_scale,
+        //     scale_mat4,
+        //     player_transform,
+        //     aim_rot
+        // });
 
         const muzzle_transform = player.get_muzzle_position(&player_transform);
 
@@ -440,19 +466,20 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             }
         }
 
-        std.debug.print("updating muzzle_flash\n", .{});
+        // std.debug.print("updating muzzle_flash\n", .{});
         muzzle_flash.update(state.delta_time);
-        std.debug.print("updating bullet_store\n", .{});
+
+        // std.debug.print("updating bullet_store\n", .{});
         try bullet_store.update_bullets(&state);
 
         // if (player.is_alive) {
         //     std.debug.print("updating enemies\n", .{});
-        //     try enemies.update(&state);
-        //     enemies.chase_player(&state);
+        //     try enemy_system.update(&state);
+        //     enemy_system.chase_player(&state);
         // }
 
         // Update Player
-        std.debug.print("updating player\n", .{});
+        // std.debug.print("updating player\n", .{});
         try player.update(&state, aim_theta);
 
         var use_point_light = false;
@@ -474,14 +501,22 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         const near_plane: f32 = 1.0;
         const far_plane: f32 = 50.0;
         const ortho_size: f32 = 10.0;
-        const player_position = player.position;
 
         const light_projection = Mat4.orthographicRhGl(-ortho_size, ortho_size, -ortho_size, ortho_size, near_plane, far_plane);
-        const light_view = Mat4.lookAtRhGl(&player_position.sub(&player_light_dir.mulScalar(-20)), &player_position, &vec3(0.0, 1.0, 0.0));
+        const light_view = Mat4.lookAtRhGl(&player.position.sub(&player_light_dir.mulScalar(20)), &player.position, &vec3(0.0, 1.0, 0.0));
         const light_space_matrix = light_projection.mulMat4(&light_view);
 
-        std.debug.print("updating shaders\n", .{});
+        // std.debug.print("light_projection = {any}\nplayer.position = {any}\neye = {any}\nlight_view = {any}\nlight_space_matrix = {any}\n", .{
+        //     light_projection,
+        //     player.position,
+        //     player.position.sub(&player_light_dir.mulScalar(20)),
+        //     light_view,
+        //     light_space_matrix,
+        // });
+
+        // std.debug.print("updating shaders\n", .{});
         player_shader.use_shader();
+
         player_shader.set_mat4("projectionView", &projection_view);
         player_shader.set_mat4("model", &player_transform);
         player_shader.set_mat4("aimRot", &aim_rot);
@@ -504,10 +539,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         gl.clear(gl.DEPTH_BUFFER_BIT);
 
         player_shader.use_shader();
-        player_shader.set_bool("depth_mode", true);
+        player_shader.set_bool("depth_mode", false); // was true
         player_shader.set_bool("useLight", false);
 
-        std.debug.print("rendering player\n", .{});
+        // std.debug.print("rendering player\n", .{});
         try player.render(player_shader);
 
         wiggly_shader.use_shader();
@@ -515,7 +550,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         wiggly_shader.set_mat4("lightSpaceMatrix", &light_space_matrix);
         wiggly_shader.set_bool("depth_mode", true);
 
-        std.debug.print("rendering enemies\n", .{});
+        // std.debug.print("rendering enemies\n", .{});
         try enemy_system.draw_enemies(wiggly_shader, &state);
 
         // shadows end
@@ -532,7 +567,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             player_emissive_shader.set_mat4("projectionView", &projection_view);
             player_emissive_shader.set_mat4("model", &player_transform);
 
-            std.debug.print("rendering player with emissive shader\n", .{});
+            // std.debug.print("rendering player with emissive shader\n", .{});
             try player.render(player_emissive_shader);
 
             // doesn't seem to do anything
@@ -553,7 +588,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             //     }
             // }
 
-            std.debug.print("rendering bullet_store \n", .{});
+            // std.debug.print("rendering bullet_store \n", .{});
             bullet_store.draw_bullets(instanced_texture_shader, &projection_view);
 
             const debug_emission = false;
@@ -570,7 +605,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
                 basicer_shader.set_bool("greyscale", false);
                 basicer_shader.set_int("tex", texture_unit);
 
-                std.debug.print("rendering quads \n", .{});
+                // std.debug.print("rendering quads \n", .{});
                 quads.render_quad(&quad_vao);
 
                 buffer_ready = true;
@@ -600,14 +635,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         } else {
             gl.bindFramebuffer(gl.FRAMEBUFFER, 0);
-            gl.viewport(0, 0, viewport_width, viewport_height);
+            gl.viewport(0, 0, @intFromFloat(viewport_width), @intFromFloat(viewport_height));
         }
 
         floor_shader.use_shader();
         floor_shader.set_bool("useLight", true);
         floor_shader.set_bool("useSpec", true);
 
-        std.debug.print("rendering floor\n", .{});
+        // std.debug.print("rendering floor\n", .{});
         floor.draw(floor_shader, &projection_view);
 
         player_shader.use_shader();
@@ -615,7 +650,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         player_shader.set_bool("useEmissive", true);
         player_shader.set_bool("depth_mode", false);
 
-        std.debug.print("rendering player\n", .{});
+        // std.debug.print("rendering player\n", .{});
         try player.render(player_shader);
 
         muzzle_flash.draw(sprite_shader, &projection_view, &muzzle_transform);
@@ -625,13 +660,13 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         wiggly_shader.set_bool("useEmissive", false);
         wiggly_shader.set_bool("depth_mode", false);
 
-        std.debug.print("rendering enemies\n", .{});
+        // std.debug.print("rendering enemies\n", .{});
         try enemy_system.draw_enemies(wiggly_shader, &state);
 
-        std.debug.print("rendering burn_marks\n", .{});
+        // std.debug.print("rendering burn_marks\n", .{});
         state.burn_marks.draw_marks(basic_texture_shader, &projection_view, state.delta_time);
 
-        std.debug.print("rendering bullet_impacts\n", .{});
+        // std.debug.print("rendering bullet_impacts\n", .{});
         bullet_store.draw_bullet_impacts(sprite_shader, &projection_view);
 
         if (!use_framebuffers) {
@@ -732,7 +767,6 @@ inline fn toRadians(degrees: f32) f32 {
 
 fn key_handler (window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = scancode;
-    _ = mods;
     switch (key) {
         .escape => { window.setShouldClose(true); },
         .t => {
@@ -740,10 +774,34 @@ fn key_handler (window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw
                 std.debug.print("time: {d}\n", .{state.delta_time});
             }
         },
-        .w => { state.game_camera.process_keyboard(.Forward, state.delta_time);},
-        .s => { state.game_camera.process_keyboard(.Backward, state.delta_time);},
-        .a => { state.game_camera.process_keyboard(.Left, state.delta_time);},
-        .d => { state.game_camera.process_keyboard(.Right, state.delta_time);},
+        .w => {
+            if (mods.shift) {
+                state.game_camera.process_keyboard(.Forward, state.delta_time);
+            } else {
+                handle_key_press( action, key);
+            }
+        },
+        .s => {
+            if (mods.shift) {
+                state.game_camera.process_keyboard(.Backward, state.delta_time);
+            } else {
+                handle_key_press( action, key);
+            }
+        },
+        .a => {
+            if (mods.shift) {
+                state.game_camera.process_keyboard(.Left, state.delta_time);
+            } else {
+                handle_key_press( action, key);
+            }
+        },
+        .d => {
+            if (mods.shift) {
+                state.game_camera.process_keyboard(.Right, state.delta_time);
+            } else {
+                handle_key_press( action, key);
+            }
+        },
         else => {}
     }
 }
@@ -784,4 +842,38 @@ fn scroll_handler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void
     _ = window;
     _ = xoffset;
     state.game_camera.process_mouse_scroll(@floatCast(yoffset));
+}
+
+fn handle_key_press(action: glfw.Action, key: glfw.Key) void {
+    switch (action) {
+        .release => { _ = state.key_presses.remove(key); },
+        .press => { _ = state.key_presses.add(key) catch {}; },
+        else => {}
+    }
+
+    if (state.player.is_alive) {
+        const player_speed = state.player.speed;
+        var direction_vec = Vec3.splat(0.0);
+
+        var iterator = state.key_presses.iterator();
+        while (iterator.next()) |key_| {
+            switch (key_.*) {
+                glfw.Key.a => direction_vec.addTo(&vec3(0.0, 0.0, -1.0)),
+                glfw.Key.d => direction_vec.addTo(&vec3(0.0, 0.0, 1.0)),
+                glfw.Key.s => direction_vec.addTo(&vec3(-1.0, 0.0, 0.0)),
+                glfw.Key.w => direction_vec.addTo(&vec3(1.0, 0.0, 0.0)),
+                else => {}
+            }
+        }
+
+        if (direction_vec.lengthSquared() > 0.01) {
+            std.debug.print("previous player position = {any}\n", .{state.player.position});
+            state.player.position.addTo(&direction_vec.normalize().mulScalar(player_speed * state.delta_time));
+            std.debug.print("updated player position = {any}\nn", .{state.player.position});
+        }
+        state.player.direction = vec2(direction_vec.x, direction_vec.z);
+
+        // info!("key presses: {:?}", &state.key_presses);
+        // info!("direction: {:?}  player.direction: {:?}  delta_time: {:?}", direction_vec, player.direction, state.frame_time);
+    }
 }

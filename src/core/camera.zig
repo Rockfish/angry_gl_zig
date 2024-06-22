@@ -50,7 +50,6 @@ pub const Camera = struct {
     const Self = @This();
 
     pub fn deinit(self: *const Self) void {
-        std.debug.print("Camera deinit\n", .{});
         self.allocator.destroy(self);
     }
 
@@ -91,8 +90,8 @@ pub const Camera = struct {
 
     pub fn camera_scalar(allocator: Allocator, pos_x: f32, pos_y: f32, pos_z: f32, up_x: f32, up_y: f32, up_z: f32, yaw: f32, pitch: f32) !*Camera {
         var camera = try Camera.new(allocator);
-        camera.position = vec4(pos_x, pos_y, pos_z, 0.0);
-        camera.world_up = vec4(up_x, up_y, up_z, 0.0);
+        camera.position = vec3(pos_x, pos_y, pos_z);
+        camera.world_up = vec3(up_x, up_y, up_z);
         camera.yaw = yaw;
         camera.pitch = pitch;
         camera.update_camera_vectors();
@@ -124,7 +123,7 @@ pub const Camera = struct {
 
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
     pub fn get_view_matrix(self: *Self) Mat4 {
-        const viewTransform = Mat4.lookRhGl(&self.position, &self.front, &self.up);
+        const viewTransform = Mat4.lookToRhGl(&self.position, &self.front, &self.up);
         return viewTransform;
     }
 

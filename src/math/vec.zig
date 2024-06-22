@@ -34,7 +34,7 @@ pub fn vec2(x: f32, y: f32) Vec2 {
     return .{ .x = x, .y = y};
 }
 
-pub const Vec3 = struct {
+pub const Vec3 = extern struct {
     x: f32,
     y: f32,
     z: f32,
@@ -48,7 +48,7 @@ pub const Vec3 = struct {
     }
 
     pub fn splat(v: f32) Vec3 {
-        return  .{.x = v, .y = v, .z = v};
+        return .{.x = v, .y = v, .z = v};
     }
 
     pub fn fromArray(value: [3]f32) Vec3 {
@@ -71,6 +71,12 @@ pub const Vec3 = struct {
 
     pub fn add(a: *const Vec3, b: *const Vec3) Vec3 {
         return .{.x = a.x + b.x, .y = a.y + b.y, .z = a.z + b.z};
+    }
+
+    pub fn addTo(a: *Vec3, b: *const Vec3) void {
+        a.x = a.x + b.x;
+        a.y = a.y + b.y;
+        a.z = a.z + b.z;
     }
 
     pub fn sub(a: *const Vec3, b: *const Vec3) Vec3 {
@@ -97,12 +103,16 @@ pub const Vec3 = struct {
         return (lhs.x * rhs.x) + (lhs.y * rhs.y) + (lhs.z * rhs.z);
     }
 
-    pub fn cross(a: *const Vec3, b: *const Vec3) Vec3 {
+    pub fn cross(a: *const Vec3, rhs: *const Vec3) Vec3 {
         return Vec3 {
-            .x = a.y * b.z - a.z * b.y,
-            .y = a.z * b.x - a.x * b.z,
-            .z = a.x * b.y - a.y * b.x,
+            .x = a.y * rhs.z - a.z * rhs.y,
+            .y = a.z * rhs.x - a.x * rhs.z,
+            .z = a.x * rhs.y - a.y * rhs.x,
         };
+    }
+
+    pub fn lengthSquared(v: *const Vec3) f32 {
+        return v.dot(v);
     }
 
     pub fn length(v: *const Vec3) f32 {

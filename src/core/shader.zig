@@ -217,7 +217,7 @@ pub const Shader = struct {
     pub fn set_mat4(self: *const Shader, uniform: [:0]const u8, mat: *const Mat4) void {
         const location = gl.getUniformLocation(self.id, uniform);
         // std.debug.print("shader-  uniform: {s}  matrix: {any}\n", .{uniform, &matrix.toArray()});
-        gl.uniformMatrix4fv(location, 1, gl.FALSE, &mat.toArray());
+        gl.uniformMatrix4fv(location, 1, gl.FALSE, mat.toArrayPtr());
     }
 
     // ------------------------------------------------------------------------

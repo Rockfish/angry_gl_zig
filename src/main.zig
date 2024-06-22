@@ -147,14 +147,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const texture_normals = .{ .texture_type = .Normals, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
 
     std.debug.print("Main: adding textures\n", .{});
-    try builder.addTexture("Player", texture_diffuse, "assets/Models/Player/Textures/Player_D.tga");
-    try builder.addTexture("Player", texture_specular, "assets/Models/Player/Textures/Player_M.tga");
-    try builder.addTexture("Player", texture_emissive, "assets/Models/Player/Textures/Player_E.tga");
-    try builder.addTexture("Player", texture_normals, "assets/Models/Player/Textures/Player_NRM.tga");
-    try builder.addTexture("Gun", texture_diffuse, "assets/Models/Player/Textures/Gun_D.tga");
-    try builder.addTexture("Gun", texture_specular, "assets/Models/Player/Textures/Gun_M.tga");
-    try builder.addTexture("Gun", texture_emissive, "assets/Models/Player/Textures/Gun_E.tga");
-    try builder.addTexture("Gun", texture_normals, "assets/Models/Player/Textures/Gun_NRM.tga");
+    try builder.addTexture("Player", texture_diffuse, "Textures/Player_D.tga");
+    try builder.addTexture("Player", texture_specular, "Textures/Player_M.tga");
+    try builder.addTexture("Player", texture_emissive, "Textures/Player_E.tga");
+    try builder.addTexture("Player", texture_normals, "Textures/Player_NRM.tga");
+    try builder.addTexture("Gun", texture_diffuse, "Textures/Gun_D.tga");
+    try builder.addTexture("Gun", texture_specular, "Textures/Gun_M.tga");
+    try builder.addTexture("Gun", texture_emissive, "Textures/Gun_E.tga");
+    try builder.addTexture("Gun", texture_normals, "Textures/Gun_NRM.tga");
 
     std.debug.print("Main: building model: {s}\n", .{model_path});
     var model = try builder.build();
@@ -242,9 +242,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     shader.deinit();
     camera.deinit();
     model.deinit();
-    for (texture_cache.items) |_texture| {
-        _texture.deinit();
-    }
     texture_cache.deinit();
 }
 
