@@ -1,7 +1,7 @@
 const std = @import("std");
 const cglm = @import("cglm.zig").CGLM;
 
-pub const Vec2 = struct {
+pub const Vec2 = extern struct {
     x: f32,
     y: f32,
 

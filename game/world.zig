@@ -57,6 +57,7 @@ pub const State = struct {
     viewport_height: f32,
     scaled_width: f32,
     scaled_height: f32,
+    window_scale: [2]f32,
     game_camera: *Camera,
     floating_camera: *Camera,
     ortho_camera: *Camera,

@@ -220,9 +220,6 @@ pub const Player = struct {
     pub fn update(self: *Self, state: *State, aim_theta: f32) !void {
         const weight_animations = self.update_animation_weights(self.direction, aim_theta, state.frame_time);
         try self.model.play_weight_animations(&weight_animations, state.frame_time);
-        // _ = aim_theta;
-        // try self.model.update_animation(state.delta_time);
-        // std.debug.print("delta_time = {d} frame_time = {d}\n", .{state.delta_time, state.frame_time});
     }
 
     fn update_animation_weights(self: *Self, move_vec: Vec2, aim_theta: f32, frame_time: f32) [6]WeightedAnimation {
@@ -233,8 +230,6 @@ pub const Player = struct {
 
         const anim_delta_time = frame_time - self.anim_weights.last_anim_time;
         self.anim_weights.last_anim_time = frame_time;
-
-        // std.debug.print("update_animation frame_time = {d}\n", .{frame_time});
 
         const is_dead = self.death_time >= 0.0;
 

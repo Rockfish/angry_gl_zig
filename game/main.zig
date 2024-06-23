@@ -117,7 +117,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // set handlers
     _ = window.setKeyCallback(key_handler);
     _ = window.setFramebufferSizeCallback(framebuffer_size_handler);
-    // _ = window.setCursorPosCallback(cursor_position_handler);
+    _ = window.setCursorPosCallback(cursor_position_handler);
     _ = window.setScrollCallback(scroll_handler);
 
     // Shaders
@@ -243,21 +243,20 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     std.debug.print("floor loaded\n", .{});
     var burn_marks = try BurnMarks.new(allocator, unit_square_quad);
 
-    const enemies = ArrayList(?*Enemy).init(allocator);
+    var key_presses = set.Set(glfw.Key).init(allocator);
+    var enemies = ArrayList(?*Enemy).init(allocator);
 
+    // note: defer occurs in reverse order
     defer player.deinit();
     defer enemy_system.deinit();
     defer muzzle_flash.deinit();
     defer bullet_store.deinit();
     defer floor.deinit();
     defer burn_marks.deinit();
-
-    defer for (enemies.items) |enemy| {
-        if (enemy) |e| {
-            e.deinit();
-        }
-        enemies.deinit();
-    };
+    defer key_presses.deinit();
+    defer key_presses.clearAndFree();
+    defer enemies.deinit();
+    defer enemies.clearAndFree();
 
     std.debug.print("models loaded\n", .{});
 
@@ -267,6 +266,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .viewport_height = viewport_height,
         .scaled_width = scaled_width,
         .scaled_height = scaled_height,
+        .window_scale = window_scale,
         .game_camera = game_camera,
         .floating_camera = floating_camera,
         .ortho_camera = ortho_camera,
@@ -286,7 +286,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .mouse_y = scaled_height / 2.0,
         .burn_marks = burn_marks,
         // .sound_system = undefined,
-        .key_presses = set.Set(glfw.Key).init(allocator),
+        .key_presses = key_presses,
         .run = true,
     };
 
@@ -768,55 +768,49 @@ inline fn toRadians(degrees: f32) f32 {
 
 fn key_handler (window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = scancode;
-    switch (key) {
-        .escape => { window.setShouldClose(true); },
-        .t => {
-            if (action == glfw.Action.press) {
-                std.debug.print("time: {d}\n", .{state.delta_time});
-            }
-        },
-        .w => {
-            if (mods.shift) {
-                state.game_camera.process_keyboard(.Forward, state.delta_time);
-            } else {
-                handle_key_press( action, key);
-            }
-        },
-        .s => {
-            if (mods.shift) {
-                state.game_camera.process_keyboard(.Backward, state.delta_time);
-            } else {
-                handle_key_press( action, key);
-            }
-        },
-        .a => {
-            if (mods.shift) {
-                state.game_camera.process_keyboard(.Left, state.delta_time);
-            } else {
-                handle_key_press( action, key);
-            }
-        },
-        .d => {
-            if (mods.shift) {
-                state.game_camera.process_keyboard(.Right, state.delta_time);
-            } else {
-                handle_key_press( action, key);
-            }
-        },
-        else => {}
+    if (key == .escape) { window.setShouldClose(true); }
+    if (mods.shift) {
+        switch (key) {
+            .w => state.game_camera.process_keyboard(.Forward, state.delta_time),
+            .s => state.game_camera.process_keyboard(.Backward, state.delta_time),
+            .a => state.game_camera.process_keyboard(.Left, state.delta_time),
+            .d => state.game_camera.process_keyboard(.Right, state.delta_time),
+            else => {}
+        }
+    } else {
+        switch (key) {
+            .t => if (action == glfw.Action.press) { std.debug.print("time: {d}\n", .{state.delta_time}); },
+            .w => handle_key_press( action, key),
+            .s => handle_key_press( action, key),
+            .a => handle_key_press( action, key),
+            .d => handle_key_press( action, key),
+            else => {}
+        }
     }
 }
 
 fn framebuffer_size_handler(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {
     _ = window;
     gl.viewport(0, 0, width, height);
+    set_view_port(width, height);
 }
 
-fn mouse_hander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
-    _ = window;
-    _ = button;
-    _ = action;
-    _ = mods;
+fn set_view_port(w: i32, h: i32) void {
+    const width: f32 = @floatFromInt(w);
+    const height: f32 = @floatFromInt(h);
+
+    state.viewport_width = width; // * state.window_scale.0 as i32;
+    state.viewport_height = height; // * state.window_scale.1 as i32;
+    state.scaled_width = width / state.window_scale[0];
+    state.scaled_height = height / state.window_scale[1];
+
+    const ortho_width = (state.viewport_width / 130);
+    const ortho_height = (state.viewport_height / 130);
+    const aspect_ratio = (state.viewport_width / state.viewport_height);
+
+    state.game_projection = Mat4.perspectiveRhGl(math.degreesToRadians(state.game_camera.zoom), aspect_ratio, 0.1, 100.0);
+    state.floating_projection = Mat4.perspectiveRhGl(math.degreesToRadians(state.floating_camera.zoom), aspect_ratio, 0.1, 100.0);
+    state.orthographic_projection = Mat4.orthographicRhGl(-ortho_width, ortho_width, -ortho_height, ortho_height, 0.1, 100.0);
 }
 
 fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
@@ -825,19 +819,56 @@ fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callc
     const ypos: f32 = @floatCast(yposIn);
 
     if (state.first_mouse) {
-        state.last_x = xpos;
-        state.last_y = ypos;
+        state.mouse_x = xpos;
+        state.mouse_y = ypos;
         state.first_mouse = false;
     }
 
-    const xoffset = xpos - state.last_x;
-    const yoffset = state.last_y - ypos; // reversed since y-coordinates go from bottom to top
+    // let xoffset = xpos - state.mouse_x;
+    // let yoffset = state.mouse_y - ypos; // reversed since y-coordinates go from bottom to top
 
-    state.last_x = xpos;
-    state.last_y = ypos;
+    state.mouse_x = xpos;
+    state.mouse_y = ypos;
 
-    state.game_camera.process_mouse_movement(xoffset, yoffset, true);
+    // info!("mouse: {}, {}", xpos, ypos);
+
+    // state.camera.process_mouse_movement(xoffset, yoffset, true);
 }
+
+fn mouse_hander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
+    _ = window;
+    _ = mods;
+    switch (button) {
+        .left => {
+            switch (action) {
+                .press => state.player.is_trying_to_fire = true,
+                .release => state.player.is_trying_to_fire = false,
+                else => {}
+            }
+        },
+        else => {}
+    }
+}
+
+// fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
+//     _ = window;
+//     const xpos: f32 = @floatCast(xposIn);
+//     const ypos: f32 = @floatCast(yposIn);
+//
+//     if (state.first_mouse) {
+//         state.last_x = xpos;
+//         state.last_y = ypos;
+//         state.first_mouse = false;
+//     }
+//
+//     const xoffset = xpos - state.last_x;
+//     const yoffset = state.last_y - ypos; // reversed since y-coordinates go from bottom to top
+//
+//     state.last_x = xpos;
+//     state.last_y = ypos;
+//
+//     state.game_camera.process_mouse_movement(xoffset, yoffset, true);
+// }
 
 fn scroll_handler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {
     _ = window;

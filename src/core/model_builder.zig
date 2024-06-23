@@ -10,6 +10,12 @@ const Transform = @import("transform.zig").Transform;
 const String = @import("string.zig").String;
 const Model_Mesh = @import("model_mesh.zig");
 const utils = @import("utils.zig");
+const math = @import("math");
+
+const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
+const StringHashMap = std.StringHashMap;
+const Path = std.fs.path;
 
 const texture_ = @import("texture.zig");
 const Texture = texture_.Texture;
@@ -17,15 +23,10 @@ const TextureType = texture_.TextureType;
 const TextureConfig = texture_.TextureConfig;
 const TextureFilter = texture_.TextureFilter;
 const TextureWrap = texture_.TextureWrap;
-
-const Allocator = std.mem.Allocator;
-const ArrayList = std.ArrayList;
-const StringHashMap = std.StringHashMap;
-const Path = std.fs.path;
 const Assimp = assimp.Assimp;
 const ModelMesh = Model_Mesh.ModelMesh;
-const CVec2 = Model_Mesh.CVec2;
-const CVec3 = Model_Mesh.CVec3;
+const Vec2 = math.Vec2;
+const Vec3 = math.Vec3;
 
 pub const ModelBuilder = struct {
     name: []const u8,
@@ -195,7 +196,7 @@ pub const ModelBuilder = struct {
 
             if (aiMesh.mTextureCoords[0] != null) {
                 const tex_coords = aiMesh.mTextureCoords[0];
-                model_vertex.uv = CVec2.new(tex_coords[i].x, tex_coords[i].y);
+                model_vertex.uv = Vec2.new(tex_coords[i].x, tex_coords[i].y);
                 model_vertex.tangent = vec3FromVector3D(aiMesh.mTangents[i]);
                 model_vertex.bi_tangent = vec3FromVector3D(aiMesh.mBitangents[i]);
             }
@@ -327,12 +328,12 @@ pub const ModelBuilder = struct {
     }
 };
 
-inline fn vec2FromVector2D(aiVec: Assimp.aiVector2D) CVec2 {
-    return CVec2.new(aiVec.x, aiVec.y);
+inline fn vec2FromVector2D(aiVec: Assimp.aiVector2D) Vec2 {
+    return Vec2.new(aiVec.x, aiVec.y);
 }
 
-inline fn vec3FromVector3D(aiVec: Assimp.aiVector3D) CVec3 {
-    return CVec3.new(aiVec.x, aiVec.y, aiVec.z);
+inline fn vec3FromVector3D(aiVec: Assimp.aiVector3D) Vec3 {
+    return Vec3.new(aiVec.x, aiVec.y, aiVec.z);
 }
 
 inline fn GetMaterialTexture(

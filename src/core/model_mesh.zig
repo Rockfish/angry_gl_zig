@@ -3,44 +3,22 @@ const gl = @import("zopengl").bindings;
 const Texture = @import("texture.zig").Texture;
 const Shader = @import("shader.zig").Shader;
 const utils = @import("utils.zig");
+const math = @import("math");
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
+const Vec2 = math.Vec2;
+const Vec3 = math.Vec3;
+
 const MAX_BONE_INFLUENCE: usize = 4;
 
-pub const CVec2 = extern struct {
-    x: f32,
-    y: f32,
-
-    pub fn new(x: f32, y: f32) CVec2 {
-        return CVec2 {
-            .x = x,
-            .y = y,
-        };
-    }
-};
-
-pub const CVec3 = extern struct {
-    x: f32,
-    y: f32,
-    z: f32,
-
-    pub fn new(x: f32, y: f32, z: f32) CVec3 {
-        return CVec3 {
-            .x = x,
-            .y = y,
-            .z = z
-        };
-    }
-};
-
 pub const ModelVertex = extern struct {
-    position: CVec3,
-    normal: CVec3,
-    uv: CVec2,
-    tangent: CVec3,
-    bi_tangent: CVec3,
+    position: Vec3,
+    normal: Vec3,
+    uv: Vec2,
+    tangent: Vec3,
+    bi_tangent: Vec3,
     bone_ids: [MAX_BONE_INFLUENCE]i32, //  align(1),
     bone_weights: [MAX_BONE_INFLUENCE]f32,
 
@@ -288,14 +266,14 @@ pub fn print_model_mesh(mesh: *ModelMesh) void {
     std.debug.print("OFFSET_OF_BONE_IDS: {any}\n", .{OFFSET_OF_BONE_IDS});
     std.debug.print("OFFSET_OF_WEIGHTS: {any}\n", .{OFFSET_OF_WEIGHTS});
 
-    std.debug.print("size of CVec2: {d}\n", .{@sizeOf(CVec2)});
-    std.debug.print("size of CVec3: {d}\n", .{@sizeOf(CVec3)});
+    std.debug.print("size of CVec2: {d}\n", .{@sizeOf(Vec2)});
+    std.debug.print("size of CVec3: {d}\n", .{@sizeOf(Vec3)});
     std.debug.print("size of [4]i32: {d}\n", .{@sizeOf([4]i32)});
     std.debug.print("size of [4]f32: {d}\n", .{@sizeOf([4]f32)});
 
     std.debug.print("size vertex: {d}\n", .{@sizeOf(ModelVertex)});
     std.debug.print("size of vertex parts: {d}\n",
-        .{@sizeOf(CVec3) * 4 + @sizeOf(CVec2) + @sizeOf([4]i32) + @sizeOf([4]f32)});
+        .{@sizeOf(Vec3) * 4 + @sizeOf(Vec2) + @sizeOf([4]i32) + @sizeOf([4]f32)});
 
     std.debug.print("mesh.id: {any}\n", .{mesh.id});
     std.debug.print("mesh.vertex[0]: {any}\n", .{mesh.vertices.items[0]});
