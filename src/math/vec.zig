@@ -6,11 +6,11 @@ pub const Vec2 = extern struct {
     y: f32,
 
     pub fn new(x: f32, y: f32) Vec2 {
-        return .{ .x = x, .y = y};
+        return .{ .x = x, .y = y };
     }
 
     pub fn default() Vec2 {
-        return .{.x = 0.0, .y = 0.0};
+        return .{ .x = 0.0, .y = 0.0 };
     }
 
     pub fn asArray(self: *const Vec2) [2]f32 {
@@ -31,7 +31,7 @@ pub const Vec2 = extern struct {
 };
 
 pub fn vec2(x: f32, y: f32) Vec2 {
-    return .{ .x = x, .y = y};
+    return .{ .x = x, .y = y };
 }
 
 pub const Vec3 = extern struct {
@@ -44,11 +44,11 @@ pub const Vec3 = extern struct {
     }
 
     pub fn default() Vec3 {
-        return .{.x = 0.0, .y = 0.0, .z = 0.0};
+        return .{ .x = 0.0, .y = 0.0, .z = 0.0 };
     }
 
     pub fn splat(v: f32) Vec3 {
-        return .{.x = v, .y = v, .z = v};
+        return .{ .x = v, .y = v, .z = v };
     }
 
     pub fn fromArray(value: [3]f32) Vec3 {
@@ -70,7 +70,7 @@ pub const Vec3 = extern struct {
     }
 
     pub fn add(a: *const Vec3, b: *const Vec3) Vec3 {
-        return .{.x = a.x + b.x, .y = a.y + b.y, .z = a.z + b.z};
+        return .{ .x = a.x + b.x, .y = a.y + b.y, .z = a.z + b.z };
     }
 
     pub fn addTo(a: *Vec3, b: *const Vec3) void {
@@ -80,23 +80,23 @@ pub const Vec3 = extern struct {
     }
 
     pub fn sub(a: *const Vec3, b: *const Vec3) Vec3 {
-        return .{.x = a.x - b.x, .y = a.y - b.y, .z = a.z - b.z};
+        return .{ .x = a.x - b.x, .y = a.y - b.y, .z = a.z - b.z };
     }
 
     pub fn mul(a: *const Vec3, b: *const Vec3) Vec3 {
-        return .{.x = a.x * b.x, .y = a.y * b.y, .z = a.z * b.z};
+        return .{ .x = a.x * b.x, .y = a.y * b.y, .z = a.z * b.z };
     }
 
     pub fn addScalar(a: *const Vec3, b: f32) Vec3 {
-        return .{.x = a.x + b, .y = a.y + b, .z = a.z + b};
+        return .{ .x = a.x + b, .y = a.y + b, .z = a.z + b };
     }
 
     pub fn mulScalar(a: *const Vec3, b: f32) Vec3 {
-        return .{.x = a.x * b, .y = a.y * b, .z = a.z * b};
+        return .{ .x = a.x * b, .y = a.y * b, .z = a.z * b };
     }
 
     pub fn divScalar(a: *const Vec3, b: f32) Vec3 {
-        return .{.x = a.x / b, .y = a.y / b, .z = a.z / b};
+        return .{ .x = a.x / b, .y = a.y / b, .z = a.z / b };
     }
 
     pub fn dot(lhs: *const Vec3, rhs: *const Vec3) f32 {
@@ -104,7 +104,7 @@ pub const Vec3 = extern struct {
     }
 
     pub fn cross(a: *const Vec3, rhs: *const Vec3) Vec3 {
-        return Vec3 {
+        return Vec3{
             .x = a.y * rhs.z - a.z * rhs.y,
             .y = a.z * rhs.x - a.x * rhs.z,
             .z = a.x * rhs.y - a.y * rhs.x,
@@ -125,7 +125,12 @@ pub const Vec3 = extern struct {
 
     pub fn lerp(from: *const Vec3, to: *const Vec3, t: f32) Vec3 {
         var result: [3]f32 = undefined;
-        cglm.glm_vec3_lerp(@as([*c]f32, @ptrCast(@constCast(from))), @as([*c]f32, @ptrCast(@constCast(to))),  t, &result);
+        cglm.glm_vec3_lerp(
+            @as([*c]f32, @ptrCast(@constCast(from))),
+            @as([*c]f32, @ptrCast(@constCast(to))),
+            t,
+            &result,
+        );
         return @as(*Vec3, @ptrCast(&result)).*;
     }
 };
@@ -145,7 +150,7 @@ pub const Vec4 = struct {
     }
 
     pub fn asArray(self: *const Vec4) [4]f32 {
-       return @as(*[4]f32, @ptrCast(@constCast(self))).*;
+        return @as(*[4]f32, @ptrCast(@constCast(self))).*;
     }
 
     pub fn asArrayPtr(self: *const Vec4) *[4]f32 {
@@ -153,11 +158,11 @@ pub const Vec4 = struct {
     }
 
     pub fn splat(v: f32) Vec4 {
-        return  .{ .x = v, .y = v, .z = v, .w = v };
+        return .{ .x = v, .y = v, .z = v, .w = v };
     }
 
     pub fn xyz(self: *const Vec4) Vec3 {
-        return .{.x = self.x, .y = self.y, .z = self.z};
+        return .{ .x = self.x, .y = self.y, .z = self.z };
     }
 
     pub fn scale(v: *const Vec4, s: f32) Vec4 {
@@ -166,7 +171,12 @@ pub const Vec4 = struct {
 
     pub fn lerp(from: *const Vec4, to: *const Vec4, t: f32) Vec4 {
         var result: [4]f32 = undefined;
-        cglm.glmc_vec4_lerp(@as([*c]f32, @ptrCast(@constCast(from))), @as([*c]f32, @ptrCast(@constCast(to))),  t, &result);
+        cglm.glmc_vec4_lerp(
+            @as([*c]f32, @ptrCast(@constCast(from))),
+            @as([*c]f32, @ptrCast(@constCast(to))),
+            t,
+            &result,
+        );
         return @as(*Vec4, @ptrCast(&result)).*;
     }
 
@@ -176,7 +186,10 @@ pub const Vec4 = struct {
 
     pub fn normalizeTo(v: *const Vec4) Vec4 {
         var result: [4]f32 = undefined;
-        cglm.glmc_vec4_normalize_to(@as([*c]f32, @ptrCast(@constCast(v))), &result);
+        cglm.glmc_vec4_normalize_to(
+            @as([*c]f32, @ptrCast(@constCast(v))),
+            &result,
+        );
         return @as(*Vec4, @ptrCast(&result)).*;
     }
 };
@@ -184,4 +197,3 @@ pub const Vec4 = struct {
 pub fn vec4(x: f32, y: f32, z: f32, w: f32) Vec4 {
     return .{ .x = x, .y = y, .z = z, .w = w };
 }
-

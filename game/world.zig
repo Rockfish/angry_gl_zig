@@ -4,6 +4,9 @@ const set = @import("ziglangSet");
 const core = @import("core");
 const math = @import("math");
 
+const ArrayList = std.ArrayList;
+const EnumSet = std.EnumSet;
+
 const Player = @import("player.zig").Player;
 const Enemy = @import("enemy.zig").Enemy;
 const EnemySystem = @import("enemy.zig").EnemySystem;
@@ -15,8 +18,6 @@ const Floor = @import("floor.zig").Floor;
 const fb = @import("framebuffers.zig");
 const quads = @import("quads.zig");
 const Capsule = @import("capsule.zig").Capsule;
-
-const ArrayList = std.ArrayList;
 
 const Assimp = core.assimp.Assimp;
 const Model = core.Model;
@@ -69,7 +70,8 @@ pub const State = struct {
     game_projection: math.Mat4,
     floating_projection: math.Mat4,
     orthographic_projection: math.Mat4,
-    key_presses: set.Set(glfw.Key),
+    // key_presses: set.Set(glfw.Key),
+    key_presses: EnumSet(glfw.Key),
     light_postion: math.Vec3,
     mouse_x: f32,
     mouse_y: f32,

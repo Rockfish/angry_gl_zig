@@ -187,9 +187,9 @@ pub const Mat4 = extern struct {
     // @param[out] m     affine transform
     // @param[in]  angle angle (radians)
     // @param[in]  axis  axis
-    pub fn fromAxisAngle(axis: *const Vec3, angle: f32) Mat4 {
+    pub fn fromAxisAngle(axis: *const Vec3, angleRadians: f32) Mat4 {
         var result: [4][4]f32 = undefined;
-        cglm.glmc_rotate_make(&result, angle,  @as([*c]f32, @ptrCast(@alignCast(@constCast(axis)))));
+        cglm.glmc_rotate_make(&result, angleRadians,  @as([*c]f32, @ptrCast(@alignCast(@constCast(axis)))));
         return Mat4 { .data = result, };
     }
 

@@ -40,8 +40,6 @@ pub fn build(b: *std.Build) void {
     lib.addIncludePath(assimp.path("include"));
     b.installArtifact(lib);
 
-    const ziglangSet = b.dependency("ziglangSet", .{});
-
     const exe = b.addExecutable(.{
         .name = "angry_gl_zig",
         .root_source_file = b.path("src/main.zig"),
@@ -66,7 +64,6 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addImport("cglm", cglm.module("root"));
     exe.root_module.addImport("zglfw", zglfw.module("root"));
     exe.root_module.addImport("zopengl", zopengl.module("root"));
-    exe.root_module.addImport("ziglangSet", ziglangSet.module("ziglangSet"));
     exe.linkLibrary(zglfw.artifact("glfw"));
     exe.linkLibrary(cglm.artifact("cglm"));
     exe.addIncludePath(b.path("src/include"));
@@ -99,7 +96,6 @@ pub fn build(b: *std.Build) void {
     game.root_module.addImport("cglm", cglm.module("root"));
     game.root_module.addImport("zglfw", zglfw.module("root"));
     game.root_module.addImport("zopengl", zopengl.module("root"));
-    game.root_module.addImport("ziglangSet", ziglangSet.module("ziglangSet"));
     game.linkLibrary(zglfw.artifact("glfw"));
     game.linkLibrary(cglm.artifact("cglm"));
 

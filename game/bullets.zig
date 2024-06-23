@@ -357,7 +357,7 @@ pub const BulletStore = struct {
                 // could make this async
                 const bullet_group_start_index = group.start_index;
                 const num_bullets_in_group = group.group_size;
-                const sub_group_size = @divTrunc(num_bullets_in_group, num_sub_groups);
+                const sub_group_size = @divExact(num_bullets_in_group, num_sub_groups);
 
                 for (0..num_sub_groups) |sub_group| {
                     var bullet_start = sub_group_size * sub_group;
@@ -370,14 +370,18 @@ pub const BulletStore = struct {
                     bullet_start += bullet_group_start_index;
                     bullet_end += bullet_group_start_index;
 
-                    for (bullet_start..bullet_end) |bullet_index| {
-                        self.all_bullet_positions.items[bullet_index] = self.all_bullet_positions.items[bullet_index].add(&self.all_bullet_directions.items[bullet_index].mulScalar(delta_position_magnitude));
+                    for (bullet_start..bullet_end-1) |bullet_index| {
+                        var position = self.all_bullet_positions.items[bullet_index];
+                        const change = position.mulScalar(delta_position_magnitude);
+                        position = position.add(&change);
+                        self.all_bullet_positions.items[bullet_index] = position;
+                        // self.all_bullet_positions.items[bullet_index].add(&self.all_bullet_directions.items[bullet_index].mulScalar(delta_position_magnitude));
                     }
 
                     var subgroup_bound_box = Aabb.new();
 
                     if (use_aabb) {
-                        for (bullet_start..bullet_end) |bullet_index| {
+                        for (bullet_start..bullet_end-1) |bullet_index| {
                             subgroup_bound_box.expand_to_include(self.all_bullet_positions.items[bullet_index]);
                         }
 
@@ -390,7 +394,7 @@ pub const BulletStore = struct {
                         if (use_aabb and !subgroup_bound_box.contains_point(enemy.*.?.position)) {
                             continue;
                         }
-                        for (bullet_start..bullet_end) |bullet_index| {
+                        for (bullet_start..bullet_end-1) |bullet_index| {
                             if (bullet_collides_with_enemy(
                                 &self.all_bullet_positions.items[bullet_index],
                                 &self.all_bullet_directions.items[bullet_index],
@@ -502,7 +506,7 @@ pub const BulletStore = struct {
         gl.bufferData(
             gl.ARRAY_BUFFER,
             @as(isize, @intCast(self.all_bullet_rotations.items.len * SIZE_OF_QUAT)),
-            @as(?*anyopaque, @ptrCast(&self.all_bullet_rotations.items)),
+            @as(?*anyopaque, @ptrCast(self.all_bullet_rotations.items.ptr)),
             gl.STREAM_DRAW,
         );
 
@@ -511,7 +515,7 @@ pub const BulletStore = struct {
         gl.bufferData(
             gl.ARRAY_BUFFER,
             @as(isize, @intCast(self.all_bullet_positions.items.len * SIZE_OF_VEC3)),
-            @as(?*anyopaque, @ptrCast(&self.all_bullet_positions.items)),
+            @as(?*anyopaque, @ptrCast(self.all_bullet_positions.items.ptr)),
             gl.STREAM_DRAW,
         );
 
