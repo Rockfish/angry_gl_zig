@@ -9,7 +9,7 @@ const BoneData = @import("model_animation.zig").BoneData;
 const Transform = @import("transform.zig").Transform;
 const String = @import("string.zig").String;
 const Model_Mesh = @import("model_mesh.zig");
-const utils = @import("utils.zig");
+const utils = @import("utils/utils.zig");
 const math = @import("math");
 
 const Allocator = std.mem.Allocator;

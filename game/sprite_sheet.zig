@@ -35,19 +35,4 @@ pub const SpriteSheet = struct {
 pub const SpriteSheetSprite = struct {
     world_position: Vec3,
     age: f32,
-    allocator: Allocator,
-
-    const Self = @This();
-
-    pub fn deinit(self: *Self) void {
-        self.allocator.destroy(self);
-    }
-
-    pub fn new(allocator: Allocator, world_position: Vec3) Self {
-        return .{
-            .world_position = world_position,
-            .age = 0.0,
-            .allocator = allocator,
-        };
-    }
 };

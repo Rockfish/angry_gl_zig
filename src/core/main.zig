@@ -1,10 +1,10 @@
-
+const std = @import("std");
 
 pub const assimp = @import("assimp.zig");
 pub const animation = @import("animator.zig");
 pub const string = @import("string.zig");
 pub const texture = @import("texture.zig");
-pub const utils = @import("utils.zig");
+pub const utils = @import("utils/utils.zig");
 
 pub const Model = @import("model.zig").Model;
 pub const ModelMesh = @import("model_mesh.zig").ModelMesh;

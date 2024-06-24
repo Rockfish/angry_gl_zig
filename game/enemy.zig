@@ -93,14 +93,16 @@ pub const EnemySystem = struct {
         self.count_down -= state.delta_time;
         if (self.count_down <= 0.0) {
             for (0..world.SPAWNS_PER_INTERVAL) |_| {
-                try self.spawn_enemy(state);
+                const rand_num = self.random.rand_float();
+                std.debug.print("rand_num = {d}\n", .{rand_num});
+                try self.spawn_enemy(state, rand_num);
             }
             self.count_down += world.ENEMY_SPAWN_INTERVAL;
         }
     }
 
-    pub fn spawn_enemy(self: *Self, state: *State) !void {
-        const theta = math.degreesToRadians(self.random.rand_float() * 360.0);
+    pub fn spawn_enemy(self: *Self, state: *State, rand_num: f32) !void {
+        const theta = math.degreesToRadians(rand_num * 360.0);
         const x = state.player.position.x + math.sin(theta) * world.SPAWN_RADIUS;
         const z = state.player.position.z + math.cos(theta) * world.SPAWN_RADIUS;
         const enemy = try self.allocator.create(Enemy);
@@ -110,25 +112,24 @@ pub const EnemySystem = struct {
 
     pub fn chase_player(self: *Self, state: *State) void {
         _ = self;
-        var player = state.player;
-        const player_collision_position = vec3(player.position.x, world.MONSTER_Y, player.position.z);
+        const player_collision_position = vec3(state.player.position.x, world.MONSTER_Y, state.player.position.z);
 
         for (state.enemies.items) |*enemy| {
-            var dir = player.position.sub(&enemy.*.?.position);
+            var dir = state.player.position.sub(&enemy.*.?.position);
             dir.y = 0.0;
             enemy.*.?.dir = dir.normalize();
             enemy.*.?.position = enemy.*.?.position.add(&enemy.*.?.dir.mulScalar(state.delta_time * world.MONSTER_SPEED));
 
-            if (player.is_alive) {
+            if (state.player.is_alive) {
                 const p1 = enemy.*.?.position.sub(&enemy.*.?.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
                 const p2 = enemy.*.?.position.sub(&enemy.*.?.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
                 const dist = geom.distance_between_point_and_line_segment(&player_collision_position, &p1, &p2);
 
                 if (dist <= (world.PLAYER_COLLISION_RADIUS + world.ENEMY_COLLIDER.radius)) {
                     // println!("GOTTEM!");
-                    player.is_alive = false;
-                    player.set_player_death_time(state.frame_time);
-                    player.direction = vec2(0.0, 0.0);
+                    state.player.is_alive = false;
+                    state.player.set_player_death_time(state.frame_time);
+                    state.player.direction = vec2(0.0, 0.0);
                 }
             }
         }

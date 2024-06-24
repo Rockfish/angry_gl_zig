@@ -143,7 +143,7 @@ pub const BulletStore = struct {
     bullet_groups: ArrayList(BulletGroup),
     bullet_texture: *Texture,
     bullet_impact_spritesheet: SpriteSheet,
-    bullet_impact_sprites: ArrayList(?*SpriteSheetSprite),
+    bullet_impact_sprites: ArrayList(?SpriteSheetSprite),
     unit_square_vao: c_uint,
     allocator: Allocator,
 
@@ -245,7 +245,7 @@ pub const BulletStore = struct {
             .all_bullet_rotations = ArrayList(Quat).init(allocator),
             .all_bullet_directions = ArrayList(Vec3).init(allocator),
             .bullet_groups = ArrayList(BulletGroup).init(allocator),
-            .bullet_impact_sprites = ArrayList(?*SpriteSheetSprite).init(allocator),
+            .bullet_impact_sprites = ArrayList(?SpriteSheetSprite).init(allocator),
             .bullet_vao = bullet_vao,
             .rotation_vbo = instance_rotation_vbo,
             .offset_vbo = instance_offset_vbo,
@@ -333,16 +333,9 @@ pub const BulletStore = struct {
     }
 
     pub fn update_bullets(self: *Self, state: *State) !void {
-        //}, bulletImpactSprites: &ArrayList(SpriteSheetSprite>) {
 
         const use_aabb = state.enemies.items.len != 0;
-        var num_sub_groups: u32 = undefined;
-        
-        if (use_aabb) { 
-            num_sub_groups = 9; 
-        } else { 
-            num_sub_groups = 1;
-        }
+        const num_sub_groups: u32 = if (use_aabb)  @as(u32, @intCast(9)) else @as(u32, @intCast(1));
 
         const delta_position_magnitude = state.delta_time * BULLET_SPEED;
 
@@ -357,7 +350,7 @@ pub const BulletStore = struct {
                 // could make this async
                 const bullet_group_start_index = group.start_index;
                 const num_bullets_in_group = group.group_size;
-                const sub_group_size = @divExact(num_bullets_in_group, num_sub_groups);
+                const sub_group_size: u32 = @divTrunc(num_bullets_in_group, num_sub_groups);
 
                 for (0..num_sub_groups) |sub_group| {
                     var bullet_start = sub_group_size * sub_group;
@@ -420,9 +413,6 @@ pub const BulletStore = struct {
         }
 
         if (first_live_bullet != 0) {
-            // self.all_bullet_positions.drain(0..first_live_bullet);
-            // self.all_bullet_directions.drain(0..first_live_bullet);
-            // self.all_bullet_rotations.drain(0..first_live_bullet);
             try core.utils.removeRange(Vec3, &self.all_bullet_positions, 0, first_live_bullet);
             try core.utils.removeRange(Vec3, &self.all_bullet_directions, 0, first_live_bullet);
             try core.utils.removeRange(Quat, &self.all_bullet_rotations, 0, first_live_bullet);
@@ -433,9 +423,10 @@ pub const BulletStore = struct {
         }
 
         if (self.bullet_impact_sprites.items.len != 0) {
-            for (self.bullet_impact_sprites.items) |*sheet| {
-                sheet.*.?.age = sheet.*.?.age + state.delta_time;
+            for (0..self.bullet_impact_sprites.items.len) |i| {
+                self.bullet_impact_sprites.items[i].?.age = self.bullet_impact_sprites.items[i].?.age + state.delta_time;
             }
+
             const sprite_duration = self.bullet_impact_spritesheet.num_columns * self.bullet_impact_spritesheet.time_per_sprite;
 
             const sprite_tester = SpriteAgeTester { .sprite_duration = sprite_duration };
@@ -445,8 +436,7 @@ pub const BulletStore = struct {
 
         for (state.enemies.items) |enemy| {
             if (!enemy.?.is_alive) {
-                const sprite_sheet_sprite = try self.allocator.create(SpriteSheetSprite);
-                sprite_sheet_sprite.* = SpriteSheetSprite.new(self.allocator, enemy.?.position);
+                const sprite_sheet_sprite = SpriteSheetSprite {.age = 0.0, .world_position = enemy.?.position };
                 try self.bullet_impact_sprites.append(sprite_sheet_sprite);
                 try state.burn_marks.add_mark(enemy.?.position);
                 // state.sound_system.play_enemy_destroyed();
@@ -455,12 +445,12 @@ pub const BulletStore = struct {
 
         const enemyTester = EnemyTester {};
         // state.enemies.retain(|e| e.is_alive);
-        try core.utils.retain(Enemy, EnemyTester, &state.enemies, enemyTester, self.allocator);
+        try core.utils.retain(*Enemy, EnemyTester, &state.enemies, enemyTester, self.allocator);
     }
 
     const SpriteAgeTester = struct {
         sprite_duration: f32,
-        pub fn predicate(self: *const SpriteAgeTester, sprite: *SpriteSheetSprite) bool {
+        pub fn predicate(self: *const SpriteAgeTester, sprite: SpriteSheetSprite) bool {
             return sprite.age < self.sprite_duration;
         }
     };

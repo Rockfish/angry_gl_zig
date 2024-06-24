@@ -23,17 +23,12 @@ const BURN_MARK_TIME: f32 = 5.0;
 pub const BurnMark = struct {
     position: Vec3,
     time_left: f32,
-    allocator: Allocator,
-
-    pub fn deinit(self: *BurnMark) void {
-        self.allocator.destroy(self);
-    }
 };
 
 pub const BurnMarks = struct {
     unit_square_vao: c_uint,
     mark_texture: *Texture,
-    marks: ArrayList(?*BurnMark),
+    marks: ArrayList(?BurnMark),
     allocator: Allocator,
 
     const Self = @This();
@@ -54,18 +49,16 @@ pub const BurnMarks = struct {
         burn_marks.* = .{
             .unit_square_vao = unit_square_vao,
             .mark_texture = mark_texture,
-            .marks = ArrayList(?*BurnMark).init(allocator),
+            .marks = ArrayList(?BurnMark).init(allocator),
             .allocator = allocator,
         };
         return burn_marks;
     }
 
     pub fn add_mark(self: *Self, position: Vec3) !void {
-        const burn_mark = try self.allocator.create(BurnMark);
-        burn_mark.* = BurnMark {
+        const burn_mark = BurnMark {
             .position = position,
             .time_left = BURN_MARK_TIME,
-            .allocator = self.allocator,
         };
         try self.marks.append(burn_mark);
     }
@@ -102,9 +95,9 @@ pub const BurnMarks = struct {
             gl.drawArrays(gl.TRIANGLES, 0, 6);
         }
 
-        const predicate = Tester {};
+        const tester = Tester {};
 
-        try core.utils.retain(BurnMark, Tester, &self.marks, predicate, self.allocator);
+        try core.utils.retain(BurnMark, Tester, &self.marks, tester, self.allocator);
 
         gl.disable(gl.BLEND);
         gl.depthMask(gl.TRUE);
@@ -112,7 +105,7 @@ pub const BurnMarks = struct {
     }
 
     const Tester = struct {
-        pub fn predicate(self: *const Tester, m: *BurnMark) bool {
+        pub fn predicate(self: *const Tester, m: BurnMark) bool {
             _ = self;
             return m.time_left > 0.0;
         }

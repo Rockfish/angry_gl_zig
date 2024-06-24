@@ -1,7 +1,7 @@
 const std = @import("std");
 const math = @import("math");
 const assimp = @import("assimp.zig");
-const utils = @import("utils.zig");
+const utils = @import("utils/utils.zig");
 const Transform = @import("transform.zig").Transform;
 const String = @import("string.zig").String;
 

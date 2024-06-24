@@ -18,31 +18,18 @@ const TextureFilter = core.texture.TextureFilter;
 
 const SpriteAge = struct {
     age: f32,
-    pub fn init(allocator: Allocator, age: f32) !*SpriteAge {
-        const sprite_age = try allocator.create(SpriteAge);
-        sprite_age.* = .{ .age = age };
-        return sprite_age;
-    }
-    pub fn deinit(self: *SpriteAge) void {
-       _ = self;
-    }
 };
 
 pub const MuzzleFlash = struct {
     unit_square_vao: c_uint,
     muzzle_flash_impact_sprite: SpriteSheet,
-    muzzle_flash_sprites_age: ArrayList(?*SpriteAge),
+    muzzle_flash_sprites_age: ArrayList(?SpriteAge),
     allocator: Allocator,
 
     const Self = @This();
 
     pub fn deinit(self: *const Self) void {
         self.muzzle_flash_impact_sprite.texture.deinit();
-        for (self.muzzle_flash_sprites_age.items) |sprite_age| {
-           if (sprite_age) |sprite| {
-               sprite.deinit();
-           }
-        }
         self.muzzle_flash_sprites_age.deinit();
     }
 
@@ -56,15 +43,14 @@ pub const MuzzleFlash = struct {
         return .{
             .unit_square_vao = unit_square_vao,
             .muzzle_flash_impact_sprite = muzzle_flash_impact_sprite,
-            .muzzle_flash_sprites_age = ArrayList(?*SpriteAge).init(allocator),
+            .muzzle_flash_sprites_age = ArrayList(?SpriteAge).init(allocator),
             .allocator = allocator,
         };
     }
 
     const Tester = struct {
         max_age: f32 = 0.0,
-        const This = @This();
-        pub fn predicate(self: *const This, spriteAge: *SpriteAge) bool {
+        pub fn predicate(self: *const @This(), spriteAge: SpriteAge) bool {
             return spriteAge.age < self.max_age;
         }
     };
@@ -76,10 +62,9 @@ pub const MuzzleFlash = struct {
             }
             const max_age = self.muzzle_flash_impact_sprite.num_columns * self.muzzle_flash_impact_sprite.time_per_sprite;
 
-            const predicate = Tester{ .max_age = max_age };
+            const tester = Tester{ .max_age = max_age };
 
-            // need different retain for T = f32
-            try core.utils.retain(SpriteAge, Tester, &self.muzzle_flash_sprites_age, predicate, self.allocator);
+            try core.utils.retain(SpriteAge, Tester, &self.muzzle_flash_sprites_age, tester, self.allocator);
         }
     }
 
@@ -92,7 +77,7 @@ pub const MuzzleFlash = struct {
     }
 
     pub fn add_flash(self: *Self) !void {
-        const sprite_age = try SpriteAge.init(self.allocator, 0.0);
+        const sprite_age = SpriteAge{ .age = 0.0 };
         try self.muzzle_flash_sprites_age.append(sprite_age);
     }
 

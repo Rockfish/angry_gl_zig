@@ -509,11 +509,11 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // std.debug.print("updating bullet_store\n", .{});
         try bullet_store.update_bullets(&state);
 
-        // if (player.is_alive) {
-        //     std.debug.print("updating enemies\n", .{});
-        //     try enemy_system.update(&state);
-        //     enemy_system.chase_player(&state);
-        // }
+        if (player.is_alive) {
+            // std.debug.print("updating enemies\n", .{});
+            try enemy_system.update(&state);
+            enemy_system.chase_player(&state);
+        }
 
         // Update Player
         // std.debug.print("updating player\n", .{});
@@ -908,9 +908,7 @@ fn handle_key_press(action: glfw.Action, key: glfw.Key) void {
         }
 
         if (direction_vec.lengthSquared() > 0.01) {
-            std.debug.print("previous player position = {any}\n", .{state.player.position});
             state.player.position.addTo(&direction_vec.normalize().mulScalar(player_speed * state.delta_time));
-            std.debug.print("updated player position = {any}\nn", .{state.player.position});
         }
         state.player.direction = vec2(direction_vec.x, direction_vec.z);
 
