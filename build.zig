@@ -138,6 +138,31 @@ pub fn build(b: *std.Build) void {
     const run_cmd = b.addRunArtifact(animation_example);
     run_cmd.step.dependOn(&install_sample.step);
     b.step("sample-run", "Run 'animation_example' demo").dependOn(&run_cmd.step);
+
+    const assimp_report = b.addExecutable(.{
+        .name = "assimp_report",
+        .root_source_file = b.path("examples/assimp_report/assimp_report.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    assimp_report.addIncludePath(b.path("src/include"));
+    assimp_report.root_module.addImport("math", math);
+    assimp_report.root_module.addImport("core", core);
+    assimp_report.root_module.addImport("cglm", cglm.module("root"));
+    assimp_report.root_module.addImport("zglfw", zglfw.module("root"));
+    assimp_report.root_module.addImport("zopengl", zopengl.module("root"));
+    assimp_report.linkLibrary(zglfw.artifact("glfw"));
+    assimp_report.linkLibrary(cglm.artifact("cglm"));
+
+    const install_assimp_report = b.addInstallArtifact(assimp_report, .{});
+
+    b.getInstallStep().dependOn(&install_assimp_report.step);
+    b.step("assimp_report", "Build 'assimp_report' demo").dependOn(&install_assimp_report.step);
+
+    const run_assimp_report = b.addRunArtifact(assimp_report);
+    run_assimp_report.step.dependOn(&install_assimp_report.step);
+    b.step("assimp_report-run", "Run 'assimp_report' demo").dependOn(&run_assimp_report.step);
 }
 
 pub const Options = struct {

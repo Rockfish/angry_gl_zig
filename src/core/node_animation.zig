@@ -43,6 +43,13 @@ pub const NodeAnimation = struct {
     const Self = @This();
 
     pub fn new(allocator: Allocator, name: Assimp.aiString, aiNodeAnim: [*c]Assimp.aiNodeAnim) !*NodeAnimation {
+       // "Character1_Reference\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightArm\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightFoot\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightForeArm\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHand\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandIndex1\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandIndex2\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandIndex3\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandMiddle1\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandMiddle2\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandMiddle3\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandThumb1\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandThumb2\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandThumb3\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightLeg\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightShoulder\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightToeBase\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightUpLeg\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_Spine1\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_Weapon\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaGun_$AssimpFbx$_Translation\xaa\xaa\xaa\xaa\xaaGun_$AssimpFbx$_Rotation\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa"
+
+        const name_string = try String.from_aiString(name);
+        if (name_string.startsWithU8("Character1_Reference")) {
+            std.debug.print("NodeAnim name: {s}\n", .{name_string.str});
+        }
+
         const positions = try allocator.create(ArrayList(KeyPosition));
         const rotations = try allocator.create(ArrayList(KeyRotation));
         const scales = try allocator.create(ArrayList(KeyScale));
@@ -51,11 +58,11 @@ pub const NodeAnimation = struct {
         rotations.* = ArrayList(KeyRotation).init(allocator);
         scales.* = ArrayList(KeyScale).init(allocator);
 
-        const num_positions = aiNodeAnim[0].mNumPositionKeys;
-        const num_rotations = aiNodeAnim[0].mNumRotationKeys;
-        const num_scales = aiNodeAnim[0].mNumScalingKeys;
+        const num_positions = aiNodeAnim.*.mNumPositionKeys;
+        const num_rotations = aiNodeAnim.*.mNumRotationKeys;
+        const num_scales = aiNodeAnim.*.mNumScalingKeys;
 
-        for (aiNodeAnim[0].mPositionKeys[0..num_positions]) |positionKey| {
+        for (aiNodeAnim.*.mPositionKeys[0..num_positions]) |positionKey| {
             const time_stamp: f32 = @floatCast(positionKey.mTime);
             const key = KeyPosition{
                 .position = assimp.vec3_from_aiVector3D(positionKey.mValue),
@@ -64,7 +71,7 @@ pub const NodeAnimation = struct {
             try positions.append(key);
         }
 
-        for (aiNodeAnim[0].mRotationKeys[0..num_rotations]) |rotationKey| {
+        for (aiNodeAnim.*.mRotationKeys[0..num_rotations]) |rotationKey| {
             const time_stamp: f32 = @floatCast(rotationKey.mTime);
             const key = KeyRotation{
                 .orientation = assimp.quat_from_aiQuaternion(rotationKey.mValue),
@@ -73,7 +80,7 @@ pub const NodeAnimation = struct {
             try rotations.append(key);
         }
 
-        for (aiNodeAnim[0].mScalingKeys[0..num_scales]) |scaleKey| {
+        for (aiNodeAnim.*.mScalingKeys[0..num_scales]) |scaleKey| {
             const time_stamp: f32 = @floatCast(scaleKey.mTime);
             const key = KeyScale{
                 .scale = assimp.vec3_from_aiVector3D(scaleKey.mValue),
@@ -84,7 +91,7 @@ pub const NodeAnimation = struct {
 
         const node_animation = try allocator.create(NodeAnimation);
         node_animation.* = NodeAnimation{
-            .name = try String.from_aiString(name),
+            .name = name_string,
             .positions = positions,
             .rotations = rotations,
             .scales = scales,

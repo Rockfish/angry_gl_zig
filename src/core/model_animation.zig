@@ -101,19 +101,20 @@ pub const ModelAnimation = struct {
             .allocator = allocator,
         };
 
-        const num_animations = aiScene[0].mNumAnimations;
+        const num_animations = aiScene.*.mNumAnimations;
         if (num_animations == 0) {
             return model_animation;
         }
 
         // only handling the first animation
-        const animation = aiScene[0].mAnimations[0..num_animations][0];
+        const animation = aiScene.*.mAnimations[0..num_animations][0];
         model_animation.*.duration = @as(f32, @floatCast(animation.*.mDuration));
         model_animation.*.ticks_per_second = @as(f32, @floatCast(animation.*.mTicksPerSecond));
 
         const num_channels = animation.*.mNumChannels;
+
         for (animation.*.mChannels[0..num_channels]) |channel| {
-            const node_animation = try NodeAnimation.new(allocator, channel[0].mNodeName, channel);
+            const node_animation = try NodeAnimation.new(allocator, channel.*.mNodeName, channel);
             try model_animation.node_animations.append(node_animation);
         }
 

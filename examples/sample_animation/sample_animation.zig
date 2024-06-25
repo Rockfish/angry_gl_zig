@@ -206,16 +206,17 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var model = try builder.build();
     builder.deinit();
 
-    const idle = AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever);
-    const forward = AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever);
+    // const idle = AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever);
+    // const forward = AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever);
     // const backwards = AnimationClip.new(159.0, 179.0, AnimationRepeat.Forever);
     // const right = AnimationClip.new(184.0, 204.0, AnimationRepeat.Forever);
     // const left = AnimationClip.new(209.0, 229.0, AnimationRepeat.Forever);
-    // const dying = AnimationClip.new(234.0, 293.0, AnimationRepeat.Once);
+    const dying = AnimationClip.new(234.0, 293.0, AnimationRepeat.Once);
 
     std.debug.print("Main: playClip\n", .{});
-    try model.playClip(idle);
-    try model.play_clip_with_transition(forward, 6);
+    // try model.playClip(idle);
+    // try model.play_clip_with_transition(forward, 6);
+    try model.playClip(dying);
 
     // --- event loop
     state.last_frame = @floatCast(glfw.getTime());

@@ -44,4 +44,18 @@ pub const String = struct {
     pub fn equalsU8(self: *Self, other: []const u8) bool {
         return std.mem.eql(u8, self.str, other);
     }
+
+    pub fn startsWith(self: *const Self, other: *String) bool {
+        if (other.str.len > self.str.len) {
+            return false;
+        }
+        return std.mem.eql(u8, self.str[0..other.str.len], other.str);
+    }
+
+    pub fn startsWithU8(self: *const Self, other: []const u8) bool {
+        if (other.len > self.str.len) {
+            return false;
+        }
+        return std.mem.eql(u8, self.str[0..other.len], other);
+    }
 };

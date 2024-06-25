@@ -141,10 +141,14 @@ pub const ModelBuilder = struct {
         const c_path: [:0]const u8 = try self.allocator.dupeZ(u8, file_path);
         defer self.allocator.free(c_path);
 
-        const aiScene: [*c]const Assimp.aiScene = Assimp.aiImportFile(c_path, Assimp.aiProcess_CalcTangentSpace |
+        const aiScene: [*c]const Assimp.aiScene = Assimp.aiImportFile(
+            c_path,
+            Assimp.aiProcess_CalcTangentSpace |
             Assimp.aiProcess_Triangulate |
             Assimp.aiProcess_JoinIdenticalVertices |
-            Assimp.aiProcess_SortByPType);
+            Assimp.aiProcess_SortByPType |
+            Assimp.aiProcess_FindInvalidData,  // this fixes animation
+        );
 
         // printSceneInfo(aiScene[0]);
         return aiScene;
