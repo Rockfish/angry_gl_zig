@@ -47,10 +47,14 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const math = b.createModule(.{ .root_source_file = b.path("src/math/main.zig"), });
+    const math = b.createModule(.{
+        .root_source_file = b.path("src/math/main.zig"),
+    });
     math.addIncludePath(b.path("src/include"));
 
-    const core = b.createModule(.{ .root_source_file = b.path("src/core/main.zig"), });
+    const core = b.createModule(.{
+        .root_source_file = b.path("src/core/main.zig"),
+    });
 
     core.addImport("math", math);
     core.addImport("zopengl", zopengl.module("root"));
@@ -133,11 +137,11 @@ pub fn build(b: *std.Build) void {
     const install_sample = b.addInstallArtifact(animation_example, .{});
 
     b.getInstallStep().dependOn(&install_sample.step);
-    b.step("sample", "Build 'animation_example' demo").dependOn(&install_sample.step);
+    b.step("animation_example", "Build 'animation_example' demo").dependOn(&install_sample.step);
 
     const run_cmd = b.addRunArtifact(animation_example);
     run_cmd.step.dependOn(&install_sample.step);
-    b.step("sample-run", "Run 'animation_example' demo").dependOn(&run_cmd.step);
+    b.step("animation_example-run", "Run 'animation_example' demo").dependOn(&run_cmd.step);
 
     const assimp_report = b.addExecutable(.{
         .name = "assimp_report",

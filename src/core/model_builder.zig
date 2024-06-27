@@ -9,7 +9,7 @@ const BoneData = @import("model_animation.zig").BoneData;
 const Transform = @import("transform.zig").Transform;
 const String = @import("string.zig").String;
 const Model_Mesh = @import("model_mesh.zig");
-const utils = @import("utils/utils.zig");
+const utils = @import("utils/main.zig");
 const math = @import("math");
 
 const Allocator = std.mem.Allocator;
@@ -113,7 +113,7 @@ pub const ModelBuilder = struct {
         // return self;
     }
 
-    pub fn skip_textures(self: *Self) void {
+    pub fn skipModelTextures(self: *Self) void {
         self.load_textures = false;
     }
 
@@ -147,7 +147,8 @@ pub const ModelBuilder = struct {
             Assimp.aiProcess_Triangulate |
             Assimp.aiProcess_JoinIdenticalVertices |
             Assimp.aiProcess_SortByPType |
-            Assimp.aiProcess_FindInvalidData,  // this fixes animation
+            Assimp.aiProcess_FlipUVs |
+            Assimp.aiProcess_FindInvalidData,  // this fixes animation by removing dupilcate keys
         );
 
         // printSceneInfo(aiScene[0]);

@@ -6,6 +6,7 @@ const remove_ = @import("remove.zig");
 pub const retain = retain_.retain;
 pub const removeRange = remove_.removeRange;
 
+/// Create a c_str using a local buffer avoiding allocation
 pub fn bufCopyZ(buf: []u8, source: []const u8) [:0]const u8 {
     std.mem.copyForwards(u8, buf, source);
     buf[source.len] = 0;

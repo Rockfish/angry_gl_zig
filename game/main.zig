@@ -1,7 +1,7 @@
 const std = @import("std");
 const glfw = @import("zglfw");
 const zopengl = @import("zopengl");
-const zstbi = @import("zstbi");
+// const zstbi = @import("zstbi");
 const set = @import("ziglangSet");
 const core = @import("core");
 const math = @import("math");
@@ -257,7 +257,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     defer burn_marks.deinit();
     // defer {
     //     key_presses.clearAndFree();
-        // key_presses.deinit();
+    // key_presses.deinit();
     // }
     defer enemies.deinit();
     defer enemies.clearAndFree();

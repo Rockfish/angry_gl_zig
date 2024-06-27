@@ -68,7 +68,7 @@ pub const EnemySystem = struct {
         const builder = try ModelBuilder.init(allocator, texture_cache,"enemy", "assets/Models/Eeldog/EelDog.FBX");
         defer builder.deinit();
 
-        builder.skip_textures();
+        builder.skipModelTextures();
         const texture_diffuse = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
         try builder.addTexture("Eeldog", texture_diffuse, "Eeldog_Albedo.png");
 

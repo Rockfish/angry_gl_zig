@@ -283,6 +283,7 @@ const SceneParser = struct {
     }
 
     fn parse_single_animation(self: *Self, animation_id: usize, animation: *Assimp.aiAnimation) void {
+        _ = self;
         const animation_name = animation.mName.data[0..animation.mName.length];
         std.debug.print("animation: {d}\nname: {s}\n", .{ animation_id, animation_name });
         std.debug.print("ticks_per_second: {d}\nduration: {d}\n", .{ animation.mTicksPerSecond, animation.mDuration });
@@ -302,24 +303,24 @@ const SceneParser = struct {
                 },
             );
 
-            if (std.mem.eql(u8, node_name, "Character1_Reference")) {
-                self.space_count = 4;
-                std.debug.print("postion keys\n", .{});
-                for (0..channel.mNumPositionKeys) |ci| {
-                    const m = channel.mPositionKeys[ci];
-                    self.print_aiVectorKey(m);
-                }
-                std.debug.print("rotation keys\n", .{});
-                for (0..channel.mNumPositionKeys) |ci| {
-                    const m = channel.mRotationKeys[ci];
-                    self.print_aiQuatKey(m);
-                }
-                std.debug.print("scaling keys\n", .{});
-                for (0..channel.mNumPositionKeys) |ci| {
-                    const m = channel.mScalingKeys[ci];
-                    self.print_aiVectorKey(m);
-                }
-            }
+            // if (std.mem.eql(u8, node_name, "Character1_Reference")) {
+            //     self.space_count = 4;
+            //     std.debug.print("postion keys\n", .{});
+            //     for (0..channel.mNumPositionKeys) |ci| {
+            //         const m = channel.mPositionKeys[ci];
+            //         self.print_aiVectorKey(m);
+            //     }
+            //     std.debug.print("rotation keys\n", .{});
+            //     for (0..channel.mNumPositionKeys) |ci| {
+            //         const m = channel.mRotationKeys[ci];
+            //         self.print_aiQuatKey(m);
+            //     }
+            //     std.debug.print("scaling keys\n", .{});
+            //     for (0..channel.mNumPositionKeys) |ci| {
+            //         const m = channel.mScalingKeys[ci];
+            //         self.print_aiVectorKey(m);
+            //     }
+            // }
         }
         std.debug.print("\n", .{});
     }

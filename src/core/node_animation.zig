@@ -1,7 +1,7 @@
 const std = @import("std");
 const math = @import("math");
 const assimp = @import("assimp.zig");
-const utils = @import("utils/utils.zig");
+const utils = @import("utils/main.zig");
 const Transform = @import("transform.zig").Transform;
 const String = @import("string.zig").String;
 
@@ -43,13 +43,7 @@ pub const NodeAnimation = struct {
     const Self = @This();
 
     pub fn new(allocator: Allocator, name: Assimp.aiString, aiNodeAnim: [*c]Assimp.aiNodeAnim) !*NodeAnimation {
-       // "Character1_Reference\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightArm\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightFoot\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightForeArm\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHand\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandIndex1\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandIndex2\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandIndex3\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandMiddle1\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandMiddle2\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandMiddle3\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandThumb1\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandThumb2\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightHandThumb3\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightLeg\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightShoulder\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightToeBase\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_RightUpLeg\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_Spine1\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaCharacter1_Weapon\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaaGun_$AssimpFbx$_Translation\xaa\xaa\xaa\xaa\xaaGun_$AssimpFbx$_Rotation\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa"
-
         const name_string = try String.from_aiString(name);
-        if (name_string.startsWithU8("Character1_Reference")) {
-            std.debug.print("NodeAnim name: {s}\n", .{name_string.str});
-        }
-
         const positions = try allocator.create(ArrayList(KeyPosition));
         const rotations = try allocator.create(ArrayList(KeyRotation));
         const scales = try allocator.create(ArrayList(KeyScale));

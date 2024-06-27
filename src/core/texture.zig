@@ -2,6 +2,7 @@ const std = @import("std");
 const zstbi = @import("zstbi");
 const zopengl = @import("zopengl");
 const gl = @import("zopengl").bindings;
+const utils = @import("utils/main.zig");
 
 const Allocator = std.mem.Allocator;
 
@@ -126,8 +127,8 @@ pub const Texture = struct {
 
         zstbi.setFlipVerticallyOnLoad(texture_config.flip_v);
 
-        const c_path: [:0]const u8 = try allocator.dupeZ(u8, path);
-        defer allocator.free(c_path);
+        var buf: [256]u8 = undefined;
+        const c_path = utils.bufCopyZ(&buf,path);
 
         var image = zstbi.Image.loadFromFile(c_path, 0) catch |err| {
             std.debug.print("Texture loadFromFile error: {any}  filepath: {s}\n", .{err, path});

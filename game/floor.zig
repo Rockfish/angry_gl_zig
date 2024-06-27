@@ -27,12 +27,12 @@ const SIZE_OF_FLOAT = @sizeOf(f32);
 
 const FLOOR_VERTICES: [30]f32 = .{
     // Vertices                                // TexCoord
-    -FLOOR_SIZE / 2.0, 0.0, -FLOOR_SIZE / 2.0, 0.0, 0.0,
+    -FLOOR_SIZE / 2.0, 0.0, -FLOOR_SIZE / 2.0, 0.0,            0.0,
     -FLOOR_SIZE / 2.0, 0.0,  FLOOR_SIZE / 2.0, NUM_TILE_WRAPS, 0.0,
      FLOOR_SIZE / 2.0, 0.0,  FLOOR_SIZE / 2.0, NUM_TILE_WRAPS, NUM_TILE_WRAPS,
-    -FLOOR_SIZE / 2.0, 0.0, -FLOOR_SIZE / 2.0, 0.0, 0.0,
+    -FLOOR_SIZE / 2.0, 0.0, -FLOOR_SIZE / 2.0, 0.0,            0.0,
      FLOOR_SIZE / 2.0, 0.0,  FLOOR_SIZE / 2.0, NUM_TILE_WRAPS, NUM_TILE_WRAPS,
-     FLOOR_SIZE / 2.0, 0.0, -FLOOR_SIZE / 2.0, 0.0, NUM_TILE_WRAPS
+     FLOOR_SIZE / 2.0, 0.0, -FLOOR_SIZE / 2.0, 0.0,            NUM_TILE_WRAPS,
 };
 
 pub const Floor = struct {
@@ -51,7 +51,7 @@ pub const Floor = struct {
     }
 
     pub fn new(allocator: Allocator) !Self {
-        const texture_config = TextureConfig {
+        const texture_config = TextureConfig{
             .flip_v = false,
             .gamma_correction = false,
             .filter = TextureFilter.Linear,
@@ -59,26 +59,54 @@ pub const Floor = struct {
             .wrap = TextureWrap.Repeat,
         };
 
-        const texture_floor_diffuse = try Texture.new(allocator, "assets/Models/Floor D.png", texture_config);
-        const texture_floor_normal = try Texture.new(allocator, "assets/Models/Floor N.png", texture_config);
-        const texture_floor_spec = try Texture.new(allocator, "assets/Models/Floor M.png", texture_config);
+        const texture_floor_diffuse = try Texture.new(
+            allocator,
+            "assets/Models/Floor D.png",
+            texture_config,
+        );
+        const texture_floor_normal = try Texture.new(
+            allocator,
+            "assets/Models/Floor N.png",
+            texture_config,
+        );
+        const texture_floor_spec = try Texture.new(
+            allocator,
+            "assets/Models/Floor M.png",
+            texture_config,
+        );
 
         var floor_vao: gl.Uint = 0;
         var floor_vbo: gl.Uint = 0;
 
         gl.genVertexArrays(1, &floor_vao);
         gl.genBuffers(1, &floor_vbo);
+
         gl.bindVertexArray(floor_vao);
         gl.bindBuffer(gl.ARRAY_BUFFER, floor_vbo);
+
         gl.bufferData(
             gl.ARRAY_BUFFER,
             (FLOOR_VERTICES.len * SIZE_OF_FLOAT),
             &FLOOR_VERTICES,
             gl.STATIC_DRAW,
         );
-        gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), null);
+        gl.vertexAttribPointer(
+            0,
+            3,
+            gl.FLOAT,
+            gl.FALSE,
+            (5 * SIZE_OF_FLOAT),
+            null,
+        );
         gl.enableVertexAttribArray(0);
-        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), &(3 * SIZE_OF_FLOAT));
+        gl.vertexAttribPointer(
+            1,
+            2,
+            gl.FLOAT,
+            gl.FALSE,
+            (5 * SIZE_OF_FLOAT),
+            @ptrFromInt(3 * SIZE_OF_FLOAT),
+        );
         gl.enableVertexAttribArray(1);
 
         return .{

@@ -6,7 +6,7 @@ const NodeData = @import("model_animation.zig").NodeData;
 const ModelAnimation = @import("model_animation.zig").ModelAnimation;
 const NodeAnimation = @import("node_animation.zig").NodeAnimation;
 const Transform = @import("transform.zig").Transform;
-const utils = @import("utils/utils.zig");
+const utils = @import("utils/main.zig");
 const String = @import("string.zig").String;
 const panic = @import("std").debug.panic;
 

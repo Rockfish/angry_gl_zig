@@ -2,7 +2,7 @@ const std = @import("std");
 const gl = @import("zopengl").bindings;
 const Texture = @import("texture.zig").Texture;
 const Shader = @import("shader.zig").Shader;
-const utils = @import("utils/utils.zig");
+const utils = @import("utils/main.zig");
 const math = @import("math");
 
 const Allocator = std.mem.Allocator;
@@ -77,9 +77,9 @@ pub const ModelMesh = struct {
         self.allocator.destroy(self.vertices);
         self.indices.deinit();
         self.allocator.destroy(self.indices);
-        for (self.textures.items) |texture| {
-            texture.deinit();
-        }
+        // for (self.textures.items) |texture| {
+        //     texture.deinit();
+        // }
         self.textures.deinit();
         self.allocator.destroy(self.textures);
         self.allocator.free(self.name);

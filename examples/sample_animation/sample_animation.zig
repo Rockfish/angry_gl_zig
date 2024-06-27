@@ -193,18 +193,30 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const texture_normals = .{ .texture_type = .Normals, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
 
     std.debug.print("Main: adding textures\n", .{});
-    try builder.addTexture("Player", texture_diffuse, "assets/Models/Player/Textures/Player_D.tga");
-    try builder.addTexture("Player", texture_specular, "assets/Models/Player/Textures/Player_M.tga");
-    try builder.addTexture("Player", texture_emissive, "assets/Models/Player/Textures/Player_E.tga");
-    try builder.addTexture("Player", texture_normals, "assets/Models/Player/Textures/Player_NRM.tga");
-    try builder.addTexture("Gun", texture_diffuse, "assets/Models/Player/Textures/Gun_D.tga");
-    try builder.addTexture("Gun", texture_specular, "assets/Models/Player/Textures/Gun_M.tga");
-    try builder.addTexture("Gun", texture_emissive, "assets/Models/Player/Textures/Gun_E.tga");
-    try builder.addTexture("Gun", texture_normals, "assets/Models/Player/Textures/Gun_NRM.tga");
+    try builder.addTexture("Player", texture_diffuse, "Textures/Player_D.tga");
+    try builder.addTexture("Player", texture_specular, "Textures/Player_M.tga");
+    try builder.addTexture("Player", texture_emissive, "Textures/Player_E.tga");
+    try builder.addTexture("Player", texture_normals, "Textures/Player_NRM.tga");
+    try builder.addTexture("Gun", texture_diffuse, "Textures/Gun_D.tga");
+    try builder.addTexture("Gun", texture_specular, "Textures/Gun_M.tga");
+    try builder.addTexture("Gun", texture_emissive, "Textures/Gun_E.tga");
+    try builder.addTexture("Gun", texture_normals, "Textures/Gun_NRM.tga");
 
     std.debug.print("Main: building model: {s}\n", .{model_path});
     var model = try builder.build();
     builder.deinit();
+
+
+    const bullet_model_path = "assets/Models/Bullet/Bullet.FBX";
+    var bullet_model_builder = try ModelBuilder.init(allocator, &texture_cache, "bullet", bullet_model_path,);
+    bullet_model_builder.skipModelTextures();
+
+    // try bullet_model_builder.addTexture( "Plane001", texture_diffuse, "Textures/BulletTexture.png");
+    try bullet_model_builder.addTexture( "Plane001", texture_diffuse, "Floor D.png",);
+    var bullet_model = try bullet_model_builder.build();
+    bullet_model_builder.deinit();
+
+    defer bullet_model.deinit();
 
     // const idle = AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever);
     // const forward = AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever);
@@ -259,6 +271,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         //const projection = Mat4.perspectiveRhGl(toRadians(state.camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
 
         const debug_camera = try Camera.camera_vec3(allocator, vec3(0.0, 40.0, 120.0));
+        defer debug_camera.deinit();
+
         const projection = Mat4.perspectiveRhGl(toRadians(debug_camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
         const view = state.camera.get_view_matrix();
         var modelTransform = Mat4.identity();
@@ -282,6 +296,13 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         // std.debug.print("Main: render\n", .{});
         try model.render(shader);
+
+        // var model = Mat4.identity();
+        // model *= Mat4::from_rotation_x(-90.0f32.to_radians());
+        const bulletTransform = Mat4.fromScale(&vec3(2.0, 2.0, 2.0));
+
+        shader.set_mat4("model", &bulletTransform);
+        try bullet_model.render(shader);
 
         window.swapBuffers();
     }

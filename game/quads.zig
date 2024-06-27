@@ -43,9 +43,9 @@ pub fn create_obnoxious_quad_vao() gl.Uint {
             &OBNOXIOUS_QUAD,
             gl.STATIC_DRAW,
         );
-        gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), null);
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), null,);
         gl.EnableVertexAttribArray(0);
-        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), (3 * SIZE_OF_FLOAT));
+        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), @ptrFromInt(3 * SIZE_OF_FLOAT),);
         gl.EnableVertexAttribArray(1);
     return obnoxious_quad_vao;
 }
@@ -63,9 +63,9 @@ pub fn create_unit_square_vao() gl.Uint {
             &UNIT_SQUARE,
             gl.STATIC_DRAW,
         );
-        gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), null);
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), null,);
         gl.enableVertexAttribArray(0);
-        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), &(3 * SIZE_OF_FLOAT));
+        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), @ptrFromInt(3 * SIZE_OF_FLOAT),);
         gl.enableVertexAttribArray(1);
     return unit_square_vao;
 }
@@ -83,9 +83,9 @@ pub fn create_more_obnoxious_quad_vao() gl.Uint {
             &MORE_OBNOXIOUS_QUAD,
             gl.STATIC_DRAW,
         );
-        gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), null);
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), null,);
         gl.enableVertexAttribArray(0);
-        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), &(3 * SIZE_OF_FLOAT));
+        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), @ptrFromInt(3 * SIZE_OF_FLOAT),);
         gl.enableVertexAttribArray(1);
     return more_obnoxious_quad_vao;
 }
@@ -114,9 +114,9 @@ pub fn render_quad(quad_vao: *gl.Uint) void {
             gl.STATIC_DRAW,
         );
         gl.enableVertexAttribArray(0);
-        gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), null);
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), null,);
         gl.enableVertexAttribArray(1);
-        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), (3 * SIZE_OF_FLOAT));
+        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, (5 * SIZE_OF_FLOAT), @ptrFromInt(3 * SIZE_OF_FLOAT),);
     }
 
         gl.bindVertexArray(*quad_vao);
