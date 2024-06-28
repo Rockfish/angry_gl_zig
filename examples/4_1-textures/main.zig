@@ -2,11 +2,9 @@ const std = @import("std");
 const glfw = @import("zglfw");
 const zopengl = @import("zopengl");
 const gl = @import("zopengl").bindings;
-const zstbi = @import("zstbi");
-const Shader = @import("core/shader.zig").Shader;
-
-// const math = @import("math/main.zig");
-const math = @import("core/math.zig");
+const zstbi = @import("core").zstbi;
+const Shader = @import("core").Shader;
+const math = @import("math");
 
 const SCR_WIDTH: f32 = 800.0;
 const SCR_HEIGHT: f32 = 800.0;
@@ -45,8 +43,8 @@ pub fn main() !void {
 
     const shader = try Shader.new(
             allocator,
-            "src/4_1-textures/4_1-texture.vert",
-            "src/4_1-textures/4_1-texture.frag",
+            "examples/4_1-textures/4_1-texture.vert",
+            "examples/4_1-textures/4_1-texture.frag",
     );
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
@@ -134,7 +132,7 @@ pub fn main() !void {
     defer zstbi.deinit();
 
     std.debug.print("loading image\n", .{});
-    var image = try zstbi.Image.loadFromFile("src/4_1-textures/container.jpg", 0);
+    var image = try zstbi.Image.loadFromFile("examples/4_1-textures/container.jpg", 0);
     defer image.deinit();
 
     const width: c_int = @intCast(image.width);

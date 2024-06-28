@@ -3,8 +3,7 @@ const debug = std.debug;
 const assert = debug.assert;
 const testing = std.testing;
 
-pub fn retain(comptime TA: type, comptime TS: type, list: *std.ArrayList(?TA), tester: TS, allocator: std.mem.Allocator) !void {
-    _ = allocator;
+pub fn retain(comptime TA: type, comptime TS: type, list: *std.ArrayList(?TA), tester: TS) !void {
     const length = list.items.len;
     var i: usize = 0;
     var f: usize = 0;
@@ -62,7 +61,7 @@ pub fn retain(comptime TA: type, comptime TS: type, list: *std.ArrayList(?TA), t
                 d.?.deinit();
             }
         }
-        list.items = list.items[0..count];
+        list.shrinkRetainingCapacity(count);
     }
 }
 

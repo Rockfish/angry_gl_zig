@@ -1,5 +1,6 @@
 const std = @import("std");
 
+pub const zstbi = @import("zstbi");
 pub const assimp = @import("assimp.zig");
 pub const animation = @import("animator.zig");
 pub const string = @import("string.zig");

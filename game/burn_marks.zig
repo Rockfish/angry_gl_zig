@@ -97,7 +97,7 @@ pub const BurnMarks = struct {
 
         const tester = Tester {};
 
-        try core.utils.retain(BurnMark, Tester, &self.marks, tester, self.allocator);
+        try core.utils.retain(BurnMark, Tester, &self.marks, tester,);
 
         gl.disable(gl.BLEND);
         gl.depthMask(gl.TRUE);

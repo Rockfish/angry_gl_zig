@@ -139,7 +139,7 @@ pub fn vec3(x: f32, y: f32, z: f32) Vec3 {
     return .{ .x = x, .y = y, .z = z };
 }
 
-pub const Vec4 = struct {
+pub const Vec4 = extern struct {
     x: f32,
     y: f32,
     z: f32,

@@ -64,7 +64,7 @@ pub const MuzzleFlash = struct {
 
             const tester = Tester{ .max_age = max_age };
 
-            try core.utils.retain(SpriteAge, Tester, &self.muzzle_flash_sprites_age, tester, self.allocator);
+            try core.utils.retain(SpriteAge, Tester, &self.muzzle_flash_sprites_age, tester,);
         }
     }
 

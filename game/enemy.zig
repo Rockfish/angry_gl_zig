@@ -94,7 +94,6 @@ pub const EnemySystem = struct {
         if (self.count_down <= 0.0) {
             for (0..world.SPAWNS_PER_INTERVAL) |_| {
                 const rand_num = self.random.rand_float();
-                std.debug.print("rand_num = {d}\n", .{rand_num});
                 try self.spawn_enemy(state, rand_num);
             }
             self.count_down += world.ENEMY_SPAWN_INTERVAL;

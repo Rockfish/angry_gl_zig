@@ -313,7 +313,7 @@ pub const Animator = struct {
             animation.?.current_weight -= animation.?.weight_decline_per_sec * delta_time;
         }
         const tester = Tester{};
-        try utils.retain(*AnimationTransition, Tester, self.transitions, tester, self.allocator);
+        try utils.retain(*AnimationTransition, Tester, self.transitions, tester);
     }
 
     fn update_node_map(self: *Self, delta_time: f32) !void {

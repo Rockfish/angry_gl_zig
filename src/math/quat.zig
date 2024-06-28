@@ -13,7 +13,7 @@ pub fn quat(x: f32, y: f32, z: f32, w: f32) Quat {
     return Quat { .data = .{x, y, z, w} };
 }
 
-pub const Quat = struct {
+pub const Quat = extern struct {
     data: [4]f32,
 
     const Self = @This();

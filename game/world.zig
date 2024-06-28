@@ -31,7 +31,7 @@ const FrameCount = core.FrameCount;
 
 // Player
 pub const FIRE_INTERVAL: f32 = 0.1;
-pub const SPREAD_AMOUNT: i32 = 20; // bullet spread
+pub const SPREAD_AMOUNT: i32 = 2; //20; // bullet spread
 pub const PLAYER_COLLISION_RADIUS: f32 = 0.35;
 pub const PLAYER_MODEL_SCALE: f32 = 0.0044;
 pub const PLAYER_MODEL_GUN_HEIGHT: f32 = 110.0;

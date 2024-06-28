@@ -230,7 +230,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     // Models and systems
     var texture_cache = ArrayList(*Texture).init(allocator);
-    defer texture_cache.deinit();
+    defer {
+        for (texture_cache.items) |t| {
+            t.deinit();
+        }
+        texture_cache.deinit();
+    }
 
     var player = try Player.new(allocator, &texture_cache);
     std.debug.print("player loaded\n", .{});
@@ -255,12 +260,13 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     defer bullet_store.deinit();
     defer floor.deinit();
     defer burn_marks.deinit();
-    // defer {
-    //     key_presses.clearAndFree();
-    // key_presses.deinit();
-    // }
+    defer {
+        for (enemies.items) |e| {
+            e.?.deinit();
+        }
+    }
     defer enemies.deinit();
-    defer enemies.clearAndFree();
+    // defer enemies.clearAndFree();
 
     std.debug.print("models loaded\n", .{});
 
@@ -343,7 +349,11 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         glfw.pollEvents();
 
         const currentFrame: f32 = @floatCast(glfw.getTime());
-        state.delta_time = currentFrame - state.frame_time;
+        if (state.run) {
+            state.delta_time = currentFrame - state.frame_time;
+        } else {
+            state.delta_time = 0.0;
+        }
         state.frame_time = currentFrame;
 
         // std.debug.print("currentFrame = {d} frame_time = {d}\n", .{currentFrame, state.last_frame});
