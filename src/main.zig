@@ -21,6 +21,7 @@ const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
 const vec2 = math.vec2;
 const vec3 = math.vec3;
+const vec4 = math.vec4;
 const Mat4 = math.Mat4;
 
 const Texture = core.texture.Texture;
@@ -308,4 +309,35 @@ fn scroll_handler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void
     _ = window;
     _ = xoffset;
     state.camera.process_mouse_scroll(@floatCast(yoffset));
+}
+
+test "utils.get_world_ray_from_mouse" {
+    const mouse_x = 1117.3203;
+    const mouse_y = 323.6797;
+    const width = 1500.0;
+    const height = 1000.0;
+
+    const view_matrix = Mat4.from_cols(
+        vec4(0.345086, 0.64576554, -0.68110394, 0.0),
+        vec4(0.3210102, 0.6007121, 0.7321868, 0.0),
+        vec4(0.8819683, -0.47130874, -0.0, 0.0),
+        vec4(1.1920929e-7, -0.0, -5.872819, 1.0),);
+
+    const projection = Mat4.from_cols(
+        vec4(1.6094756, 0.0, 0.0, 0.0),
+        vec4(0.0, 2.4142134, 0.0, 0.0),
+        vec4(0.0, 0.0, -1.002002, -1.0),
+        vec4(0.0, 0.0, -0.2002002, 0.0),);
+
+
+    const ray = math.get_world_ray_from_mouse(
+        mouse_x,
+        mouse_y,
+        width,
+        height,
+        &view_matrix,
+        &projection,
+    );
+
+    std.debug.print("ray = {any}", .{ray});
 }

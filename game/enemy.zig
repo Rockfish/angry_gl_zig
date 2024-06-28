@@ -31,20 +31,14 @@ pub const Enemy = struct {
     position: Vec3,
     dir: Vec3,
     is_alive: bool,
-    allocator: Allocator,
 
     const Self = @This();
 
-    pub fn deinit(self: *const Self) void {
-        self.allocator.destroy(self);
-    }
-
-    pub fn new(allocator: Allocator, position: Vec3, dir: Vec3) Self {
+    pub fn new(position: Vec3, dir: Vec3) Self {
         return . {
             .position = position,
             .dir = dir,
             .is_alive = true,
-            .allocator = allocator,
         };
     }
 };
@@ -104,8 +98,8 @@ pub const EnemySystem = struct {
         const theta = math.degreesToRadians(rand_num * 360.0);
         const x = state.player.position.x + math.sin(theta) * world.SPAWN_RADIUS;
         const z = state.player.position.z + math.cos(theta) * world.SPAWN_RADIUS;
-        const enemy = try self.allocator.create(Enemy);
-        enemy.* = Enemy.new(self.allocator, vec3(x, self.monster_y, z), vec3(0.0, 0.0, 1.0));
+
+        const enemy = Enemy.new(vec3(x, self.monster_y, z), vec3(0.0, 0.0, 1.0));
         try state.enemies.append(enemy);
     }
 
@@ -113,15 +107,16 @@ pub const EnemySystem = struct {
         _ = self;
         const player_collision_position = vec3(state.player.position.x, world.MONSTER_Y, state.player.position.z);
 
-        for (state.enemies.items) |*enemy| {
-            var dir = state.player.position.sub(&enemy.*.?.position);
+        for (0..state.enemies.items.len) |i| {
+            const enemy = &state.enemies.items[i].?;
+            var dir = state.player.position.sub(&enemy.position);
             dir.y = 0.0;
-            enemy.*.?.dir = dir.normalize();
-            enemy.*.?.position = enemy.*.?.position.add(&enemy.*.?.dir.mulScalar(state.delta_time * world.MONSTER_SPEED));
+            enemy.dir = dir.normalize();
+            enemy.position = enemy.position.add(&enemy.dir.mulScalar(state.delta_time * world.MONSTER_SPEED));
 
             if (state.player.is_alive) {
-                const p1 = enemy.*.?.position.sub(&enemy.*.?.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
-                const p2 = enemy.*.?.position.sub(&enemy.*.?.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
+                const p1 = enemy.position.sub(&enemy.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
+                const p2 = enemy.position.sub(&enemy.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
                 const dist = geom.distance_between_point_and_line_segment(&player_collision_position, &p1, &p2);
 
                 if (dist <= (world.PLAYER_COLLISION_RADIUS + world.ENEMY_COLLIDER.radius)) {

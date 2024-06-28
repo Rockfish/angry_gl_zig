@@ -62,18 +62,16 @@ pub const BulletGroup = struct {
     }
 };
 
-const SIZE_OF_U32 = @sizeOf(u32);
 const SIZE_OF_FLOAT = @sizeOf(f32);
-const SIZE_OF_VEC3 = @sizeOf(Vec3);
-const SIZE_OF_VEC4 = @sizeOf(Vec4);
-const SIZE_OF_QUAT = @sizeOf(Quat);
+const SIZE_OF_VEC3 = @sizeOf([3]f32);
+const SIZE_OF_QUAT = @sizeOf([4]f32);
 
 // const BULLET_SCALE: f32 = 0.3;
 const BULLET_SCALE: f32 = 0.3;
 const BULLET_LIFETIME: f32 = 1.0;
 // seconds
 const BULLET_SPEED: f32 = 15.0;
-// const BULLET_SPEED: f32 = 2.0;
+// const BULLET_SPEED: f32 = 1.0;
 // Game units per second
 const ROTATION_PER_BULLET: f32 = 3.0 * math.pi / 180.0;
 
@@ -119,28 +117,23 @@ const BULLET_VERTICES_H_V: [40]f32 = .{
     0.0,                     BULLET_SCALE * 0.243,    BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
 };
 
-const BULLET_INDICES: [6]u32 = .{ 0, 1, 2, 0, 2, 3 };
+const BULLET_INDICES: [6]f32 = .{ 0, 1, 2, 0, 2, 3 };
 
-const BULLET_INDICES_H_V: [12]u32 = .{
+const BULLET_INDICES_H_V: [12]f32 = .{
     0, 1, 2,
     0, 2, 3,
     4, 5, 6,
     4, 6, 7,
 };
 
-const VERTICES = BULLET_VERTICES_H_V;
-const INDICES = BULLET_INDICES_H_V;
-
 pub const BulletStore = struct {
     all_bullet_positions: ArrayList(Vec3),
     all_bullet_rotations: ArrayList(Quat),
     all_bullet_directions: ArrayList(Vec3),
-    // precalculated rotations
-    x_rotations: ArrayList(Quat),
-    y_rotations: ArrayList(Quat),
+    // thread_pool
     bullet_vao: gl.Uint,
     rotation_vbo: gl.Uint,
-    position_vbo: gl.Uint,
+    offset_vbo: gl.Uint,
     bullet_groups: ArrayList(BulletGroup),
     bullet_texture: *Texture,
     bullet_impact_spritesheet: SpriteSheet,
@@ -155,14 +148,17 @@ pub const BulletStore = struct {
         self.all_bullet_positions.deinit();
         self.all_bullet_rotations.deinit();
         self.all_bullet_directions.deinit();
-        self.x_rotations.deinit();
-        self.y_rotations.deinit();
         self.bullet_groups.deinit();
         self.bullet_impact_sprites.deinit();
         self.bullet_impact_spritesheet.deinit();
     }
 
-    pub fn new(allocator: Allocator, unit_square_vao: c_uint) !Self {
+    pub fn new(allocator: Allocator, unit_square_vao: c_uint) !Self { // keep on heap or stack, hmm
+        // initialize_buffer_and_create
+
+        var instance_rotation_vbo: gl.Uint = 0;
+        var instance_offset_vbo: gl.Uint = 0;
+
         const texture_config = TextureConfig{
             .flip_v = false,
             // .flip_h = true,
@@ -173,247 +169,18 @@ pub const BulletStore = struct {
         };
 
         const bullet_texture = try Texture.new(allocator, "angrygl_assets/bullet/bullet_texture_transparent.png", texture_config);
+        // const bullet_texture = Texture.new("angrygl_assets/bullet/red_bullet_transparent.png", &texture_config);
+        // const bullet_texture = Texture.new("angrygl_assets/bullet/red_and_green_bullet_transparent.png", &texture_config);
 
-        const texture_impact_sprite_sheet = try Texture.new(allocator, "angrygl_assets/bullet/impact_spritesheet_with_00.png", texture_config);
-        const bullet_impact_spritesheet = SpriteSheet.new(texture_impact_sprite_sheet, 11, 0.05);
-
-        // Pre calculate the bullet spread rotations. Only needs to be done once.
-        var x_rotations = ArrayList(Quat).init(allocator);
-        var y_rotations = ArrayList(Quat).init(allocator);
-
-        const spread_amount_f32: f32 = @floatFromInt(world.SPREAD_AMOUNT);
-        const spread_centering = ROTATION_PER_BULLET * (spread_amount_f32 - @as(f32, 1.0)) / @as(f32, 4.0);
-
-        for (0..world.SPREAD_AMOUNT) |i| {
-            const i_f32: f32 = @floatFromInt(i);
-            const y_rot = Quat.fromAxisAngle(
-                &vec3(0.0, 1.0, 0.0),
-                ROTATION_PER_BULLET * ((i_f32 - world.SPREAD_AMOUNT) / @as(f32, 2.0)) + spread_centering,
-            );
-            const x_rot = Quat.fromAxisAngle(
-                &vec3(1.0, 0.0, 0.0),
-                ROTATION_PER_BULLET * ((i_f32 - world.SPREAD_AMOUNT) / @as(f32, 2.0)) + spread_centering,
-            );
-            // std.debug.print("x_rot = {any}\n", .{x_rot});
-            try x_rotations.append(x_rot);
-            try y_rotations.append(y_rot);
-        }
-
-        var bullet_store: BulletStore = .{
-            .all_bullet_positions = ArrayList(Vec3).init(allocator),
-            .all_bullet_rotations = ArrayList(Quat).init(allocator),
-            .all_bullet_directions = ArrayList(Vec3).init(allocator),
-            .x_rotations = x_rotations,
-            .y_rotations = y_rotations,
-            .bullet_groups = ArrayList(BulletGroup).init(allocator),
-            .bullet_impact_sprites = ArrayList(?SpriteSheetSprite).init(allocator),
-            .bullet_vao = 1000, //bullet_vao,
-            .rotation_vbo = 1000, //instance_rotation_vbo,
-            .position_vbo = 1000, //instance_position_vbo,
-            .bullet_texture = bullet_texture,
-            .bullet_impact_spritesheet = bullet_impact_spritesheet,
-            .unit_square_vao = unit_square_vao,
-            .allocator = allocator,
-        };
-
-        Self.create_shader_buffers(&bullet_store);
-        std.debug.print("bullet_store = {any}\n", .{bullet_store});
-
-        return bullet_store;
-    }
-
-    pub fn create_bullets(self: *Self, dx: f32, dz: f32, muzzle_transform: *const Mat4, _: i32) !bool {
-        // limit number of bullet groups
-        if (self.bullet_groups.items.len > 10) {
-            return false;
-        }
-
-        const muzzle_world_position = muzzle_transform.mulVec4(&vec4(0.0, 0.0, 0.0, 1.0));
-        const projectile_spawn_point = muzzle_world_position.xyz();
-        const mid_direction = vec3(dx, 0.0, dz).normalize();
-        const normalized_direction = mid_direction.normalize();
-        const rot_vec = vec3(0.0, 1.0, 0.0); // rotate around y
-
-        const x = vec3(CANONICAL_DIR.x, 0.0, CANONICAL_DIR.z).normalize();
-        const y = vec3(normalized_direction.x, 0.0, normalized_direction.z).normalize();
-
-        // direction angle with respect to the canonical direction
-        const theta = geom.oriented_angle(&x, &y, &rot_vec) * -1.0;
-        var mid_dir_quat = Quat.new(1.0, 0.0, 0.0, 0.0);
-        mid_dir_quat = mid_dir_quat.mulQuat(&Quat.fromAxisAngle(&rot_vec, math.degreesToRadians(theta)));
-
-        const start_index = self.all_bullet_positions.items.len;
-        const bullet_group_size = world.SPREAD_AMOUNT * world.SPREAD_AMOUNT;
-
-        const bullet_group = BulletGroup.new(start_index, bullet_group_size, BULLET_LIFETIME);
-
-        try self.all_bullet_positions.resize(start_index + bullet_group_size);
-        try self.all_bullet_rotations.resize(start_index + bullet_group_size);
-        try self.all_bullet_directions.resize(start_index + bullet_group_size);
-
-        const start: usize = start_index;
-        const end = start + bullet_group_size;
-
-        for (start..end) |index| {
-            const count = index - start;
-            const i = @divTrunc(count, world.SPREAD_AMOUNT);
-            const j = @mod(count, world.SPREAD_AMOUNT);
-
-            const y_quat = mid_dir_quat.mulQuat(&self.y_rotations.items[i]);
-            const rot_quat = y_quat.mulQuat(&self.x_rotations.items[j]);
-            const direction = rot_quat.rotateVec(&CANONICAL_DIR.mulScalar(-1.0));
-
-            self.all_bullet_positions.items[index] = projectile_spawn_point;
-            self.all_bullet_rotations.items[index] = rot_quat;
-            self.all_bullet_directions.items[index] = direction;
-        }
-
-        try self.bullet_groups.append(bullet_group);
-        return true;
-    }
-
-    pub fn update_bullets(self: *Self, state: *State) !void {
-
-        if (self.all_bullet_positions.items.len == 0 ) {
-            return;
-        }
-
-        const use_aabb = state.enemies.items.len != 0;
-        const num_sub_groups: u32 = if (use_aabb) @as(u32, @intCast(9)) else @as(u32, @intCast(1));
-
-        const delta_position_magnitude = state.delta_time * BULLET_SPEED;
-
-        var first_live_bullet_group: usize = 0;
-
-        for (self.bullet_groups.items) |*group| {
-            group.time_to_live -= state.delta_time;
-
-            if (group.time_to_live <= 0.0) {
-                first_live_bullet_group += 1;
-            } else {
-                const bullet_group_start_index = group.start_index;
-                const num_bullets_in_group = group.group_size;
-                const sub_group_size: u32 = @divTrunc(num_bullets_in_group, num_sub_groups);
-
-                for  (0..num_sub_groups) |sub_group| {
-                    var bullet_start = sub_group_size * sub_group;
-
-                    var bullet_end = if (sub_group == (num_sub_groups - 1))
-                        num_bullets_in_group
-                    else
-                        (bullet_start + sub_group_size);
-
-                    bullet_start += bullet_group_start_index;
-                    bullet_end += bullet_group_start_index;
-
-                    for  (bullet_start..bullet_end) |bullet_index| {
-                        var direction = self.all_bullet_directions.items[bullet_index];
-                        const change = direction.mulScalar(delta_position_magnitude);
-
-                        var position = self.all_bullet_positions.items[bullet_index];
-                        position = position.add(&change);
-                        self.all_bullet_positions.items[bullet_index] = position;
-                    }
-
-                    var subgroup_bound_box = Aabb.new();
-
-                    if (use_aabb) {
-                        // -1?
-                        for (bullet_start..bullet_end) |bullet_index| {
-                            subgroup_bound_box.expand_to_include(self.all_bullet_positions.items[bullet_index]);
-                        }
-                        subgroup_bound_box.expand_by(BULLET_ENEMY_MAX_COLLISION_DIST);
-                    }
-
-                    for (0..state.enemies.items.len) |i| {
-                        const enemy = &state.enemies.items[i].?;
-
-                        if (use_aabb and !subgroup_bound_box.contains_point(enemy.position)) {
-                            continue;
-                        }
-                        for (bullet_start..bullet_end) |bullet_index| {
-                            if (bullet_collides_with_enemy(
-                                &self.all_bullet_positions.items[bullet_index],
-                                &self.all_bullet_directions.items[bullet_index],
-                                enemy,
-                            )) {
-                                std.debug.print("enemy killed\n", .{});
-                                enemy.is_alive = false;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        var first_live_bullet: usize = 0;
-
-        if (first_live_bullet_group != 0) {
-            first_live_bullet =
-            self.bullet_groups.items[first_live_bullet_group - 1].start_index + self.bullet_groups.items[first_live_bullet_group - 1].group_size;
-            // self.bullet_groups.drain(0..first_live_bullet_group);
-            try core.utils.removeRange(BulletGroup, &self.bullet_groups, 0, first_live_bullet_group);
-        }
-
-        if (first_live_bullet != 0) {
-            try core.utils.removeRange(Vec3, &self.all_bullet_positions, 0, first_live_bullet);
-            try core.utils.removeRange(Vec3, &self.all_bullet_directions, 0, first_live_bullet);
-            try core.utils.removeRange(Quat, &self.all_bullet_rotations, 0, first_live_bullet);
-
-            for (self.bullet_groups.items) |*group| {
-                group.start_index -= first_live_bullet;
-            }
-        }
-
-        if (self.bullet_impact_sprites.items.len != 0) {
-            for (0..self.bullet_impact_sprites.items.len) |i| {
-                self.bullet_impact_sprites.items[i].?.age = self.bullet_impact_sprites.items[i].?.age + state.delta_time;
-            }
-
-            const sprite_duration = self.bullet_impact_spritesheet.num_columns * self.bullet_impact_spritesheet.time_per_sprite;
-
-            const sprite_tester = SpriteAgeTester{ .sprite_duration = sprite_duration };
-
-            try core.utils.retain(SpriteSheetSprite, SpriteAgeTester, &self.bullet_impact_sprites, sprite_tester,);
-        }
-
-        for (state.enemies.items) |enemy| {
-            if (!enemy.?.is_alive) {
-                const sprite_sheet_sprite = SpriteSheetSprite{ .age = 0.0, .world_position = enemy.?.position };
-                try self.bullet_impact_sprites.append(sprite_sheet_sprite);
-                try state.burn_marks.add_mark(enemy.?.position);
-                // state.sound_system.play_enemy_destroyed();
-            }
-        }
-
-        const enemyTester = EnemyTester{};
-        // state.enemies.retain(|e| e.is_alive);
-        try core.utils.retain(Enemy, EnemyTester, &state.enemies, enemyTester,);
-    }
-
-    const SpriteAgeTester = struct {
-        sprite_duration: f32,
-        pub fn predicate(self: *const SpriteAgeTester, sprite: SpriteSheetSprite) bool {
-            return sprite.age < self.sprite_duration;
-        }
-    };
-
-    const EnemyTester = struct {
-        pub fn predicate(self: *const EnemyTester, enemy: Enemy) bool {
-            _ = self;
-            return enemy.is_alive;
-        }
-    };
-
-    fn create_shader_buffers(self: *Self) void {
         var bullet_vao: gl.Uint = 0;
         var bullet_vertices_vbo: gl.Uint = 0;
         var bullet_indices_ebo: gl.Uint = 0;
-        var instance_rotation_vbo: gl.Uint = 0;
-        var instance_position_vbo: gl.Uint = 0;
+
+        const vertices = BULLET_VERTICES_H_V;
+        const indices = BULLET_INDICES_H_V;
 
         gl.genVertexArrays(1, &bullet_vao);
+
         gl.genBuffers(1, &bullet_vertices_vbo);
         gl.genBuffers(1, &bullet_indices_ebo);
 
@@ -423,8 +190,8 @@ pub const BulletStore = struct {
         // vertices data
         gl.bufferData(
             gl.ARRAY_BUFFER,
-            (VERTICES.len * SIZE_OF_FLOAT),
-            &VERTICES,
+            (vertices.len * SIZE_OF_FLOAT),
+            &vertices,
             gl.STATIC_DRAW,
         );
 
@@ -432,8 +199,8 @@ pub const BulletStore = struct {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bullet_indices_ebo);
         gl.bufferData(
             gl.ELEMENT_ARRAY_BUFFER,
-            (INDICES.len * SIZE_OF_U32),
-            &INDICES,
+            (indices.len * SIZE_OF_FLOAT),
+            &indices,
             gl.STATIC_DRAW,
         );
 
@@ -478,8 +245,8 @@ pub const BulletStore = struct {
         gl.vertexAttribDivisor(2, 1); // one rotation per bullet instance
 
         // per instance position offset vbo
-        gl.genBuffers(1, &instance_position_vbo);
-        gl.bindBuffer(gl.ARRAY_BUFFER, instance_position_vbo);
+        gl.genBuffers(1, &instance_offset_vbo);
+        gl.bindBuffer(gl.ARRAY_BUFFER, instance_offset_vbo);
 
         // location: 3: bullet position offsets
         gl.enableVertexAttribArray(3);
@@ -493,9 +260,222 @@ pub const BulletStore = struct {
         );
         gl.vertexAttribDivisor(3, 1); // one offset per bullet instance
 
-        self.bullet_vao = bullet_vao;
-        self.rotation_vbo = instance_rotation_vbo;
-        self.position_vbo = instance_position_vbo;
+        const texture_impact_sprite_sheet = try Texture.new(allocator, "angrygl_assets/bullet/impact_spritesheet_with_00.png", texture_config,);
+        const bullet_impact_spritesheet = SpriteSheet.new(texture_impact_sprite_sheet, 11, 0.05,);
+
+        return .{
+            .all_bullet_positions = ArrayList(Vec3).init(allocator),
+            .all_bullet_rotations = ArrayList(Quat).init(allocator),
+            .all_bullet_directions = ArrayList(Vec3).init(allocator),
+            .bullet_groups = ArrayList(BulletGroup).init(allocator),
+            .bullet_impact_sprites = ArrayList(?SpriteSheetSprite).init(allocator),
+            .bullet_vao = bullet_vao,
+            .rotation_vbo = instance_rotation_vbo,
+            .offset_vbo = instance_offset_vbo,
+            .bullet_texture = bullet_texture,
+            .bullet_impact_spritesheet = bullet_impact_spritesheet,
+            .unit_square_vao = unit_square_vao,
+            .allocator = allocator,
+        };
+    }
+
+    pub fn create_bullets(self: *Self, dx: f32, dz: f32, muzzle_transform: *const Mat4, spread_amount: u32) !bool {
+        @setFloatMode(.optimized);
+        // const spreadAmount = 100;
+        // limit number of bullet groups
+        if (self.bullet_groups.items.len > 9) { // this is from the parallel version
+            return false;
+        }
+
+        const muzzle_world_position = muzzle_transform.mulVec4(&vec4(0.0, 0.0, 0.0, 1.0));
+
+        const projectile_spawn_point = muzzle_world_position.xyz();
+
+        const mid_direction = vec3(dx, 0.0, dz).normalize();
+
+        const normalized_direction = mid_direction.normalize();
+
+        const rot_vec = vec3(0.0, 1.0, 0.0); // rotate around y
+
+        const x: Vec3 = vec3(CANONICAL_DIR.x, 0.0, CANONICAL_DIR.z).normalize();
+        const y: Vec3 = vec3(normalized_direction.x, 0.0, normalized_direction.z).normalize();
+
+        // direction angle with respect to the canonical direction
+        const theta = geom.oriented_angle(&x, &y, &rot_vec) * -1.0;
+
+        var mid_dir_quat = Quat.new(1.0, 0.0, 0.0, 0.0);
+
+        mid_dir_quat = mid_dir_quat.mulQuat(&Quat.fromAxisAngle(&rot_vec, math.degreesToRadians(theta)));
+
+        const start_index: u32 = @intCast(self.all_bullet_positions.items.len);
+
+        const bullet_group_size: u32 = spread_amount * spread_amount;
+
+        const bullet_group = BulletGroup.new(start_index, bullet_group_size, BULLET_LIFETIME);
+
+        // const size: usize = start_index + bullet_group_size;
+        // try self.all_bullet_positions.resize(size);
+        // try self.all_bullet_rotations.resize(size);
+        // try self.all_bullet_directions.resize(size);
+
+        const i_start = 0;
+        const i_end = spread_amount;
+        const spread_amount_f32: f32 = @floatFromInt(spread_amount);
+
+        const spread_centering = ROTATION_PER_BULLET * (spread_amount_f32 - @as(f32, 1.0)) / @as(f32, 4.0);
+
+        for (i_start..i_end) |i| {
+            const y_quat = mid_dir_quat.mulQuat(&Quat.fromAxisAngle(&vec3(0.0, 1.0, 0.0), ROTATION_PER_BULLET * (@as(f32, @floatFromInt(i)) - spread_amount_f32) / @as(f32, 2.0) + spread_centering));
+
+            for (0..spread_amount) |j| {
+                const rot_quat = y_quat.mulQuat(&Quat.fromAxisAngle(&vec3(1.0, 0.0, 0.0), ROTATION_PER_BULLET * (@as(f32, @floatFromInt(j)) - spread_amount_f32) / @as(f32, 2.0) + spread_centering));
+
+                const direction = rot_quat.rotateVec(&CANONICAL_DIR.mulScalar(-1.0));
+
+                const index = (i * spread_amount + j) + start_index;
+
+                self.all_bullet_positions.items[index] = projectile_spawn_point;
+                self.all_bullet_directions.items[index] = direction;
+                self.all_bullet_rotations.items[index] = rot_quat;
+            }
+        }
+
+        try self.bullet_groups.append(bullet_group);
+
+        return true;
+    }
+
+    pub fn update_bullets(self: *Self, state: *State) !void {
+        const use_aabb = state.enemies.items.len != 0;
+        const num_sub_groups: u32 = if (use_aabb) @as(u32, @intCast(9)) else @as(u32, @intCast(1));
+
+        const delta_position_magnitude = state.delta_time * BULLET_SPEED;
+
+        var first_live_bullet_group: usize = 0;
+
+        for (self.bullet_groups.items) |*group| {
+            group.time_to_live -= state.delta_time;
+
+            if (group.time_to_live <= 0.0) {
+                first_live_bullet_group += 1;
+            } else {
+                // could make this async
+                const bullet_group_start_index = group.start_index;
+                const num_bullets_in_group = group.group_size;
+                const sub_group_size: u32 = @divTrunc(num_bullets_in_group, num_sub_groups);
+
+                for (0..num_sub_groups) |sub_group| {
+                    var bullet_start = sub_group_size * sub_group;
+
+                    var bullet_end = if (sub_group == (num_sub_groups - 1))
+                        num_bullets_in_group
+                    else
+                        (bullet_start + sub_group_size);
+
+                    bullet_start += bullet_group_start_index;
+                    bullet_end += bullet_group_start_index;
+
+                    for (bullet_start..bullet_end - 1) |bullet_index| {
+                        var position = self.all_bullet_positions.items[bullet_index];
+                        const change = position.mulScalar(delta_position_magnitude);
+                        position = position.add(&change);
+                        self.all_bullet_positions.items[bullet_index] = position;
+                        // self.all_bullet_positions.items[bullet_index].add(&self.all_bullet_directions.items[bullet_index].mulScalar(delta_position_magnitude));
+                    }
+
+                    var subgroup_bound_box = Aabb.new();
+
+                    if (use_aabb) {
+                        for (bullet_start..bullet_end - 1) |bullet_index| {
+                            subgroup_bound_box.expand_to_include(self.all_bullet_positions.items[bullet_index]);
+                        }
+
+                        subgroup_bound_box.expand_by(BULLET_ENEMY_MAX_COLLISION_DIST);
+                    }
+
+                    for (0..state.enemies.items.len) |i| {
+                        const enemy = &state.enemies.items[i];
+
+                        if (use_aabb and !subgroup_bound_box.contains_point(enemy.*.?.position)) {
+                            continue;
+                        }
+                        for (bullet_start..bullet_end - 1) |bullet_index| {
+                            if (bullet_collides_with_enemy(
+                                &self.all_bullet_positions.items[bullet_index],
+                                &self.all_bullet_directions.items[bullet_index],
+                                enemy.*.?,
+                            )) {
+                                // println!("killed enemy!");
+                                enemy.*.?.is_alive = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        var first_live_bullet: usize = 0;
+
+        if (first_live_bullet_group != 0) {
+            first_live_bullet =
+                self.bullet_groups.items[first_live_bullet_group - 1].start_index + self.bullet_groups.items[first_live_bullet_group - 1].group_size;
+            // self.bullet_groups.drain(0..first_live_bullet_group);
+            try core.utils.removeRange(BulletGroup, &self.bullet_groups, 0, first_live_bullet_group);
+        }
+
+        if (first_live_bullet != 0) {
+            try core.utils.removeRange(Vec3, &self.all_bullet_positions, 0, first_live_bullet);
+            try core.utils.removeRange(Vec3, &self.all_bullet_directions, 0, first_live_bullet);
+            try core.utils.removeRange(Quat, &self.all_bullet_rotations, 0, first_live_bullet);
+
+            for (self.bullet_groups.items) |*group| {
+                group.start_index -= first_live_bullet;
+            }
+        }
+
+        if (self.bullet_impact_sprites.items.len != 0) {
+            for (0..self.bullet_impact_sprites.items.len) |i| {
+                self.bullet_impact_sprites.items[i].?.age = self.bullet_impact_sprites.items[i].?.age + state.delta_time;
+            }
+
+            const sprite_duration = self.bullet_impact_spritesheet.num_columns * self.bullet_impact_spritesheet.time_per_sprite;
+
+            const sprite_tester = SpriteAgeTester{ .sprite_duration = sprite_duration };
+
+            try core.utils.retain(SpriteSheetSprite, SpriteAgeTester, &self.bullet_impact_sprites, sprite_tester,);
+        }
+
+        for (state.enemies.items) |enemy| {
+            if (!enemy.?.is_alive) {
+                const sprite_sheet_sprite = SpriteSheetSprite{ .age = 0.0, .world_position = enemy.?.position };
+                try self.bullet_impact_sprites.append(sprite_sheet_sprite);
+                try state.burn_marks.add_mark(enemy.?.position);
+                // state.sound_system.play_enemy_destroyed();
+            }
+        }
+
+        const enemyTester = EnemyTester{};
+        // state.enemies.retain(|e| e.is_alive);
+        try core.utils.retain(*Enemy, EnemyTester, &state.enemies, enemyTester,);
+    }
+
+    const SpriteAgeTester = struct {
+        sprite_duration: f32,
+        pub fn predicate(self: *const SpriteAgeTester, sprite: SpriteSheetSprite) bool {
+            return sprite.age < self.sprite_duration;
+        }
+    };
+
+    const EnemyTester = struct {
+        pub fn predicate(self: *const EnemyTester, enemy: *Enemy) bool {
+            _ = self;
+            return enemy.is_alive;
+        }
+    };
+
+    fn create_shader_buffers(self: *Self) void {
+
     }
 
     pub fn draw_bullets(self: *Self, shader: *Shader, projection_view: *const Mat4) void {
@@ -505,6 +485,7 @@ pub const BulletStore = struct {
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        // gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
         gl.depthMask(gl.FALSE);
         gl.disable(gl.CULL_FACE);
@@ -523,72 +504,7 @@ pub const BulletStore = struct {
         gl.depthMask(gl.TRUE);
     }
 
-    // rust
-    // self.all_bullet_rotations = [
-    // Quat(0.4691308, -0.017338134, 0.8829104, 0.009212547),
-    // Quat(0.46921122, -0.0057797083, 0.8830617, 0.0030710243),
-    // Quat(0.45753372, -0.017457237, 0.8889755, 0.008984809),
-    // Quat(0.45761213, -0.005819412, 0.8891279, 0.0029951073)]
-    // self.all_bullet_positions = [
-    // Vec3(-0.37858108, 0.48462552, -0.43320495),
-    // Vec3(-0.37866658, 0.48068565, -0.43326268),
-    // Vec3(-0.37633452, 0.48462552, -0.43643945),
-    // Vec3(-0.37641847, 0.48068565, -0.43649942)]
-
-    // Zig
-    // self.all_bullet_rotations = {
-    // quat.Quat{ .data = { 7.207146e-1, -1.3607864e-2, 6.9295377e-1, 1.4153018e-2 } },
-    // quat.Quat{ .data = { 7.208381e-1, -4.536214e-3, 6.930725e-1, 4.7179423e-3 } },
-    // quat.Quat{ .data = { 7.1158236e-1, -1.3791957e-2, 7.0232826e-1, 1.3973684e-2 } },
-    // quat.Quat{ .data = { 7.117043e-1, -4.5975815e-3, 7.0244867e-1, 4.6581607e-3 } } }
-    // self.all_bullet_positions = {
-    // vec.Vec3{ .x = -5.009726e-1, .y = 6.0757834e-1, .z = -1.6028745e-1 },
-    // vec.Vec3{ .x = -5.009726e-1, .y = 6.0757834e-1, .z = -1.6028745e-1 },
-    // vec.Vec3{ .x = -5.009726e-1, .y = 6.0757834e-1, .z = -1.6028745e-1 },
-    // vec.Vec3{ .x = -5.009726e-1, .y = 6.0757834e-1, .z = -1.6028745e-1 } }
-
-    // pub fn set_test_data(self: *Self) !void {
-    //
-    //     if (self.all_bullet_positions.items.len != 0) {
-    //         return;
-    //     }
-    //
-    // const test_bullet_rotations: [4]Vec4 = .{
-    //     vec4(0.4691308, -0.017338134, 0.8829104, 0.009212547),
-    //     vec4(0.46921122, -0.0057797083, 0.8830617, 0.0030710243),
-    //     vec4(0.45753372, -0.017457237, 0.8889755, 0.008984809),
-    //     vec4(0.45761213, -0.005819412, 0.8891279, 0.0029951073)
-    // };
-    //
-    // const test_bullet_positions: [4]Vec3 = .{
-    //     vec3(-0.37858108, 0.48462552, -0.43320495),
-    //     vec3(-0.37866658, 0.48068565, -0.43326268),
-    //     vec3(-0.37633452, 0.48462552, -0.43643945),
-    //     vec3(-0.37641847, 0.48068565, -0.43649942)
-    // };/
-    //     const test_bullet_rotations: [4]Quat = .{
-    //         Quat.new(0.4691308, -0.017338134, 0.8829104, 0.009212547),
-    //         Quat.new(0.46921122, -0.0057797083, 0.8830617, 0.0030710243),
-    //         Quat.new(0.45753372, -0.017457237, 0.8889755, 0.008984809),
-    //         Quat.new(0.45761213, -0.005819412, 0.8891279, 0.0029951073)
-    //     };
-    //
-    //     const test_bullet_positions: [4]Vec3 = .{
-    //         vec3(-0.37858108, 0.48462552, -0.43320495),
-    //         vec3(-0.37866658, 0.48068565, -0.43326268),
-    //         vec3(-0.37633452, 0.48462552, -0.43643945),
-    //         vec3(-0.37641847, 0.48068565, -0.43649942)
-    //     };
-    //
-    //     for (0..4) |i| {
-    //         try self.all_bullet_rotations.append(test_bullet_rotations[i]);
-    //         try self.all_bullet_positions.append(test_bullet_positions[i]);
-    //     }
-    // }
-
     pub fn render_bullet_sprites(self: *Self) void {
-
-
         gl.bindVertexArray(self.bullet_vao);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, self.rotation_vbo);
@@ -600,7 +516,7 @@ pub const BulletStore = struct {
             gl.STREAM_DRAW,
         );
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, self.position_vbo);
+        gl.bindBuffer(gl.ARRAY_BUFFER, self.offset_vbo);
 
         gl.bufferData(
             gl.ARRAY_BUFFER,
@@ -611,14 +527,14 @@ pub const BulletStore = struct {
 
         gl.drawElementsInstanced(
             gl.TRIANGLES,
-            INDICES.len, // 6,
+            12, // 6,
             gl.UNSIGNED_INT,
             null,
             @intCast(self.all_bullet_positions.items.len),
         );
     }
 
-    pub fn draw_bullet_impacts(self: *const Self, sprite_shader: *Shader, projection_view: *const Mat4) void {
+    pub fn draw_bullet_impacts(self: *Self, sprite_shader: *Shader, projection_view: *const Mat4) void {
         sprite_shader.use_shader();
         sprite_shader.set_mat4("PV", projection_view);
 
@@ -628,6 +544,7 @@ pub const BulletStore = struct {
         sprite_shader.bind_texture(0, "spritesheet", self.bullet_impact_spritesheet.texture);
 
         gl.enable(gl.BLEND);
+        // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.depthMask(gl.FALSE);
         gl.disable(gl.CULL_FACE);
 
@@ -638,6 +555,16 @@ pub const BulletStore = struct {
         for (self.bullet_impact_sprites.items) |sprite| {
             var model = Mat4.fromTranslation(&sprite.?.world_position);
             model = model.mulMat4(&Mat4.fromRotationX(math.degreesToRadians(-90.0)));
+
+            // TODO: Billboarding
+            // for (int i = 0; i < 3; i++)
+            // {
+            //     for (int j = 0; j < 3; j++)
+            //     {
+            //         model[i][j] = viewTransform[j][i];
+            //     }
+            // }
+
             model = model.mulMat4(&Mat4.fromScale(&vec3(scale, scale, scale)));
 
             sprite_shader.set_float("age", sprite.?.age);
@@ -707,25 +634,33 @@ fn hamilton_product_quat_quat(first: Quat, other: *Quat) Quat {
     );
 }
 
-test "bullets.test_oriented_rotation" {
-    const canonical_dir = vec3(0.0, 0.0, -1.0);
-
-    for (0..361) |angle| {
-        const x_sin = math.sin(math.degreesToRadians(angle));
-        const y_cos = math.cos(math.degreesToRadians(angle));
-
-        const direction = vec3(x_sin, 0.0, y_cos);
-
-        const normalized_direction = direction; //.normalize_or_zero();
-
-        const rot_vec = vec3(0.0, 1.0, 0.0); // rotate around y
-
-        const x = vec3(canonical_dir.x, 0.0, canonical_dir.z).normalize_or_zero();
-        const y = vec3(normalized_direction.x, 0.0, normalized_direction.z).normalize_or_zero();
-
-        // direction angle with respect to the canonical direction
-        const theta = geom.oriented_angle(x, y, rot_vec) * -1.0;
-
-        std.debug.print("angle: {d}  direction: {any}   theta: {d}", .{angle, normalized_direction, theta});
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use crate::geom::oriented_angle;
+//     use glam::vec3;
+//
+//     #[test]
+//     fn test_oriented_rotation() {
+//         const canonical_dir = vec3(0.0, 0.0, -1.0);
+//
+//         for angle in 0..361 {
+//             const (sin, cos) = (angle).to_radians().sin_cos();
+//             const x = sin;
+//             const z = cos;
+//
+//             const direction = vec3(x, 0.0, z);
+//
+//             const normalized_direction = direction; //.normalize();
+//
+//             const rot_vec = vec3(0.0, 1.0, 0.0); // rotate around y
+//
+//             const x = vec3(canonical_dir.x, 0.0, canonical_dir.z).normalize();
+//             const y = vec3(normalized_direction.x, 0.0, normalized_direction.z).normalize();
+//
+//             // direction angle with respect to the canonical direction
+//             const theta = oriented_angle(x, y, rot_vec) * -1.0;
+//
+//             println!("angle: {}  direction: {:?}   theta: {:?}", angle, normalized_direction, theta);
+//         }
+//     }
+// }

@@ -1,3 +1,4 @@
+const std = @import("std");
 const vec = @import("vec.zig");
 const mat4_ = @import("mat4.zig");
 const quat_ = @import("quat.zig");
@@ -53,6 +54,7 @@ pub fn get_world_ray_from_mouse(
     view_matrix: *const Mat4,
     projection: *const Mat4,
 ) Vec3 {
+
     // normalize device coordinates
     const ndc_x = (2.0 * mouse_x) / viewport_width - 1.0;
     const ndc_y = 1.0 - (2.0 * mouse_y) / viewport_height;
@@ -69,8 +71,23 @@ pub fn get_world_ray_from_mouse(
     // world space
     const ray_world = (view_inverse.mulVec4(&ray_eye)).xyz();
 
+    // std.debug.print("mouse: {d} {d}\nwidth = {any} height = {any}\nview_matrix = {any}\nprojection = {any}\nview_inverse = {any}\nproj_inverse = {any}\n\n",
+    //     .{
+    //         mouse_x, mouse_y,
+    //         viewport_width,
+    //         viewport_height,
+    //         view_matrix,
+    //         projection,
+    //         view_inverse,
+    //         projection_inverse,
+    //     });
+
     // ray from camera
-    return ray_world.normalize();
+    const ray_normalized = ray_world.normalize();
+
+    std.debug.print("mouse: {d} {d}\nray_normalized = {any}\n\n", .{mouse_x, mouse_y, ray_normalized});
+
+    return ray_normalized;
 }
 
 pub fn ray_plane_intersection(ray_origin: *const Vec3, ray_direction: *const Vec3, plane_point: *const Vec3, plane_normal: *const Vec3) ?Vec3 {
@@ -83,4 +100,35 @@ pub fn ray_plane_intersection(ray_origin: *const Vec3, ray_direction: *const Vec
         }
     }
     return null;
+}
+
+test "utils.get_world_ray_from_mouse" {
+    const mouse_x = 1117.3203;
+    const mouse_y = 323.6797;
+    const width = 1500.0;
+    const height = 1000.0;
+
+    const view_matrix = Mat4.from_cols(
+        vec4(0.345086, 0.64576554, -0.68110394, 0.0),
+        vec4(0.3210102, 0.6007121, 0.7321868, 0.0),
+        vec4(0.8819683, -0.47130874, -0.0, 0.0),
+        vec4(1.1920929e-7, -0.0, -5.872819, 1.0),);
+
+    const projection = Mat4.from_cols(
+        vec4(1.6094756, 0.0, 0.0, 0.0),
+        vec4(0.0, 2.4142134, 0.0, 0.0),
+        vec4(0.0, 0.0, -1.002002, -1.0),
+        vec4(0.0, 0.0, -0.2002002, 0.0),);
+
+
+    const ray = get_world_ray_from_mouse(
+        mouse_x,
+        mouse_y,
+        width,
+        height,
+        &view_matrix,
+        &projection,
+    );
+
+    std.debug.print("ray = {any}", .{ray});
 }

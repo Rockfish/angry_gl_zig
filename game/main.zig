@@ -249,24 +249,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     std.debug.print("floor loaded\n", .{});
     var burn_marks = try BurnMarks.new(allocator, unit_square_quad);
 
-    // var key_presses = set.Set(glfw.Key).init(allocator);
     const key_presses = EnumSet(glfw.Key).initEmpty();
-    var enemies = ArrayList(?*Enemy).init(allocator);
-
-    // note: defer occurs in reverse order
-    defer player.deinit();
-    defer enemy_system.deinit();
-    defer muzzle_flash.deinit();
-    defer bullet_store.deinit();
-    defer floor.deinit();
-    defer burn_marks.deinit();
-    defer {
-        for (enemies.items) |e| {
-            e.?.deinit();
-        }
-    }
-    defer enemies.deinit();
-    // defer enemies.clearAndFree();
 
     std.debug.print("models loaded\n", .{});
 
@@ -285,7 +268,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .floating_projection = floating_projection,
         .orthographic_projection = orthographic_projection,
         .player = player,
-        .enemies = enemies,
+        .enemies = ArrayList(?Enemy).init(allocator),
         .light_postion = vec3(1.2, 1.0, 2.0),
         .delta_time = 0.0,
         .frame_time = 0.0,
@@ -299,6 +282,15 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .key_presses = key_presses,
         .run = true,
     };
+
+    // note: defer occurs in reverse order
+    defer player.deinit();
+    defer enemy_system.deinit();
+    defer muzzle_flash.deinit();
+    defer bullet_store.deinit();
+    defer floor.deinit();
+    defer burn_marks.deinit();
+    defer state.enemies.deinit();
 
     // Set fixed shader uniforms
 
@@ -462,21 +454,23 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
                 &world_ray,
                 &xz_plane_point,
                 &xz_plane_normal,
-            );
+            ).?;
 
-            dx = world_point.?.x - player.position.x;
-            dz = world_point.?.y - player.position.y;
+            dx = world_point.x - player.position.x;
+            dz = world_point.y - player.position.y;
+
+            aim_theta = math.atan(dx / dz);
 
             if (dz < 0.0) {
-                aim_theta = math.atan(dx / dz) + math.pi;
-            } else {
-                aim_theta = math.atan(dx / dz);
+                aim_theta = aim_theta + math.pi;
             }
 
             if (@abs(state.mouse_x) < 0.005 and @abs(state.mouse_y) < 0.005) {
                 aim_theta = 0.0;
             }
-            // std.debug.print("aim_theta = {d} in degrees = {d}\nworld_ray = {any}\nworld_point = {any}\n", .{
+            // std.debug.print("mouse: {d}, {d}\naim_theta = {d} in degrees = {d}\nworld_ray = {any}\nworld_point = {any}\n\n", .{
+            //         state.mouse_x,
+            //         state.mouse_y,
             //         aim_theta,
             //         math.radiansToDegrees(aim_theta),
             //         world_ray,
@@ -806,6 +800,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     }
 
     std.debug.print("\nRun completed.\n\n", .{});
+    test_ray();
 }
 
 inline fn toRadians(degrees: f32) f32 {
@@ -925,4 +920,45 @@ fn handle_key_press(action: glfw.Action, key: glfw.Key) void {
         // info!("key presses: {:?}", &state.key_presses);
         // info!("direction: {:?}  player.direction: {:?}  delta_time: {:?}", direction_vec, player.direction, state.frame_time);
     }
+}
+
+fn test_ray() void {
+    const mouse_x = 1117.3203;
+    const mouse_y = 323.6797;
+    const width = 1500.0;
+    const height = 1000.0;
+
+    const view_matrix = Mat4.from_cols(
+        vec4(0.345086, 0.64576554, -0.68110394, 0.0),
+        vec4(0.3210102, 0.6007121, 0.7321868, 0.0),
+        vec4(0.8819683, -0.47130874, -0.0, 0.0),
+        vec4(1.1920929e-7, -0.0, -5.872819, 1.0),);
+
+    const projection = Mat4.from_cols(
+        vec4(1.6094756, 0.0, 0.0, 0.0),
+        vec4(0.0, 2.4142134, 0.0, 0.0),
+        vec4(0.0, 0.0, -1.002002, -1.0),
+        vec4(0.0, 0.0, -0.2002002, 0.0),);
+
+
+    const ray = math.get_world_ray_from_mouse(
+        mouse_x,
+        mouse_y,
+        width,
+        height,
+        &view_matrix,
+        &projection,
+    );
+
+    const xz_plane_point = vec3(0.0, 0.0, 0.0);
+    const xz_plane_normal = vec3(0.0, 1.0, 0.0);
+
+    const world_point = math.ray_plane_intersection(
+        &vec3(0.0, 20.0, 80.0),
+        &ray,
+        &xz_plane_point,
+        &xz_plane_normal,
+    ).?;
+
+    std.debug.print("ray = {any}\nworld_point = {any}\n\n", .{ray, world_point});
 }
