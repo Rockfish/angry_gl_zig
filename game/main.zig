@@ -320,7 +320,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     std.debug.print("game/shaders initilized\n", .{});
     // --------------------------------
 
-    const use_framebuffers = false;
+    const use_framebuffers = true;
 
     var buffer_ready = false;
     var aim_theta: f32 = 0.0;
@@ -368,10 +368,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
                 horizontal_blur_fbo = fb.create_horizontal_blur_fbo(viewport_width, viewport_height);
                 vertical_blur_fbo = fb.create_vertical_blur_fbo(viewport_width, viewport_height);
             }
-            std.debug.print(
-                "view port size: {d}, {d}  scaled size: {d}, {d}\n",
-                .{ viewport_width, viewport_height, scaled_width, scaled_height },
-            );
+            // std.debug.print(
+            //     "view port size: {d}, {d}  scaled size: {d}, {d}\n",
+            //     .{ viewport_width, viewport_height, scaled_width, scaled_height },
+            // );
         }
 
         state.game_camera.position = player.position.add(&camera_follow_vec);
@@ -457,7 +457,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             ).?;
 
             dx = world_point.x - player.position.x;
-            dz = world_point.y - player.position.y;
+            dz = world_point.z - player.position.z;
 
             aim_theta = math.atan(dx / dz);
 
@@ -468,14 +468,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             if (@abs(state.mouse_x) < 0.005 and @abs(state.mouse_y) < 0.005) {
                 aim_theta = 0.0;
             }
-            // std.debug.print("mouse: {d}, {d}\naim_theta = {d} in degrees = {d}\nworld_ray = {any}\nworld_point = {any}\n\n", .{
-            //         state.mouse_x,
-            //         state.mouse_y,
-            //         aim_theta,
-            //         math.radiansToDegrees(aim_theta),
-            //         world_ray,
-            //         world_point,
-            //     });
         }
 
         const aim_rot = Mat4.fromAxisAngle(&vec3(0.0, 1.0, 0.0), aim_theta);
@@ -800,7 +792,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     }
 
     std.debug.print("\nRun completed.\n\n", .{});
-    test_ray();
+    // test_ray();
 }
 
 inline fn toRadians(degrees: f32) f32 {
@@ -960,5 +952,23 @@ fn test_ray() void {
         &xz_plane_normal,
     ).?;
 
-    std.debug.print("ray = {any}\nworld_point = {any}\n\n", .{ray, world_point});
+    const player_position_x: f32 = 0.0;
+    const player_position_z: f32 = 0.0;
+
+    const dx = world_point.x - player_position_x;
+    const dz = world_point.z - player_position_z;
+
+    var aim_theta = math.atan(dx / dz);
+
+    if (dz < 0.0) {
+        aim_theta = aim_theta + math.pi;
+    }
+
+    if (@abs(state.mouse_x) < 0.005 and @abs(state.mouse_y) < 0.005) {
+        aim_theta = 0.0;
+    }
+
+    const degrees = math.radiansToDegrees(aim_theta);
+
+    std.debug.print("ray = {any}\nworld_point = {any}\naim_theta = {d}\ndegrees = {d}\n\n", .{ray, world_point, aim_theta, degrees});
 }

@@ -71,21 +71,8 @@ pub fn get_world_ray_from_mouse(
     // world space
     const ray_world = (view_inverse.mulVec4(&ray_eye)).xyz();
 
-    // std.debug.print("mouse: {d} {d}\nwidth = {any} height = {any}\nview_matrix = {any}\nprojection = {any}\nview_inverse = {any}\nproj_inverse = {any}\n\n",
-    //     .{
-    //         mouse_x, mouse_y,
-    //         viewport_width,
-    //         viewport_height,
-    //         view_matrix,
-    //         projection,
-    //         view_inverse,
-    //         projection_inverse,
-    //     });
-
     // ray from camera
     const ray_normalized = ray_world.normalize();
-
-    std.debug.print("mouse: {d} {d}\nray_normalized = {any}\n\n", .{mouse_x, mouse_y, ray_normalized});
 
     return ray_normalized;
 }
