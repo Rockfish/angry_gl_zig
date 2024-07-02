@@ -4,6 +4,15 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const miniaudio = b.dependency("miniaudio", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const miniaudiolib = miniaudio.artifact("miniaudio");
+    miniaudiolib.addIncludePath(miniaudio.path("include"));
+    b.installArtifact(miniaudiolib);
+
     const cglm = b.dependency("cglm", .{
         .target = target,
         .optimize = optimize,
@@ -67,6 +76,7 @@ pub fn build(b: *std.Build) void {
         .{.name = "assimp_report", .exe_name = "assimp_report", .source = "examples/assimp_report/assimp_report.zig", },
         .{.name = "textures", .exe_name = "texture_example", .source = "examples/4_1-textures/main.zig", },
         .{.name = "bullets", .exe_name = "bullets_example", .source = "examples/bullets/main.zig", },
+        .{.name = "audio", .exe_name = "audio_example", .source = "examples/audio/main.zig", },
     }) |app| {
         const exe = b.addExecutable(.{
             .name = app.exe_name,
@@ -82,11 +92,14 @@ pub fn build(b: *std.Build) void {
         exe.root_module.addImport("math", math);
         exe.root_module.addImport("core", core);
         exe.root_module.addImport("cglm", cglm.module("root"));
+        exe.root_module.addImport("miniaudio", miniaudio.module("root"));
         exe.root_module.addImport("zglfw", zglfw.module("root"));
         exe.root_module.addImport("zopengl", zopengl.module("root"));
+        exe.linkLibrary(miniaudio.artifact("miniaudio"));
         exe.linkLibrary(zglfw.artifact("glfw"));
         exe.linkLibrary(cglm.artifact("cglm"));
         exe.addIncludePath(b.path("src/include"));
+        exe.addIncludePath(miniaudio.path("include"));
 
         // b.verbose = true;
 

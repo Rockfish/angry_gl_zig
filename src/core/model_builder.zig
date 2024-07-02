@@ -148,7 +148,7 @@ pub const ModelBuilder = struct {
             Assimp.aiProcess_JoinIdenticalVertices |
             Assimp.aiProcess_SortByPType |
             Assimp.aiProcess_FlipUVs |
-            Assimp.aiProcess_FindInvalidData,  // this fixes animation by removing dupilcate keys
+            Assimp.aiProcess_FindInvalidData,  // this fixes animation by removing duplicate keys
         );
 
         // printSceneInfo(aiScene[0]);

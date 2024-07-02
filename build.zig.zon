@@ -4,9 +4,10 @@
 
     .dependencies = .{
         .assimp = .{ .path = "libs/assimp" },
+        .cglm = .{ .path = "libs/cglm" },
+        .miniaudio = .{ .path = "libs/miniaudio" },
         .system_sdk = .{ .path = "libs/system-sdk" },
         .zglfw = .{ .path = "libs/zglfw" },
-        .cglm = .{ .path = "libs/cglm" },
         .zopengl = .{ .path = "libs/zopengl" },
         .zstbi = .{ .path = "libs/zstbi" },
     },
