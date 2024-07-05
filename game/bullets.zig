@@ -275,8 +275,7 @@ pub const BulletStore = struct {
     }
 
     pub fn update_bullets(self: *Self, state: *State) !void {
-
-        if (self.all_bullet_positions.items.len == 0 ) {
+        if (self.all_bullet_positions.items.len == 0) {
             return;
         }
 
@@ -297,7 +296,7 @@ pub const BulletStore = struct {
                 const num_bullets_in_group = group.group_size;
                 const sub_group_size: u32 = @divTrunc(num_bullets_in_group, num_sub_groups);
 
-                for  (0..num_sub_groups) |sub_group| {
+                for (0..num_sub_groups) |sub_group| {
                     var bullet_start = sub_group_size * sub_group;
 
                     var bullet_end = if (sub_group == (num_sub_groups - 1))
@@ -308,7 +307,7 @@ pub const BulletStore = struct {
                     bullet_start += bullet_group_start_index;
                     bullet_end += bullet_group_start_index;
 
-                    for  (bullet_start..bullet_end) |bullet_index| {
+                    for (bullet_start..bullet_end) |bullet_index| {
                         var direction = self.all_bullet_directions.items[bullet_index];
                         const change = direction.mulScalar(delta_position_magnitude);
 
@@ -353,7 +352,7 @@ pub const BulletStore = struct {
 
         if (first_live_bullet_group != 0) {
             first_live_bullet =
-            self.bullet_groups.items[first_live_bullet_group - 1].start_index + self.bullet_groups.items[first_live_bullet_group - 1].group_size;
+                self.bullet_groups.items[first_live_bullet_group - 1].start_index + self.bullet_groups.items[first_live_bullet_group - 1].group_size;
             // self.bullet_groups.drain(0..first_live_bullet_group);
             try core.utils.removeRange(BulletGroup, &self.bullet_groups, 0, first_live_bullet_group);
         }
@@ -377,7 +376,12 @@ pub const BulletStore = struct {
 
             const sprite_tester = SpriteAgeTester{ .sprite_duration = sprite_duration };
 
-            try core.utils.retain(SpriteSheetSprite, SpriteAgeTester, &self.bullet_impact_sprites, sprite_tester,);
+            try core.utils.retain(
+                SpriteSheetSprite,
+                SpriteAgeTester,
+                &self.bullet_impact_sprites,
+                sprite_tester,
+            );
         }
 
         for (state.enemies.items) |enemy| {
@@ -385,13 +389,18 @@ pub const BulletStore = struct {
                 const sprite_sheet_sprite = SpriteSheetSprite{ .age = 0.0, .world_position = enemy.?.position };
                 try self.bullet_impact_sprites.append(sprite_sheet_sprite);
                 try state.burn_marks.add_mark(enemy.?.position);
-                // state.sound_system.play_enemy_destroyed();
+                state.sound_engine.playSound(.Explosion);
             }
         }
 
         const enemyTester = EnemyTester{};
         // state.enemies.retain(|e| e.is_alive);
-        try core.utils.retain(Enemy, EnemyTester, &state.enemies, enemyTester,);
+        try core.utils.retain(
+            Enemy,
+            EnemyTester,
+            &state.enemies,
+            enemyTester,
+        );
     }
 
     const SpriteAgeTester = struct {
@@ -526,8 +535,6 @@ pub const BulletStore = struct {
     }
 
     pub fn render_bullet_sprites(self: *Self) void {
-
-
         gl.bindVertexArray(self.bullet_vao);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, self.rotation_vbo);
@@ -665,6 +672,6 @@ test "bullets.test_oriented_rotation" {
         // direction angle with respect to the canonical direction
         const theta = geom.oriented_angle(x, y, rot_vec) * -1.0;
 
-        std.debug.print("angle: {d}  direction: {any}   theta: {d}", .{angle, normalized_direction, theta});
+        std.debug.print("angle: {d}  direction: {any}   theta: {d}", .{ angle, normalized_direction, theta });
     }
 }

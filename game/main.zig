@@ -30,7 +30,6 @@ const BulletStore = @import("bullets.zig").BulletStore;
 const BurnMarks = @import("burn_marks.zig").BurnMarks;
 const MuzzleFlash = @import("muzzle_flash.zig").MuzzleFlash;
 const Floor = @import("floor.zig").Floor;
-const SoundSystem = @import("sound_system.zig").SoundSystem;
 const fb = @import("framebuffers.zig");
 const quads = @import("quads.zig");
 
@@ -46,6 +45,7 @@ const TextureType = core.texture.TextureType;
 const Animator = core.animation.Animator;
 const AnimationClip = core.animation.AnimationClip;
 const AnimationRepeat = core.animation.AnimationRepeat;
+const SoundEngine = core.SoundEngine;
 
 const log = std.log.scoped(.Main);
 
@@ -253,6 +253,17 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const key_presses = EnumSet(glfw.Key).initEmpty();
 
+    const clips: [2]world.ClipData = .{
+        .{
+            .clip = .Explosion,
+            .file = "assets/Audio/Enemy_SFX/enemy_Spider_DestroyedExplosion.wav",
+        },
+        .{
+            .clip = .GunFire,
+            .file = "assets/Audio/Player_SFX/player_shooting.wav",
+        },
+    };
+
     log.info("models loaded", .{});
 
     // Initialize the world state
@@ -280,7 +291,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .mouse_x = scaled_width / 2.0,
         .mouse_y = scaled_height / 2.0,
         .burn_marks = burn_marks,
-        // .sound_system = undefined,
+        .sound_engine = try SoundEngine(world.ClipName, world.ClipData).init(allocator, &clips),
         .key_presses = key_presses,
         .run = true,
     };
@@ -293,6 +304,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     defer floor.deinit();
     defer burn_marks.deinit();
     defer state.enemies.deinit();
+    defer state.sound_engine.deinit();
 
     // Set fixed shader uniforms
 
@@ -497,7 +509,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             player.last_fire_time = state.frame_time;
             if (try bullet_store.create_bullets(dx, dz, &muzzle_transform, world.SPREAD_AMOUNT)) {
                 try muzzle_flash.add_flash();
-                // state.sound_system.play_player_shooting();
+                state.sound_engine.playSound(.GunFire);
             }
         }
 
@@ -926,14 +938,15 @@ fn test_ray() void {
         vec4(0.345086, 0.64576554, -0.68110394, 0.0),
         vec4(0.3210102, 0.6007121, 0.7321868, 0.0),
         vec4(0.8819683, -0.47130874, -0.0, 0.0),
-        vec4(1.1920929e-7, -0.0, -5.872819, 1.0),);
+        vec4(1.1920929e-7, -0.0, -5.872819, 1.0),
+    );
 
     const projection = Mat4.from_cols(
         vec4(1.6094756, 0.0, 0.0, 0.0),
         vec4(0.0, 2.4142134, 0.0, 0.0),
         vec4(0.0, 0.0, -1.002002, -1.0),
-        vec4(0.0, 0.0, -0.2002002, 0.0),);
-
+        vec4(0.0, 0.0, -0.2002002, 0.0),
+    );
 
     const ray = math.get_world_ray_from_mouse(
         mouse_x,
@@ -972,5 +985,5 @@ fn test_ray() void {
 
     const degrees = math.radiansToDegrees(aim_theta);
 
-    log.info("ray = {any}\nworld_point = {any}\naim_theta = {d}\ndegrees = {d}\n", .{ray, world_point, aim_theta, degrees});
+    log.info("ray = {any}\nworld_point = {any}\naim_theta = {d}\ndegrees = {d}\n", .{ ray, world_point, aim_theta, degrees });
 }

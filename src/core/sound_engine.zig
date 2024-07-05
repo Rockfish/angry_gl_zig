@@ -7,27 +7,37 @@ const EnumMap = std.EnumMap;
 
 const log = std.log.scoped(.SoundEngine);
 
-pub const ClipName = enum {
-    GunFire,
-    Explosion,
-};
-
-const ClipData = struct {
-    clip: ClipName,
-    file: [:0]const u8,
-};
-
-const clips: [2]ClipData = .{
-    .{
-        .clip = .Explosion,
-        .file = "assets/Audio/Enemy_SFX/enemy_Spider_DestroyedExplosion.wav",
-    },
-    .{
-        .clip = .GunFire,
-        .file = "assets/Audio/Player_SFX/player_shooting.wav",
-    },
-};
-
+///    // Example set up
+///
+///    pub const ClipName = enum {
+///      GunFire,
+///        Explosion,
+///    };
+///
+///    const ClipData = struct {
+///        clip: ClipName,
+///        file: [:0]const u8,
+///    };
+///
+///    const clips: [2]ClipData = .{
+///        .{
+///            .clip = .Explosion,
+///            .file = "assets/Audio/Enemy_SFX/enemy_Spider_DestroyedExplosion.wav",
+///        },
+///        .{
+///            .clip = .GunFire,
+///            .file = "assets/Audio/Player_SFX/player_shooting.wav",
+///        },
+///    };
+///
+///    const sound_engine = SoundEngine(ClipName, ClipData).init(allocator, &clips) catch |err| {
+///        std.debug.print("Error: {any}\n", .{err});
+///        return;
+///    };
+///
+///    sound_engine.playSound(.GunFire);
+///    sound_engine.playSound(.Explosion);
+///
 pub fn SoundEngine(comptime clipNameType: type, comptime clipDataType: type) type {
     return struct {
         allocator: Allocator,
@@ -108,80 +118,4 @@ pub fn SoundEngine(comptime clipNameType: type, comptime clipDataType: type) typ
             }
         }
     };
-}
-
-pub fn createSounds(allocator: Allocator) void {
-    var s = SoundEngine(ClipName, ClipData).init(allocator, &clips) catch |err| {
-        std.debug.print("Error: {any}\n", .{err});
-        return;
-    };
-
-    s.print();
-
-    s.deinit();
-}
-
-var sound_engine: SoundEngine(ClipName, ClipData) = undefined;
-
-pub fn main() !void {
-    try glfw.init();
-    defer glfw.terminate();
-
-    const gl_major = 4;
-    const gl_minor = 0;
-    glfw.windowHintTyped(.context_version_major, gl_major);
-    glfw.windowHintTyped(.context_version_minor, gl_minor);
-    glfw.windowHintTyped(.opengl_profile, .opengl_core_profile);
-    glfw.windowHintTyped(.opengl_forward_compat, true);
-    glfw.windowHintTyped(.client_api, .opengl_api);
-    glfw.windowHintTyped(.doublebuffer, true);
-
-    const window = try glfw.Window.create(600, 600, "Angry ", null);
-    defer window.destroy();
-
-    _ = window.setKeyCallback(key_handler);
-
-    glfw.makeContextCurrent(window);
-    glfw.swapInterval(1);
-
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
-    sound_engine = SoundEngine(ClipName, ClipData).init(allocator, &clips) catch |err| {
-        std.debug.print("Error: {any}\n", .{err});
-        return;
-    };
-
-    while (!window.shouldClose()) {
-        glfw.pollEvents();
-
-        window.swapBuffers();
-    }
-
-    sound_engine.deinit();
-    log.info("done.\n", .{});
-}
-
-fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
-    _ = scancode;
-    _ = mods;
-    if (action == glfw.Action.press) {
-        switch (key) {
-            .escape => {
-                window.setShouldClose(true);
-            },
-            .t => {
-                const time: f32 = @floatCast(glfw.getTime());
-                log.info("time: {d}", .{time});
-            },
-            .f => {
-                sound_engine.playSound(.GunFire);
-            },
-            .e => {
-                sound_engine.playSound(.Explosion);
-            },
-            else => {},
-        }
-    }
 }

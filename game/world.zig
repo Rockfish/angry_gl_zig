@@ -14,7 +14,6 @@ const BulletStore = @import("bullets.zig").BulletStore;
 const BurnMarks = @import("burn_marks.zig").BurnMarks;
 const MuzzleFlash = @import("muzzle_flash.zig").MuzzleFlash;
 const Floor = @import("floor.zig").Floor;
-// const SoundSystem = @import("sound_system.zig").SoundSystem;
 const fb = @import("framebuffers.zig");
 const quads = @import("quads.zig");
 const Capsule = @import("capsule.zig").Capsule;
@@ -28,6 +27,7 @@ const Camera = core.Camera;
 const Shader = core.Shader;
 const String = core.string.String;
 const FrameCount = core.FrameCount;
+const SoundEngine = core.SoundEngine;
 
 // Player
 pub const FIRE_INTERVAL: f32 = 0.1;
@@ -44,13 +44,23 @@ pub const ENEMY_SPAWN_INTERVAL: f32 = 1.0; // seconds
 pub const SPAWNS_PER_INTERVAL: i32 = 1;
 pub const SPAWN_RADIUS: f32 = 10.0; // from player
 
-pub const ENEMY_COLLIDER: Capsule = Capsule { .height = 0.4, .radius = 0.08 };
+pub const ENEMY_COLLIDER: Capsule = Capsule{ .height = 0.4, .radius = 0.08 };
 
 pub const CameraType = enum {
     Game,
     Floating,
     TopDown,
     Side,
+};
+
+pub const ClipName = enum {
+    GunFire,
+    Explosion,
+};
+
+pub const ClipData = struct {
+    clip: ClipName,
+    file: [:0]const u8,
 };
 
 pub const State = struct {
@@ -66,11 +76,10 @@ pub const State = struct {
     player: *Player,
     burn_marks: *BurnMarks,
     enemies: std.ArrayList(?Enemy),
-    // sound_system: *SoundSystem,
+    sound_engine: SoundEngine(ClipName, ClipData),
     game_projection: math.Mat4,
     floating_projection: math.Mat4,
     orthographic_projection: math.Mat4,
-    // key_presses: set.Set(glfw.Key),
     key_presses: EnumSet(glfw.Key),
     light_postion: math.Vec3,
     mouse_x: f32,
@@ -82,4 +91,3 @@ pub const State = struct {
     last_y: f32,
     run: bool,
 };
-

@@ -62,21 +62,50 @@ pub fn build(b: *std.Build) void {
     core.addImport("zopengl", zopengl.module("root"));
     core.addImport("assimp", assimp.module("root"));
     core.addImport("zstbi", zstbi.module("root"));
+    core.addImport("miniaudio", miniaudio.module("root"));
     core.linkLibrary(assimp.artifact("assimp"));
     core.linkLibrary(zstbi.artifact("zstbi"));
 
-    inline for([_]struct {
+    inline for ([_]struct {
         name: []const u8,
         exe_name: []const u8,
         source: []const u8,
-    } {
-        .{.name = "main", .exe_name = "core_main", .source = "src/main.zig", },
-        .{.name = "game", .exe_name = "angry_monsters", .source = "game/main.zig", },
-        .{.name = "animation", .exe_name = "animation_example", .source = "examples/sample_animation/sample_animation.zig", },
-        .{.name = "assimp_report", .exe_name = "assimp_report", .source = "examples/assimp_report/assimp_report.zig", },
-        .{.name = "textures", .exe_name = "texture_example", .source = "examples/4_1-textures/main.zig", },
-        .{.name = "bullets", .exe_name = "bullets_example", .source = "examples/bullets/main.zig", },
-        .{.name = "audio", .exe_name = "audio_example", .source = "examples/audio/main.zig", },
+    }{
+        .{
+            .name = "main",
+            .exe_name = "core_main",
+            .source = "src/main.zig",
+        },
+        .{
+            .name = "game",
+            .exe_name = "angry_monsters",
+            .source = "game/main.zig",
+        },
+        .{
+            .name = "animation",
+            .exe_name = "animation_example",
+            .source = "examples/sample_animation/sample_animation.zig",
+        },
+        .{
+            .name = "assimp_report",
+            .exe_name = "assimp_report",
+            .source = "examples/assimp_report/assimp_report.zig",
+        },
+        .{
+            .name = "textures",
+            .exe_name = "texture_example",
+            .source = "examples/4_1-textures/main.zig",
+        },
+        .{
+            .name = "bullets",
+            .exe_name = "bullets_example",
+            .source = "examples/bullets/main.zig",
+        },
+        .{
+            .name = "audio",
+            .exe_name = "audio_example",
+            .source = "examples/audio/main.zig",
+        },
     }) |app| {
         const exe = b.addExecutable(.{
             .name = app.exe_name,
