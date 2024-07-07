@@ -253,15 +253,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const key_presses = EnumSet(glfw.Key).initEmpty();
 
-    const clips: [2]world.ClipData = .{
-        .{
-            .clip = .Explosion,
-            .file = "assets/Audio/Enemy_SFX/enemy_Spider_DestroyedExplosion.wav",
-        },
-        .{
-            .clip = .GunFire,
-            .file = "assets/Audio/Player_SFX/player_shooting.wav",
-        },
+    const clips = [2]world.ClipData{
+        .{ .clip = .Explosion, .file = "assets/Audio/Enemy_SFX/enemy_Spider_DestroyedExplosion.wav" },
+        .{ .clip = .GunFire, .file = "assets/Audio/Player_SFX/player_shooting_one.wav" },
     };
 
     log.info("models loaded", .{});

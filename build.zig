@@ -71,41 +71,13 @@ pub fn build(b: *std.Build) void {
         exe_name: []const u8,
         source: []const u8,
     }{
-        .{
-            .name = "main",
-            .exe_name = "core_main",
-            .source = "src/main.zig",
-        },
-        .{
-            .name = "game",
-            .exe_name = "angry_monsters",
-            .source = "game/main.zig",
-        },
-        .{
-            .name = "animation",
-            .exe_name = "animation_example",
-            .source = "examples/sample_animation/sample_animation.zig",
-        },
-        .{
-            .name = "assimp_report",
-            .exe_name = "assimp_report",
-            .source = "examples/assimp_report/assimp_report.zig",
-        },
-        .{
-            .name = "textures",
-            .exe_name = "texture_example",
-            .source = "examples/4_1-textures/main.zig",
-        },
-        .{
-            .name = "bullets",
-            .exe_name = "bullets_example",
-            .source = "examples/bullets/main.zig",
-        },
-        .{
-            .name = "audio",
-            .exe_name = "audio_example",
-            .source = "examples/audio/main.zig",
-        },
+        .{ .name = "main", .exe_name = "core_main", .source = "src/main.zig" },
+        .{ .name = "game", .exe_name = "angry_monsters", .source = "game/main.zig" },
+        .{ .name = "animation", .exe_name = "animation_example", .source = "examples/sample_animation/sample_animation.zig" },
+        .{ .name = "assimp_report", .exe_name = "assimp_report", .source = "examples/assimp_report/assimp_report.zig" },
+        .{ .name = "textures", .exe_name = "texture_example", .source = "examples/4_1-textures/main.zig" },
+        .{ .name = "bullets", .exe_name = "bullets_example", .source = "examples/bullets/main.zig" },
+        .{ .name = "audio", .exe_name = "audio_example", .source = "examples/audio/main.zig" },
     }) |app| {
         const exe = b.addExecutable(.{
             .name = app.exe_name,
@@ -145,6 +117,32 @@ pub fn build(b: *std.Build) void {
         }
 
         b.step(app.name ++ "-run", "Run '" ++ app.name ++ "' app").dependOn(&run_exe.step);
+
+        // extra check step for the game for better zls
+        // See https://kristoff.it/blog/improving-your-zls-experience/
+        if (std.mem.eql(u8, app.name, "game")) {
+            const exe_check = b.addExecutable(.{
+                .name = app.exe_name,
+                .root_source_file = b.path(app.source),
+                .target = target,
+                .optimize = optimize,
+            });
+
+            exe_check.root_module.addImport("math", math);
+            exe_check.root_module.addImport("core", core);
+            exe_check.root_module.addImport("cglm", cglm.module("root"));
+            exe_check.root_module.addImport("miniaudio", miniaudio.module("root"));
+            exe_check.root_module.addImport("zglfw", zglfw.module("root"));
+            exe_check.root_module.addImport("zopengl", zopengl.module("root"));
+            exe_check.linkLibrary(miniaudio.artifact("miniaudio"));
+            exe_check.linkLibrary(zglfw.artifact("glfw"));
+            exe_check.linkLibrary(cglm.artifact("cglm"));
+            exe_check.addIncludePath(b.path("src/include"));
+            exe_check.addIncludePath(miniaudio.path("include"));
+
+            const check = b.step("check", "Check if " ++ app.name ++ " compiles");
+            check.dependOn(&exe_check.step);
+        }
     }
 }
 

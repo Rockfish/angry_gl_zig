@@ -10,7 +10,7 @@ const log = std.log.scoped(.SoundEngine);
 ///    // Example set up
 ///
 ///    pub const ClipName = enum {
-///      GunFire,
+///        GunFire,
 ///        Explosion,
 ///    };
 ///
@@ -20,14 +20,8 @@ const log = std.log.scoped(.SoundEngine);
 ///    };
 ///
 ///    const clips: [2]ClipData = .{
-///        .{
-///            .clip = .Explosion,
-///            .file = "assets/Audio/Enemy_SFX/enemy_Spider_DestroyedExplosion.wav",
-///        },
-///        .{
-///            .clip = .GunFire,
-///            .file = "assets/Audio/Player_SFX/player_shooting.wav",
-///        },
+///        .{ .clip = .Explosion, .file = "assets/Audio/Enemy_SFX/enemy_Spider_DestroyedExplosion.wav" },
+///        .{ .clip = .GunFire, .file = "assets/Audio/Player_SFX/player_shooting.wav" },
 ///    };
 ///
 ///    const sound_engine = SoundEngine(ClipName, ClipData).init(allocator, &clips) catch |err| {
