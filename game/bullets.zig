@@ -219,7 +219,7 @@ pub const BulletStore = struct {
 
         Self.create_shader_buffers(&bullet_store);
         log.info("bullet_store created", .{});
-        log.debug("bullet_store = {any}", .{bullet_store});
+        //log.debug("bullet_store = {any}", .{bullet_store});
 
         return bullet_store;
     }

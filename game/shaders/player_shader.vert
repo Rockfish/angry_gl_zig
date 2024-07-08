@@ -27,49 +27,48 @@ uniform bool depth_mode;
 uniform mat4 lightSpaceMatrix;
 
 vec4 get_animated_position() {
-  vec4 totalPosition = vec4(0.0f);
-  vec3 localNormal = vec3(0.0f);
+    vec4 totalPosition = vec4(0.0f);
+    vec3 localNormal = vec3(0.0f);
 
-  for(int i = 0 ; i < MAX_BONE_INFLUENCE ; i++)
-  {
-    if(boneIds[i] == -1) {
-      continue;
+    for (int i = 0; i < MAX_BONE_INFLUENCE; i++)
+    {
+        if (boneIds[i] == -1) {
+            continue;
+        }
+
+        if (boneIds[i] >= MAX_BONES) {
+            totalPosition = vec4(pos, 1.0f);
+            break;
+        }
+
+        vec4 localPosition = finalBonesMatrices[boneIds[i]] * vec4(pos, 1.0f);
+        totalPosition += localPosition * weights[i];
+
+        localNormal = mat3(finalBonesMatrices[boneIds[i]]) * norm;
     }
 
-    if(boneIds[i] >= MAX_BONES) {
-      totalPosition = vec4(pos, 1.0f);
-      break;
+    if (totalPosition == vec4(0.0f)) {
+        totalPosition = nodeTransform * vec4(pos, 1.0f);
     }
 
-    vec4 localPosition = finalBonesMatrices[boneIds[i]] * vec4(pos, 1.0f);
-    totalPosition += localPosition * weights[i];
-
-    localNormal = mat3(finalBonesMatrices[boneIds[i]]) * norm;
-  }
-
-  if (totalPosition == vec4(0.0f)) {
-    totalPosition = nodeTransform * vec4(pos, 1.0f);
-  }
-
-  return totalPosition;
+    return totalPosition;
 }
 
 void main() {
+    vec4 final_position = get_animated_position();
 
-  vec4 final_position = get_animated_position();
+    if (depth_mode) {
+        gl_Position = lightSpaceMatrix * model * final_position;
+    } else {
+        gl_Position = projectionView * model * final_position;
+    }
 
-  if (depth_mode) {
-    gl_Position = lightSpaceMatrix * model * final_position;
-  } else {
-    gl_Position = projectionView * model * final_position;
-  }
+    TexCoords = tex;
 
-  TexCoords = tex;
+    //  Norm = vec3(aimRot * vec4(localNormal, 1.0));
+    Norm = vec3(aimRot * vec4(norm, 1.0));
 
-//  Norm = vec3(aimRot * vec4(localNormal, 1.0));
-  Norm = vec3(aimRot * vec4(norm, 1.0));
+    FragWorldPos = vec3(model * vec4(pos, 1.0));
 
-  FragWorldPos = vec3(model * vec4(pos, 1.0));
-
-  FragPosLightSpace = lightSpaceMatrix * vec4(FragWorldPos, 1.0);
+    FragPosLightSpace = lightSpaceMatrix * vec4(FragWorldPos, 1.0);
 }
