@@ -226,9 +226,9 @@ pub const BulletStore = struct {
 
     pub fn create_bullets(self: *Self, dx: f32, dz: f32, muzzle_transform: *const Mat4, _: i32) !bool {
         // limit number of bullet groups
-        if (self.bullet_groups.items.len > 10) {
-            return false;
-        }
+        ////if (self.bullet_groups.items.len > 10) {
+        //return false;
+        //}
 
         const muzzle_world_position = muzzle_transform.mulVec4(&vec4(0.0, 0.0, 0.0, 1.0));
         const projectile_spawn_point = muzzle_world_position.xyz();

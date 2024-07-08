@@ -220,12 +220,13 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     defer floating_camera.deinit();
     defer ortho_camera.deinit();
 
-    const ortho_width = VIEW_PORT_WIDTH / 500.0;
-    const ortho_height = VIEW_PORT_HEIGHT / 500.0;
+    const ortho_width = VIEW_PORT_WIDTH / 130.0;
+    const ortho_height = VIEW_PORT_HEIGHT / 130.0;
     const aspect_ratio = VIEW_PORT_WIDTH / VIEW_PORT_HEIGHT;
 
     const game_projection = Mat4.perspectiveRhGl(math.degreesToRadians(game_camera.zoom), aspect_ratio, 0.1, 100.0);
     const floating_projection = Mat4.perspectiveRhGl(math.degreesToRadians(floating_camera.zoom), aspect_ratio, 0.1, 100.0);
+
     const orthographic_projection = Mat4.orthographicRhGl(-ortho_width, ortho_width, -ortho_height, ortho_height, 0.1, 100.0);
 
     log.info("camers loaded", .{});
@@ -255,7 +256,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const clips = [2]world.ClipData{
         .{ .clip = .Explosion, .file = "assets/Audio/Enemy_SFX/enemy_Spider_DestroyedExplosion.wav" },
-        .{ .clip = .GunFire, .file = "assets/Audio/Player_SFX/player_shooting_one.wav" },
+        .{ .clip = .GunFire, .file = "assets/Audio/Player_SFX/player_shooting.wav" },
     };
 
     log.info("models loaded", .{});
@@ -383,15 +384,16 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         }
 
         state.game_camera.position = player.position.add(&camera_follow_vec);
-        const game_view = Mat4.lookAtRhGl(&state.game_camera.position, &player.position, &state.game_camera.up);
+        const game_view = Mat4.lookAtRhGl(
+            &state.game_camera.position,
+            &player.position,
+            &state.game_camera.up,
+        );
 
         var pv: PV = undefined;
         switch (state.active_camera) {
             CameraType.Game => {
-                pv = .{
-                    .projection = state.game_projection,
-                    .view = game_view,
-                };
+                pv = .{ .projection = state.game_projection, .view = game_view };
             },
             CameraType.Floating => {
                 const view = Mat4.lookAtRhGl(
@@ -399,32 +401,24 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
                     &player.position,
                     &state.floating_camera.up,
                 );
-                pv = .{
-                    .projection = state.floating_projection,
-                    .view = view,
-                };
+                pv = .{ .projection = state.floating_projection, .view = view };
             },
             CameraType.TopDown => {
                 const view = Mat4.lookAtRhGl(
-                    &player.position.add(&vec3(0.0, 1.0, 0.0)),
+                    &vec3(player.position.x, 1.0, player.position.z),
+                    //&player.position.add(&vec3(0.0, 1.0, 0.0)),
                     &player.position,
                     &vec3(0.0, 0.0, -1.0),
                 );
-                pv = .{
-                    .projection = state.orthographic_projection,
-                    .view = view,
-                };
+                pv = .{ .projection = state.orthographic_projection, .view = view };
             },
             CameraType.Side => {
                 const view = Mat4.lookAtRhGl(
                     &player.position.add(&vec3(0.0, 0.0, -3.0)),
                     &player.position,
-                    &vec3(0.0, -1.0, 0.0),
+                    &vec3(0.0, 1.0, 0.0),
                 );
-                pv = .{
-                    .projection = state.orthographic_projection,
-                    .view = view,
-                };
+                pv = .{ .projection = state.orthographic_projection, .view = view };
             },
         }
 
@@ -833,6 +827,9 @@ fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.
             .two => state.active_camera = CameraType.Floating,
             .three => state.active_camera = CameraType.TopDown,
             .four => state.active_camera = CameraType.Side,
+            .space => if (action == glfw.Action.press) {
+                state.run = !state.run;
+            },
             else => {},
         }
     }

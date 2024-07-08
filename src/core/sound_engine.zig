@@ -99,7 +99,7 @@ pub fn SoundEngine(comptime clipNameType: type, comptime clipDataType: type) typ
                 _ = a.ma_sound_seek_to_pcm_frame(sound, 0);
             }
 
-            log.info("start sound", .{});
+            // log.info("start sound", .{});
             if (a.ma_sound_start(sound) != a.MA_SUCCESS) {
                 log.info("Could not start music", .{});
             }
