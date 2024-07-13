@@ -37,7 +37,7 @@ pub const MuzzleFlash = struct {
         var texture_config = TextureConfig.default();
         texture_config.set_wrap(TextureWrap.Repeat);
 
-        const texture_muzzle_flash_sprite_sheet = try Texture.new(allocator, "angrygl_assets/Player/muzzle_spritesheet.png", texture_config);
+        const texture_muzzle_flash_sprite_sheet = try Texture.new(allocator, "assets/player/muzzle_spritesheet.png", texture_config);
         const muzzle_flash_impact_sprite = SpriteSheet.new(texture_muzzle_flash_sprite_sheet, 6, 0.03);
 
         return .{
@@ -64,7 +64,12 @@ pub const MuzzleFlash = struct {
 
             const tester = Tester{ .max_age = max_age };
 
-            try core.utils.retain(SpriteAge, Tester, &self.muzzle_flash_sprites_age, tester,);
+            try core.utils.retain(
+                SpriteAge,
+                Tester,
+                &self.muzzle_flash_sprites_age,
+                tester,
+            );
         }
     }
 

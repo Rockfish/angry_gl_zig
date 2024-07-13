@@ -27,7 +27,7 @@ pub fn main() !void {
     // const model_path = "examples/sample_animation/source/cube_capoeira_martelo_cruzando.FBX.fbx";
     // const model_path = "/Users/john/Dev_Rust/Repos/ogldev/Content/box.obj";
     // const model_path = "/Users/john/Dev_Rust/Repos/OpenGL-Animation/Resources/res/model.dae";
-    const model_path = "/Users/john/Dev/Zig/Dev/angry_gl_zig/assets/Models/Player/Player.fbx";
+    const model_path = "/Users/john/Dev/Zig/Dev/angry_gl_zig/angrybots_assets/Models/Player/Player.fbx";
     // const model_path = "examples/sample_animation/colorful_cube/scene.gltf";
 
     const scene = try loadScene(allocator, model_path);
@@ -40,8 +40,7 @@ fn loadScene(allocator: Allocator, file_path: []const u8) ![*c]const Assimp.aiSc
     const c_path: [:0]const u8 = try allocator.dupeZ(u8, file_path);
     defer allocator.free(c_path);
 
-    const aiScene: [*c]const Assimp.aiScene = Assimp.aiImportFile(c_path,
-        Assimp.aiProcess_CalcTangentSpace |
+    const aiScene: [*c]const Assimp.aiScene = Assimp.aiImportFile(c_path, Assimp.aiProcess_CalcTangentSpace |
         Assimp.aiProcess_Triangulate |
         Assimp.aiProcess_JoinIdenticalVertices |
         Assimp.aiProcess_SortByPType |

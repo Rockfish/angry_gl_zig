@@ -10,6 +10,7 @@ backup
 
 # Ignore some special system files
 *.DS_Store
+.DS_Store
 
 # Unity copyrighted assets
-assets/
+angrybots_assets/

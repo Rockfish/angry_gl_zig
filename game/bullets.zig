@@ -173,9 +173,9 @@ pub const BulletStore = struct {
             .wrap = TextureWrap.Repeat,
         };
 
-        const bullet_texture = try Texture.new(allocator, "angrygl_assets/bullet/bullet_texture_transparent.png", texture_config);
+        const bullet_texture = try Texture.new(allocator, "assets/bullet/bullet_texture_transparent.png", texture_config);
 
-        const texture_impact_sprite_sheet = try Texture.new(allocator, "angrygl_assets/bullet/impact_spritesheet_with_00.png", texture_config);
+        const texture_impact_sprite_sheet = try Texture.new(allocator, "assets/bullet/impact_spritesheet_with_00.png", texture_config);
         const bullet_impact_spritesheet = SpriteSheet.new(texture_impact_sprite_sheet, 11, 0.05);
 
         // Pre calculate the bullet spread rotations. Only needs to be done once.

@@ -35,15 +35,13 @@ pub const Enemy = struct {
     const Self = @This();
 
     pub fn new(position: Vec3, dir: Vec3) Self {
-        return . {
+        return .{
             .position = position,
             .dir = dir,
             .is_alive = true,
         };
     }
 };
-
-
 
 pub const EnemySystem = struct {
     count_down: f32,
@@ -59,7 +57,7 @@ pub const EnemySystem = struct {
     }
 
     pub fn new(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !Self {
-        const builder = try ModelBuilder.init(allocator, texture_cache,"enemy", "assets/Models/Eeldog/EelDog.FBX");
+        const builder = try ModelBuilder.init(allocator, texture_cache, "enemy", "angrybots_assets/Models/Eeldog/EelDog.FBX");
         defer builder.deinit();
 
         builder.skipModelTextures();
@@ -136,7 +134,7 @@ pub const EnemySystem = struct {
 
         for (state.enemies.items) |e| {
             const zero: f32 = 0.0;
-            const val =if (e.?.dir.z < zero) zero else math.pi;
+            const val = if (e.?.dir.z < zero) zero else math.pi;
             const monster_theta = math.atan(e.?.dir.x / e.?.dir.z) + val;
 
             var model_transform = Mat4.fromTranslation(&e.?.position);

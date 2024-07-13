@@ -28,11 +28,11 @@ const SIZE_OF_FLOAT = @sizeOf(f32);
 const FLOOR_VERTICES: [30]f32 = .{
     // Vertices                                // TexCoord
     -FLOOR_SIZE / 2.0, 0.0, -FLOOR_SIZE / 2.0, 0.0,            0.0,
-    -FLOOR_SIZE / 2.0, 0.0,  FLOOR_SIZE / 2.0, NUM_TILE_WRAPS, 0.0,
-     FLOOR_SIZE / 2.0, 0.0,  FLOOR_SIZE / 2.0, NUM_TILE_WRAPS, NUM_TILE_WRAPS,
+    -FLOOR_SIZE / 2.0, 0.0, FLOOR_SIZE / 2.0,  NUM_TILE_WRAPS, 0.0,
+    FLOOR_SIZE / 2.0,  0.0, FLOOR_SIZE / 2.0,  NUM_TILE_WRAPS, NUM_TILE_WRAPS,
     -FLOOR_SIZE / 2.0, 0.0, -FLOOR_SIZE / 2.0, 0.0,            0.0,
-     FLOOR_SIZE / 2.0, 0.0,  FLOOR_SIZE / 2.0, NUM_TILE_WRAPS, NUM_TILE_WRAPS,
-     FLOOR_SIZE / 2.0, 0.0, -FLOOR_SIZE / 2.0, 0.0,            NUM_TILE_WRAPS,
+    FLOOR_SIZE / 2.0,  0.0, FLOOR_SIZE / 2.0,  NUM_TILE_WRAPS, NUM_TILE_WRAPS,
+    FLOOR_SIZE / 2.0,  0.0, -FLOOR_SIZE / 2.0, 0.0,            NUM_TILE_WRAPS,
 };
 
 pub const Floor = struct {
@@ -61,17 +61,17 @@ pub const Floor = struct {
 
         const texture_floor_diffuse = try Texture.new(
             allocator,
-            "assets/Models/Floor D.png",
+            "angrybots_assets/Models/Floor D.png",
             texture_config,
         );
         const texture_floor_normal = try Texture.new(
             allocator,
-            "assets/Models/Floor N.png",
+            "angrybots_assets/Models/Floor N.png",
             texture_config,
         );
         const texture_floor_spec = try Texture.new(
             allocator,
-            "assets/Models/Floor M.png",
+            "angrybots_assets/Models/Floor M.png",
             texture_config,
         );
 

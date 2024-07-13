@@ -45,7 +45,6 @@ const SCALE_VEC: Vec3 = vec3(BULLET_SCALE, BULLET_SCALE, BULLET_SCALE);
 const BULLET_NORMAL: Vec3 = vec3(0.0, 1.0, 0.0);
 const CANONICAL_DIR: Vec3 = vec3(0.0, 0.0, 1.0);
 
-
 // Trim off margin around the bullet image
 // const TEXTURE_MARGIN: f32 = 0.0625;
 // const TEXTURE_MARGIN: f32 = 0.2;
@@ -70,14 +69,14 @@ const BULLET_VERTICES_V: [20]f32 = .{
 
 const BULLET_VERTICES_H_V: [40]f32 = .{
     // Positions                                                              // Tex Coords
-    BULLET_SCALE * (-0.243), 0.0,                     BULLET_SCALE * (-1.0),  1.0 - TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
-    BULLET_SCALE * (-0.243), 0.0,                     BULLET_SCALE * 0.0,     0.0 + TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
-    BULLET_SCALE * 0.243,    0.0,                     BULLET_SCALE * 0.0,     0.0 + TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
-    BULLET_SCALE * 0.243,    0.0,                     BULLET_SCALE * (-1.0),  1.0 - TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
-    0.0,                     BULLET_SCALE * (-0.243), BULLET_SCALE * (-1.0),  1.0 - TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
-    0.0,                     BULLET_SCALE * (-0.243), BULLET_SCALE * 0.0,     0.0 + TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
-    0.0,                     BULLET_SCALE * 0.243,    BULLET_SCALE * 0.0,     0.0 + TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
-    0.0,                     BULLET_SCALE * 0.243,    BULLET_SCALE * (-1.0),  1.0 - TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
+    BULLET_SCALE * (-0.243), 0.0,                     BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
+    BULLET_SCALE * (-0.243), 0.0,                     BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
+    BULLET_SCALE * 0.243,    0.0,                     BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
+    BULLET_SCALE * 0.243,    0.0,                     BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
+    0.0,                     BULLET_SCALE * (-0.243), BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
+    0.0,                     BULLET_SCALE * (-0.243), BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
+    0.0,                     BULLET_SCALE * 0.243,    BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
+    0.0,                     BULLET_SCALE * 0.243,    BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
 };
 
 const BULLET_INDICES: [6]i32 = .{ 0, 1, 2, 0, 2, 3 };
@@ -91,15 +90,15 @@ const BULLET_INDICES_H_V: [12]u32 = .{
 
 const test_vertices: [20]f32 = .{
     // positions       // texture coordinates
-     0.5,  0.5, 0.0,   1.0, 1.0, // top right
-     0.5, -0.5, 0.0,   1.0, 0.0, // bottom right
-    -0.5, -0.5, 0.0,   0.0, 0.0, // bottom left
-    -0.5,  0.5, 0.0,   0.0, 1.0, // top left
+    0.5, 0.5, 0.0, 1.0, 1.0, // top right
+    0.5, -0.5, 0.0, 1.0, 0.0, // bottom right
+    -0.5, -0.5, 0.0, 0.0, 0.0, // bottom left
+    -0.5, 0.5, 0.0, 0.0, 1.0, // top left
 };
 
 const test_indices: [6]u32 = .{
     0, 1, 3, // first triangle
-    1, 2, 3  // second triangle
+    1, 2, 3, // second triangle
 };
 
 // const vertices = BULLET_VERTICES_H_V;
@@ -133,7 +132,7 @@ pub const Bullets = struct {
         const bullet_texture = try Texture.new(
             allocator,
             // "angrygl_assets/bullet/bullet_texture_transparent.png",
-            "angrygl_assets/bullet/red_and_green_bullet_transparent.png",
+            "assets/bullet/red_and_green_bullet_transparent.png",
             texture_config,
         );
 
@@ -156,7 +155,6 @@ pub const Bullets = struct {
         var bullet_indices_ebo: gl.Uint = 0;
         var rotation_vbo: gl.Uint = 0;
         var position_vbo: gl.Uint = 0;
-
 
         gl.genVertexArrays(1, &bullet_vao);
         gl.genBuffers(1, &bullet_vertices_vbo);
@@ -188,7 +186,7 @@ pub const Bullets = struct {
             3,
             gl.FLOAT,
             gl.FALSE,
-             SIZE_OF_FLOAT * 5,
+            SIZE_OF_FLOAT * 5,
             null,
         );
         gl.enableVertexAttribArray(0);
@@ -264,20 +262,9 @@ pub const Bullets = struct {
     }
 
     pub fn render_bullet_sprites(self: *Self) void {
+        const test_bullet_rotations: [4]Vec4 = .{ vec4(0.4691308, -0.017338134, 0.8829104, 0.009212547), vec4(0.46921122, -0.0057797083, 0.8830617, 0.0030710243), vec4(0.45753372, -0.017457237, 0.8889755, 0.008984809), vec4(0.45761213, -0.005819412, 0.8891279, 0.0029951073) };
 
-        const test_bullet_rotations: [4]Vec4 = .{
-            vec4(0.4691308, -0.017338134, 0.8829104, 0.009212547),
-            vec4(0.46921122, -0.0057797083, 0.8830617, 0.0030710243),
-            vec4(0.45753372, -0.017457237, 0.8889755, 0.008984809),
-            vec4(0.45761213, -0.005819412, 0.8891279, 0.0029951073)
-        };
-
-        const test_bullet_positions: [4]Vec3 = .{
-            vec3(-0.37858108, 0.48462552, -0.43320495),
-            vec3(-0.37866658, 0.48068565, -0.43326268),
-            vec3(-0.37633452, 0.48462552, -0.43643945),
-            vec3(-0.37641847, 0.48068565, -0.43649942)
-        };
+        const test_bullet_positions: [4]Vec3 = .{ vec3(-0.37858108, 0.48462552, -0.43320495), vec3(-0.37866658, 0.48068565, -0.43326268), vec3(-0.37633452, 0.48462552, -0.43643945), vec3(-0.37641847, 0.48068565, -0.43649942) };
 
         gl.bindVertexArray(self.bullet_vao);
 
@@ -321,9 +308,7 @@ pub const Bullets = struct {
             @intCast(self.all_bullet_positions.items.len),
         );
 
-        std.debug.print("self.all_bullet_rotations = {any}\nself.all_bullet_positions = {any}\n", .{self.all_bullet_rotations.items, self.all_bullet_positions.items});
-        std.debug.print("\n",.{});
+        std.debug.print("self.all_bullet_rotations = {any}\nself.all_bullet_positions = {any}\n", .{ self.all_bullet_rotations.items, self.all_bullet_positions.items });
+        std.debug.print("\n", .{});
     }
-
-
 };

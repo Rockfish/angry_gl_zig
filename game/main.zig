@@ -61,7 +61,7 @@ const BLUR_SCALE: i32 = 2;
 const FLOOR_LIGHT_FACTOR: f32 = 0.35;
 const FLOOR_NON_BLUE: f32 = 0.7;
 
-const content_dir = "angrygl_assets";
+const content_dir = "assets";
 
 const PV = struct {
     projection: Mat4,
@@ -255,8 +255,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const key_presses = EnumSet(glfw.Key).initEmpty();
 
     const clips = [2]world.ClipData{
-        .{ .clip = .Explosion, .file = "assets/Audio/Enemy_SFX/enemy_Spider_DestroyedExplosion.wav" },
-        .{ .clip = .GunFire, .file = "assets/Audio/Player_SFX/player_shooting.wav" },
+        .{ .clip = .Explosion, .file = "angrybots_assets/Audio/Enemy_SFX/enemy_Spider_DestroyedExplosion.wav" },
+        .{ .clip = .GunFire, .file = "angrybots_assets/Audio/Player_SFX/player_shooting.wav" },
     };
 
     log.info("models loaded", .{});

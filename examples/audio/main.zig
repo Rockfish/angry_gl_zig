@@ -20,11 +20,11 @@ const ClipData = struct {
 const clips: [2]ClipData = .{
     .{
         .clip = .Explosion,
-        .file = "assets/Audio/Enemy_SFX/enemy_Spider_DestroyedExplosion.wav",
+        .file = "angrybots_assets/Audio/Enemy_SFX/enemy_Spider_DestroyedExplosion.wav",
     },
     .{
         .clip = .GunFire,
-        .file = "assets/Audio/Player_SFX/player_shooting.wav",
+        .file = "angrybots_assets/Audio/Player_SFX/player_shooting.wav",
     },
 };
 

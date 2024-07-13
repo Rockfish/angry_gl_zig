@@ -53,7 +53,7 @@ const State = struct {
     last_y: f32,
 };
 
-const content_dir = "angrygl_assets";
+const content_dir = "assets";
 
 var state: State = undefined;
 
@@ -135,7 +135,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const ambientColor: Vec3 = vec3(NON_BLUE * 0.7, NON_BLUE * 0.7, 0.7);
 
-    const model_path = "assets/Models/Player/Player.fbx";
+    const model_path = "angrybots_assets/Models/Player/Player.fbx";
 
     std.debug.print("Main: loading model: {s}\n", .{model_path});
 
@@ -255,21 +255,31 @@ inline fn toRadians(degrees: f32) f32 {
     return degrees * (std.math.pi / 180.0);
 }
 
-fn key_handler (window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
+fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = scancode;
     _ = mods;
     switch (key) {
-        .escape => { window.setShouldClose(true); },
+        .escape => {
+            window.setShouldClose(true);
+        },
         .t => {
             if (action == glfw.Action.press) {
                 std.debug.print("time: {d}\n", .{state.delta_time});
             }
         },
-        .w => { state.camera.process_keyboard(.Forward, state.delta_time);},
-        .s => { state.camera.process_keyboard(.Backward, state.delta_time);},
-        .a => { state.camera.process_keyboard(.Left, state.delta_time);},
-        .d => { state.camera.process_keyboard(.Right, state.delta_time);},
-        else => {}
+        .w => {
+            state.camera.process_keyboard(.Forward, state.delta_time);
+        },
+        .s => {
+            state.camera.process_keyboard(.Backward, state.delta_time);
+        },
+        .a => {
+            state.camera.process_keyboard(.Left, state.delta_time);
+        },
+        .d => {
+            state.camera.process_keyboard(.Right, state.delta_time);
+        },
+        else => {},
     }
 }
 
@@ -321,14 +331,15 @@ test "utils.get_world_ray_from_mouse" {
         vec4(0.345086, 0.64576554, -0.68110394, 0.0),
         vec4(0.3210102, 0.6007121, 0.7321868, 0.0),
         vec4(0.8819683, -0.47130874, -0.0, 0.0),
-        vec4(1.1920929e-7, -0.0, -5.872819, 1.0),);
+        vec4(1.1920929e-7, -0.0, -5.872819, 1.0),
+    );
 
     const projection = Mat4.from_cols(
         vec4(1.6094756, 0.0, 0.0, 0.0),
         vec4(0.0, 2.4142134, 0.0, 0.0),
         vec4(0.0, 0.0, -1.002002, -1.0),
-        vec4(0.0, 0.0, -0.2002002, 0.0),);
-
+        vec4(0.0, 0.0, -0.2002002, 0.0),
+    );
 
     const ray = math.get_world_ray_from_mouse(
         mouse_x,

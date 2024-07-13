@@ -56,7 +56,7 @@ pub const PlayerAnimations = struct {
     dead: AnimationClip,
 
     const Self = @This();
-    
+
     pub fn new() Self {
         return .{
             .idle = AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever),
@@ -128,7 +128,7 @@ pub const Player = struct {
     }
 
     pub fn new(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !*Self {
-        const model_path = "assets/Models/Player/Player.fbx";
+        const model_path = "angrybots_assets/Models/Player/Player.fbx";
 
         var builder = try ModelBuilder.init(allocator, texture_cache, "Player", model_path);
         defer builder.deinit();
@@ -160,7 +160,7 @@ pub const Player = struct {
         try anim_hash.put(.dead, AnimationClip.new(234.0, 293.0, AnimationRepeat.Once));
 
         const player = try allocator.create(Player);
-        player.* = Player {
+        player.* = Player{
             .allocator = allocator,
             .model = model,
             .last_fire_time = 0.0,
@@ -180,7 +180,7 @@ pub const Player = struct {
         try player.model.playClip(player.animations.idle);
         return player;
     }
-    
+
     pub fn set_animation(self: *Self, animation_name: AnimationName, seconds: u32) void {
         if (!self.animation_name.eq(animation_name)) {
             self.animation_name = animation_name;

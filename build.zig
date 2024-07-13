@@ -1,8 +1,11 @@
 const std = @import("std");
 
+const content_dir = "assets/";
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    // b.verbose = true;
 
     const miniaudio = b.dependency("miniaudio", .{
         .target = target,
@@ -30,6 +33,14 @@ pub fn build(b: *std.Build) void {
     const zopengl = b.dependency("zopengl", .{
         .target = target,
         .optimize = optimize,
+    });
+
+    const zgui = b.dependency("zgui", .{
+        .target = target,
+        .optimize = optimize,
+        .backend = .glfw_opengl3,
+        .with_te = true,
+        .shared = false,
     });
 
     const zstbi = b.dependency("zstbi", .{
@@ -60,9 +71,11 @@ pub fn build(b: *std.Build) void {
 
     core.addImport("math", math);
     core.addImport("zopengl", zopengl.module("root"));
+    core.addImport("zgui", zgui.module("root"));
     core.addImport("assimp", assimp.module("root"));
     core.addImport("zstbi", zstbi.module("root"));
     core.addImport("miniaudio", miniaudio.module("root"));
+
     core.linkLibrary(assimp.artifact("assimp"));
     core.linkLibrary(zstbi.artifact("zstbi"));
 
@@ -78,6 +91,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "textures", .exe_name = "texture_example", .source = "examples/4_1-textures/main.zig" },
         .{ .name = "bullets", .exe_name = "bullets_example", .source = "examples/bullets/main.zig" },
         .{ .name = "audio", .exe_name = "audio_example", .source = "examples/audio/main.zig" },
+        .{ .name = "gui_settings", .exe_name = "gui_example", .source = "examples/gui_settings/gui_settings.zig" },
     }) |app| {
         const exe = b.addExecutable(.{
             .name = app.exe_name,
@@ -96,13 +110,16 @@ pub fn build(b: *std.Build) void {
         exe.root_module.addImport("miniaudio", miniaudio.module("root"));
         exe.root_module.addImport("zglfw", zglfw.module("root"));
         exe.root_module.addImport("zopengl", zopengl.module("root"));
-        exe.linkLibrary(miniaudio.artifact("miniaudio"));
-        exe.linkLibrary(zglfw.artifact("glfw"));
-        exe.linkLibrary(cglm.artifact("cglm"));
+        exe.root_module.addImport("zgui", zgui.module("root"));
+        exe.root_module.addImport("zstbi", zstbi.module("root")); // gui
+
         exe.addIncludePath(b.path("src/include"));
         exe.addIncludePath(miniaudio.path("include"));
 
-        // b.verbose = true;
+        exe.linkLibrary(zgui.artifact("imgui"));
+        exe.linkLibrary(zglfw.artifact("glfw"));
+        exe.linkLibrary(cglm.artifact("cglm"));
+        exe.linkLibrary(miniaudio.artifact("miniaudio"));
 
         const install_exe = b.addInstallArtifact(exe, .{});
 
@@ -118,32 +135,42 @@ pub fn build(b: *std.Build) void {
 
         b.step(app.name ++ "-run", "Run '" ++ app.name ++ "' app").dependOn(&run_exe.step);
 
-        // extra check step for the game for better zls
-        // See https://kristoff.it/blog/improving-your-zls-experience/
-        if (std.mem.eql(u8, app.name, "game")) {
-            const exe_check = b.addExecutable(.{
-                .name = app.exe_name,
-                .root_source_file = b.path(app.source),
-                .target = target,
-                .optimize = optimize,
-            });
+        const exe_options = b.addOptions();
+        exe.root_module.addOptions("build_options", exe_options);
+        exe_options.addOption([]const u8, "content_dir", content_dir);
 
-            exe_check.root_module.addImport("math", math);
-            exe_check.root_module.addImport("core", core);
-            exe_check.root_module.addImport("cglm", cglm.module("root"));
-            exe_check.root_module.addImport("miniaudio", miniaudio.module("root"));
-            exe_check.root_module.addImport("zglfw", zglfw.module("root"));
-            exe_check.root_module.addImport("zopengl", zopengl.module("root"));
-            exe_check.linkLibrary(miniaudio.artifact("miniaudio"));
-            exe_check.linkLibrary(zglfw.artifact("glfw"));
-            exe_check.linkLibrary(cglm.artifact("cglm"));
-            exe_check.addIncludePath(b.path("src/include"));
-            exe_check.addIncludePath(miniaudio.path("include"));
+        const install_content_step = b.addInstallDirectory(.{
+            .source_dir = b.path(content_dir),
+            .install_dir = .{ .custom = "" },
+            .install_subdir = "bin/" ++ content_dir,
+        });
 
-            const check = b.step("check", "Check if " ++ app.name ++ " compiles");
-            check.dependOn(&exe_check.step);
-        }
+        run_exe.step.dependOn(&install_content_step.step);
     }
+
+    // extra check step for the game for better zls
+    // See https://kristoff.it/blog/improving-your-zls-experience/
+    const exe_check = b.addExecutable(.{
+        .name = "angry_monsters",
+        .root_source_file = b.path("game/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    exe_check.root_module.addImport("math", math);
+    exe_check.root_module.addImport("core", core);
+    exe_check.root_module.addImport("cglm", cglm.module("root"));
+    exe_check.root_module.addImport("miniaudio", miniaudio.module("root"));
+    exe_check.root_module.addImport("zglfw", zglfw.module("root"));
+    exe_check.root_module.addImport("zopengl", zopengl.module("root"));
+    exe_check.linkLibrary(miniaudio.artifact("miniaudio"));
+    exe_check.linkLibrary(zglfw.artifact("glfw"));
+    exe_check.linkLibrary(cglm.artifact("cglm"));
+    exe_check.addIncludePath(b.path("src/include"));
+    exe_check.addIncludePath(miniaudio.path("include"));
+
+    const check = b.step("check", "Check if game compiles");
+    check.dependOn(&exe_check.step);
 }
 
 pub const Options = struct {

@@ -43,7 +43,7 @@ pub const BurnMarks = struct {
         var texture_config = TextureConfig.default();
         texture_config.set_wrap(TextureWrap.Repeat);
 
-        const mark_texture = try Texture.new(allocator, "angrygl_assets/bullet/burn_mark.png", texture_config);
+        const mark_texture = try Texture.new(allocator, "assets/bullet/burn_mark.png", texture_config);
 
         const burn_marks = try allocator.create(BurnMarks);
         burn_marks.* = .{
@@ -56,7 +56,7 @@ pub const BurnMarks = struct {
     }
 
     pub fn add_mark(self: *Self, position: Vec3) !void {
-        const burn_mark = BurnMark {
+        const burn_mark = BurnMark{
             .position = position,
             .time_left = BURN_MARK_TIME,
         };
@@ -95,9 +95,14 @@ pub const BurnMarks = struct {
             gl.drawArrays(gl.TRIANGLES, 0, 6);
         }
 
-        const tester = Tester {};
+        const tester = Tester{};
 
-        try core.utils.retain(BurnMark, Tester, &self.marks, tester,);
+        try core.utils.retain(
+            BurnMark,
+            Tester,
+            &self.marks,
+            tester,
+        );
 
         gl.disable(gl.BLEND);
         gl.depthMask(gl.TRUE);

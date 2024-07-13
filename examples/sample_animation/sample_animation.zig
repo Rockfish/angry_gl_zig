@@ -55,9 +55,9 @@ const State = struct {
     first_mouse: bool,
     last_x: f32,
     last_y: f32,
-    };
+};
 
-const content_dir = "angrygl_assets";
+const content_dir = "assets";
 
 var state: State = undefined;
 
@@ -180,7 +180,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const ambientColor: Vec3 = vec3(NON_BLUE * 0.7, NON_BLUE * 0.7, 0.7);
 
-    const model_path = "assets/Models/Player/Player.fbx";
+    const model_path = "angrybots_assets/Models/Player/Player.fbx";
 
     std.debug.print("Main: loading model: {s}\n", .{model_path});
 
@@ -206,13 +206,21 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var model = try builder.build();
     builder.deinit();
 
-
-    const bullet_model_path = "assets/Models/Bullet/Bullet.FBX";
-    var bullet_model_builder = try ModelBuilder.init(allocator, &texture_cache, "bullet", bullet_model_path,);
+    const bullet_model_path = "angrybots_assets/Models/Bullet/Bullet.FBX";
+    var bullet_model_builder = try ModelBuilder.init(
+        allocator,
+        &texture_cache,
+        "bullet",
+        bullet_model_path,
+    );
     bullet_model_builder.skipModelTextures();
 
     // try bullet_model_builder.addTexture( "Plane001", texture_diffuse, "Textures/BulletTexture.png");
-    try bullet_model_builder.addTexture( "Plane001", texture_diffuse, "Floor D.png",);
+    try bullet_model_builder.addTexture(
+        "Plane001",
+        texture_diffuse,
+        "Floor D.png",
+    );
     var bullet_model = try bullet_model_builder.build();
     bullet_model_builder.deinit();
 
@@ -322,21 +330,31 @@ inline fn toRadians(degrees: f32) f32 {
     return degrees * (std.math.pi / 180.0);
 }
 
-fn key_handler (window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
+fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = scancode;
     _ = mods;
     switch (key) {
-        .escape => { window.setShouldClose(true); },
+        .escape => {
+            window.setShouldClose(true);
+        },
         .t => {
             if (action == glfw.Action.press) {
                 std.debug.print("time: {d}\n", .{state.delta_time});
             }
         },
-        .w => { state.camera.process_keyboard(.Forward, state.delta_time);},
-        .s => { state.camera.process_keyboard(.Backward, state.delta_time);},
-        .a => { state.camera.process_keyboard(.Left, state.delta_time);},
-        .d => { state.camera.process_keyboard(.Right, state.delta_time);},
-        else => {}
+        .w => {
+            state.camera.process_keyboard(.Forward, state.delta_time);
+        },
+        .s => {
+            state.camera.process_keyboard(.Backward, state.delta_time);
+        },
+        .a => {
+            state.camera.process_keyboard(.Left, state.delta_time);
+        },
+        .d => {
+            state.camera.process_keyboard(.Right, state.delta_time);
+        },
+        else => {},
     }
 }
 
