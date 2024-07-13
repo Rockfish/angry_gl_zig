@@ -27,17 +27,6 @@ const AnimationClip = animation.AnimationClip;
 const AnimationRepeat = animation.AnimationRepeat;
 const WeightedAnimation = animation.WeightedAnimation;
 
-const PLAYER_SPEED: f32 = 5.0;
-// 1.5;
-const ANIM_TRANSITION_TIME: f32 = 0.2;
-
-// const IDLE = "idle";
-// const RIGHT = "right";
-// const FORWARD = "forward";
-// const BACK = "back";
-// const LEFT = "left";
-// const DEAD = "dead";
-
 pub const AnimationName = enum {
     idle,
     right,
@@ -171,7 +160,7 @@ pub const Player = struct {
             .direction = vec2(0.0, 0.0),
             .death_time = -1.0,
             .animation_name = .idle,
-            .speed = PLAYER_SPEED,
+            .speed = world.PLAYER_SPEED,
             .animations = PlayerAnimations.new(),
             .anim_weights = AnimationWeights.default(),
             .anim_hash = anim_hash,
@@ -233,11 +222,11 @@ pub const Player = struct {
 
         const is_dead = self.death_time >= 0.0;
 
-        self.anim_weights.prev_idle_weight = max(0.0, self.anim_weights.prev_idle_weight - anim_delta_time / ANIM_TRANSITION_TIME);
-        self.anim_weights.prev_right_weight = max(0.0, self.anim_weights.prev_right_weight - anim_delta_time / ANIM_TRANSITION_TIME);
-        self.anim_weights.prev_forward_weight = max(0.0, self.anim_weights.prev_forward_weight - anim_delta_time / ANIM_TRANSITION_TIME);
-        self.anim_weights.prev_back_weight = max(0.0, self.anim_weights.prev_back_weight - anim_delta_time / ANIM_TRANSITION_TIME);
-        self.anim_weights.prev_left_weight = max(0.0, self.anim_weights.prev_left_weight - anim_delta_time / ANIM_TRANSITION_TIME);
+        self.anim_weights.prev_idle_weight = max(0.0, self.anim_weights.prev_idle_weight - anim_delta_time / world.ANIM_TRANSITION_TIME);
+        self.anim_weights.prev_right_weight = max(0.0, self.anim_weights.prev_right_weight - anim_delta_time / world.ANIM_TRANSITION_TIME);
+        self.anim_weights.prev_forward_weight = max(0.0, self.anim_weights.prev_forward_weight - anim_delta_time / world.ANIM_TRANSITION_TIME);
+        self.anim_weights.prev_back_weight = max(0.0, self.anim_weights.prev_back_weight - anim_delta_time / world.ANIM_TRANSITION_TIME);
+        self.anim_weights.prev_left_weight = max(0.0, self.anim_weights.prev_left_weight - anim_delta_time / world.ANIM_TRANSITION_TIME);
 
         var dead_weight: f32 = if (is_dead) @as(f32, 1.0) else @as(f32, 0.0);
         var idle_weight = self.anim_weights.prev_idle_weight + if (is_moving or is_dead) @as(f32, 0.0) else @as(f32, 1.0);

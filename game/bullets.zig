@@ -69,22 +69,11 @@ const SIZE_OF_VEC3 = @sizeOf(Vec3);
 const SIZE_OF_VEC4 = @sizeOf(Vec4);
 const SIZE_OF_QUAT = @sizeOf(Quat);
 
-// const BULLET_SCALE: f32 = 0.3;
-const BULLET_SCALE: f32 = 0.3;
-const BULLET_LIFETIME: f32 = 1.0;
-// seconds
-const BULLET_SPEED: f32 = 15.0;
-// const BULLET_SPEED: f32 = 2.0;
-// Game units per second
-const ROTATION_PER_BULLET: f32 = 3.0 * math.pi / 180.0;
-
-const SCALE_VEC: Vec3 = vec3(BULLET_SCALE, BULLET_SCALE, BULLET_SCALE);
+const SCALE_VEC: Vec3 = vec3(world.BULLET_SCALE, world.BULLET_SCALE, world.BULLET_SCALE);
 const BULLET_NORMAL: Vec3 = vec3(0.0, 1.0, 0.0);
 const CANONICAL_DIR: Vec3 = vec3(0.0, 0.0, 1.0);
 
-const BULLET_COLLIDER: Capsule = Capsule{ .height = 0.3, .radius = 0.03 };
-
-const BULLET_ENEMY_MAX_COLLISION_DIST: f32 = BULLET_COLLIDER.height / 2.0 + BULLET_COLLIDER.radius + world.ENEMY_COLLIDER.height / 2.0 + world.ENEMY_COLLIDER.radius;
+const BULLET_ENEMY_MAX_COLLISION_DIST: f32 = world.BULLET_COLLIDER.height / 2.0 + world.BULLET_COLLIDER.radius + world.ENEMY_COLLIDER.height / 2.0 + world.ENEMY_COLLIDER.radius;
 
 // Trim off margin around the bullet image
 // const TEXTURE_MARGIN: f32 = 0.0625;
@@ -93,31 +82,31 @@ const TEXTURE_MARGIN: f32 = 0.1;
 
 const BULLET_VERTICES_H: [20]f32 = .{
     // Positions                                        // Tex Coords
-    BULLET_SCALE * (-0.243), 0.0, BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
-    BULLET_SCALE * (-0.243), 0.0, BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
-    BULLET_SCALE * 0.243,    0.0, BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
-    BULLET_SCALE * 0.243,    0.0, BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
+    world.BULLET_SCALE * (-0.243), 0.0, world.BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
+    world.BULLET_SCALE * (-0.243), 0.0, world.BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
+    world.BULLET_SCALE * 0.243,    0.0, world.BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
+    world.BULLET_SCALE * 0.243,    0.0, world.BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
 };
 
 // vertical surface to see the bullets from the side
 
 const BULLET_VERTICES_V: [20]f32 = .{
-    0.0, BULLET_SCALE * (-0.243), BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
-    0.0, BULLET_SCALE * (-0.243), BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
-    0.0, BULLET_SCALE * 0.243,    BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
-    0.0, BULLET_SCALE * 0.243,    BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
+    0.0, world.BULLET_SCALE * (-0.243), world.BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
+    0.0, world.BULLET_SCALE * (-0.243), world.BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
+    0.0, world.BULLET_SCALE * 0.243,    world.BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
+    0.0, world.BULLET_SCALE * 0.243,    world.BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
 };
 
 const BULLET_VERTICES_H_V: [40]f32 = .{
     // Positions                                        // Tex Coords
-    BULLET_SCALE * (-0.243), 0.0,                     BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
-    BULLET_SCALE * (-0.243), 0.0,                     BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
-    BULLET_SCALE * 0.243,    0.0,                     BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
-    BULLET_SCALE * 0.243,    0.0,                     BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
-    0.0,                     BULLET_SCALE * (-0.243), BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
-    0.0,                     BULLET_SCALE * (-0.243), BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
-    0.0,                     BULLET_SCALE * 0.243,    BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
-    0.0,                     BULLET_SCALE * 0.243,    BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
+    world.BULLET_SCALE * (-0.243), 0.0,                           world.BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
+    world.BULLET_SCALE * (-0.243), 0.0,                           world.BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
+    world.BULLET_SCALE * 0.243,    0.0,                           world.BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
+    world.BULLET_SCALE * 0.243,    0.0,                           world.BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
+    0.0,                           world.BULLET_SCALE * (-0.243), world.BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
+    0.0,                           world.BULLET_SCALE * (-0.243), world.BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 0.0 + TEXTURE_MARGIN,
+    0.0,                           world.BULLET_SCALE * 0.243,    world.BULLET_SCALE * 0.0,    0.0 + TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
+    0.0,                           world.BULLET_SCALE * 0.243,    world.BULLET_SCALE * (-1.0), 1.0 - TEXTURE_MARGIN, 1.0 - TEXTURE_MARGIN,
 };
 
 const BULLET_INDICES: [6]u32 = .{ 0, 1, 2, 0, 2, 3 };
@@ -182,18 +171,19 @@ pub const BulletStore = struct {
         var x_rotations = ArrayList(Quat).init(allocator);
         var y_rotations = ArrayList(Quat).init(allocator);
 
+        const rotation_per_bullet = world.ROTATION_PER_BULLET * math.pi / 180.0;
         const spread_amount_f32: f32 = @floatFromInt(world.SPREAD_AMOUNT);
-        const spread_centering = ROTATION_PER_BULLET * (spread_amount_f32 - @as(f32, 1.0)) / @as(f32, 4.0);
+        const spread_centering = rotation_per_bullet * (spread_amount_f32 - @as(f32, 1.0)) / @as(f32, 4.0);
 
         for (0..world.SPREAD_AMOUNT) |i| {
             const i_f32: f32 = @floatFromInt(i);
             const y_rot = Quat.fromAxisAngle(
                 &vec3(0.0, 1.0, 0.0),
-                ROTATION_PER_BULLET * ((i_f32 - world.SPREAD_AMOUNT) / @as(f32, 2.0)) + spread_centering,
+                rotation_per_bullet * ((i_f32 - world.SPREAD_AMOUNT) / @as(f32, 2.0)) + spread_centering,
             );
             const x_rot = Quat.fromAxisAngle(
                 &vec3(1.0, 0.0, 0.0),
-                ROTATION_PER_BULLET * ((i_f32 - world.SPREAD_AMOUNT) / @as(f32, 2.0)) + spread_centering,
+                rotation_per_bullet * ((i_f32 - world.SPREAD_AMOUNT) / @as(f32, 2.0)) + spread_centering,
             );
             // std.debug.print("x_rot = {any}\n", .{x_rot});
             try x_rotations.append(x_rot);
@@ -247,7 +237,7 @@ pub const BulletStore = struct {
         const start_index = self.all_bullet_positions.items.len;
         const bullet_group_size = world.SPREAD_AMOUNT * world.SPREAD_AMOUNT;
 
-        const bullet_group = BulletGroup.new(start_index, bullet_group_size, BULLET_LIFETIME);
+        const bullet_group = BulletGroup.new(start_index, bullet_group_size, world.BULLET_LIFETIME);
 
         try self.all_bullet_positions.resize(start_index + bullet_group_size);
         try self.all_bullet_rotations.resize(start_index + bullet_group_size);
@@ -282,7 +272,7 @@ pub const BulletStore = struct {
         const use_aabb = state.enemies.items.len != 0;
         const num_sub_groups: u32 = if (use_aabb) @as(u32, @intCast(9)) else @as(u32, @intCast(1));
 
-        const delta_position_magnitude = state.delta_time * BULLET_SPEED;
+        const delta_position_magnitude = state.delta_time * world.BULLET_SPEED;
 
         var first_live_bullet_group: usize = 0;
 
@@ -603,14 +593,14 @@ fn bullet_collides_with_enemy(position: *Vec3, direction: *Vec3, enemy: *Enemy) 
         return false;
     }
 
-    const a0 = position.sub(&direction.mulScalar(BULLET_COLLIDER.height / 2.0));
-    const a1 = position.add(&direction.mulScalar(BULLET_COLLIDER.height / 2.0));
+    const a0 = position.sub(&direction.mulScalar(world.BULLET_COLLIDER.height / 2.0));
+    const a1 = position.add(&direction.mulScalar(world.BULLET_COLLIDER.height / 2.0));
     const b0 = enemy.position.sub(&enemy.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
     const b1 = enemy.position.add(&enemy.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
 
     const closet_distance = geom.distance_between_line_segments(&a0, &a1, &b0, &b1);
 
-    return closet_distance <= (BULLET_COLLIDER.radius + world.ENEMY_COLLIDER.radius);
+    return closet_distance <= (world.BULLET_COLLIDER.radius + world.ENEMY_COLLIDER.radius);
 }
 
 pub fn rotate_by_quat(v: *Vec3, q: *Quat) Vec3 {

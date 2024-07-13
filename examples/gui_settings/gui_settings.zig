@@ -10,22 +10,21 @@ const gl = zopengl.bindings;
 const Allocator = std.mem.Allocator;
 
 const content_dir = @import("build_options").content_dir;
-const window_title = "zig-gamedev: gui test (wgpu)";
+const window_title = "gui settings";
 
 // only works if file is in the current package
 //const embedded_font_data = @embedFile("../../assets/fonts/FiraCode-Medium.ttf");
 
-const DemoState = struct {
+const State = struct {
     texture: *Texture,
     font_normal: zgui.Font,
     font_large: zgui.Font,
-    draw_list: zgui.DrawList,
     alloced_input_text_buf: [:0]u8,
     alloced_input_text_multiline_buf: [:0]u8,
     alloced_input_text_with_hint_buf: [:0]u8,
 };
 
-var _te: *zgui.te.TestEngine = undefined;
+//var _te: *zgui.te.TestEngine = undefined;
 
 var frame_counter: FrameCount = undefined;
 
@@ -66,10 +65,8 @@ pub fn main() !void {
 
     gl.enable(gl.DEPTH_TEST);
 
-    const demo = try create(allocator, window);
-    defer destroy(allocator, demo);
-
-    registerTests();
+    const code = try create(allocator, window);
+    defer destroy(allocator, code);
 
     frame_counter = FrameCount.new();
 
@@ -79,21 +76,18 @@ pub fn main() !void {
         gl.clearColor(0.05, 0.4, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        try update(demo);
+        try update(code);
 
-        draw(demo);
+        draw(code);
 
         window.swapBuffers();
     }
 }
 
-fn create(allocator: std.mem.Allocator, window: *glfw.Window) !*DemoState {
+fn create(allocator: std.mem.Allocator, window: *glfw.Window) !*State {
     const texture = try Texture.new(allocator, content_dir ++ "images/genart_0025_5.png");
 
     zgui.init(allocator);
-    zgui.plot.init();
-
-    _te = zgui.te.getTestEngine().?;
 
     const scale_factor = scale_factor: {
         const scale = window.getContentScale();
@@ -101,7 +95,6 @@ fn create(allocator: std.mem.Allocator, window: *glfw.Window) !*DemoState {
     };
 
     const font_size = 16.0 * scale_factor;
-    //const font_large = zgui.io.addFontFromMemory(embedded_font_data, math.floor(font_size * 1.1));
     const font_large = zgui.io.addFontFromFile(content_dir ++ "fonts/FiraCode-Medium.ttf", math.floor(font_size));
     const font_normal = zgui.io.addFontFromFile(content_dir ++ "fonts/Roboto-Medium.ttf", math.floor(font_size));
 
@@ -121,116 +114,39 @@ fn create(allocator: std.mem.Allocator, window: *glfw.Window) !*DemoState {
 
     style.window_min_size = .{ 320.0, 240.0 };
     style.scrollbar_size = 6.0;
-    {
-        var color = style.getColor(.scrollbar_grab);
-        color[1] = 0.8;
-        style.setColor(.scrollbar_grab, color);
-    }
+    var color = style.getColor(.scrollbar_grab);
+    color[1] = 0.8;
+    style.setColor(.scrollbar_grab, color);
     style.scaleAllSizes(scale_factor);
 
-    // To reset zgui.Style with default values:
-    //zgui.getStyle().* = zgui.Style.init();
-
-    {
-        zgui.plot.getStyle().line_weight = 3.0;
-        const plot_style = zgui.plot.getStyle();
-        plot_style.marker = .circle;
-        plot_style.marker_size = 5.0;
-    }
-
-    const draw_list = zgui.createDrawList();
-
-    const demo = try allocator.create(DemoState);
-    demo.* = .{
+    const state = try allocator.create(State);
+    state.* = .{
         .texture = texture,
         .font_normal = font_normal,
         .font_large = font_large,
-        .draw_list = draw_list,
         .alloced_input_text_buf = try allocator.allocSentinel(u8, 4, 0),
         .alloced_input_text_multiline_buf = try allocator.allocSentinel(u8, 4, 0),
         .alloced_input_text_with_hint_buf = try allocator.allocSentinel(u8, 4, 0),
     };
-    demo.alloced_input_text_buf[0] = 0;
-    demo.alloced_input_text_multiline_buf[0] = 0;
-    demo.alloced_input_text_with_hint_buf[0] = 0;
 
-    return demo;
+    state.alloced_input_text_buf[0] = 0;
+    state.alloced_input_text_multiline_buf[0] = 0;
+    state.alloced_input_text_with_hint_buf[0] = 0;
+
+    return state;
 }
 
-fn destroy(allocator: std.mem.Allocator, demo: *DemoState) void {
+fn destroy(allocator: std.mem.Allocator, state: *State) void {
     zgui.backend.deinit();
-    zgui.plot.deinit();
-    zgui.destroyDrawList(demo.draw_list);
     zgui.deinit();
-    demo.texture.deinit();
-    allocator.free(demo.alloced_input_text_buf);
-    allocator.free(demo.alloced_input_text_multiline_buf);
-    allocator.free(demo.alloced_input_text_with_hint_buf);
-    allocator.destroy(demo);
+    state.texture.deinit();
+    allocator.free(state.alloced_input_text_buf);
+    allocator.free(state.alloced_input_text_multiline_buf);
+    allocator.free(state.alloced_input_text_with_hint_buf);
+    allocator.destroy(state);
 }
 
 var check_b = false;
-fn registerTests() void {
-    _ = _te.registerTest(
-        "Awesome",
-        "should_do_some_magic",
-        @src(),
-        struct {
-            pub fn gui(ctx: *zgui.te.TestContext) !void {
-                _ = ctx;
-            }
-
-            pub fn run(ctx: *zgui.te.TestContext) !void {
-                ctx.setRef("/Demo Settings");
-                ctx.windowFocus("");
-                ctx.itemAction(.open, "Widgets: Main", .{}, null);
-                ctx.itemAction(.click, "**/Button 1", .{}, null);
-                ctx.itemAction(.click, "**/Magic Is Everywhere", .{}, null);
-
-                std.testing.expect(true) catch |err| {
-                    zgui.te.checkTestError(@src(), err);
-                    return;
-                };
-            }
-        },
-    );
-
-    _ = _te.registerTest(
-        "Awesome",
-        "should_do_some_another_magic",
-        @src(),
-        struct {
-            pub fn gui(ctx: *zgui.te.TestContext) !void {
-                _ = ctx; // autofix
-                _ = zgui.begin("Test Window", .{ .flags = .{ .no_saved_settings = true } });
-                defer zgui.end();
-
-                zgui.text("Hello, automation world", .{});
-                _ = zgui.button("Click Me", .{});
-                if (zgui.treeNode("Node")) {
-                    defer zgui.treePop();
-
-                    _ = zgui.checkbox("Checkbox", .{ .v = &check_b });
-                }
-            }
-
-            pub fn run(ctx: *zgui.te.TestContext) !void {
-                ctx.setRef("/Test Window");
-                ctx.windowFocus("");
-
-                ctx.itemAction(.click, "Click Me", .{}, null);
-                ctx.itemAction(.open, "Node", .{}, null);
-                ctx.itemAction(.check, "Node/Checkbox", .{}, null);
-                ctx.itemAction(.uncheck, "Node/Checkbox", .{}, null);
-
-                std.testing.expect(true) catch |err| {
-                    zgui.te.checkTestError(@src(), err);
-                    return;
-                };
-            }
-        },
-    );
-}
 
 const SimpleEnum = enum {
     first,
@@ -249,15 +165,13 @@ const NonExhaustiveEnum = enum(i32) {
     _,
 };
 
-fn update(demo: *DemoState) !void {
+fn update(state: *State) !void {
     frame_counter.update();
 
     zgui.backend.newFrame(
         1600.0,
         1000.0,
     );
-
-    _te.showTestEngineWindows(null);
 
     zgui.setNextWindowPos(.{ .x = 20.0, .y = 20.0, .cond = .first_use_ever });
     zgui.setNextWindowSize(.{ .w = -1.0, .h = -1.0, .cond = .first_use_ever });
@@ -266,7 +180,7 @@ fn update(demo: *DemoState) !void {
     zgui.pushStyleVar2f(.{ .idx = .window_padding, .v = .{ 5.0, 5.0 } });
     defer zgui.popStyleVar(.{ .count = 2 });
 
-    if (zgui.begin("Demo Settings", .{})) {
+    if (zgui.begin("Settings", .{})) {
         zgui.bullet();
         zgui.textUnformattedColored(.{ 0, 0.8, 0, 1 }, "Average :");
         zgui.sameLine(.{});
@@ -275,7 +189,7 @@ fn update(demo: *DemoState) !void {
             .{ frame_counter.frame_time, frame_counter.fps }, // todo: fix
         );
 
-        zgui.pushFont(demo.font_large);
+        zgui.pushFont(state.font_large);
         zgui.separator();
         zgui.dummy(.{ .w = -1.0, .h = 20.0 });
         zgui.textUnformattedColored(.{ 0, 0.8, 0, 1 }, "zgui -");
@@ -522,15 +436,15 @@ fn update(demo: *DemoState) !void {
             _ = zgui.text("length of Input text with hint {}", .{std.mem.len(@as([*:0]u8, static.input_text_with_hint_buf[0..]))});
 
             zgui.separatorText("alloced input text");
-            _ = zgui.inputText("Input text alloced", .{ .buf = demo.alloced_input_text_buf });
-            _ = zgui.text("length of Input text alloced {}", .{std.mem.len(demo.alloced_input_text_buf.ptr)});
-            _ = zgui.inputTextMultiline("Input text multiline alloced", .{ .buf = demo.alloced_input_text_multiline_buf });
-            _ = zgui.text("length of Input text multiline {}", .{std.mem.len(demo.alloced_input_text_multiline_buf.ptr)});
+            _ = zgui.inputText("Input text alloced", .{ .buf = state.alloced_input_text_buf });
+            _ = zgui.text("length of Input text alloced {}", .{std.mem.len(state.alloced_input_text_buf.ptr)});
+            _ = zgui.inputTextMultiline("Input text multiline alloced", .{ .buf = state.alloced_input_text_multiline_buf });
+            _ = zgui.text("length of Input text multiline {}", .{std.mem.len(state.alloced_input_text_multiline_buf.ptr)});
             _ = zgui.inputTextWithHint("Input text with hint alloced", .{
                 .hint = "Enter your name",
-                .buf = demo.alloced_input_text_with_hint_buf,
+                .buf = state.alloced_input_text_with_hint_buf,
             });
-            _ = zgui.text("length of Input text with hint alloced {}", .{std.mem.len(demo.alloced_input_text_with_hint_buf.ptr)});
+            _ = zgui.text("length of Input text with hint alloced {}", .{std.mem.len(state.alloced_input_text_with_hint_buf.ptr)});
 
             zgui.separatorText("input numeric");
             _ = zgui.inputFloat("Input float 1", .{ .v = &static.v1 });
@@ -587,7 +501,7 @@ fn update(demo: *DemoState) !void {
         }
 
         if (zgui.collapsingHeader("Widgets: Image", .{})) {
-            const tex_id = demo.texture.id;
+            const tex_id = state.texture.id;
             _ = zgui.imageButton(
                 "image_button_id",
                 @ptrFromInt(tex_id),
@@ -595,118 +509,15 @@ fn update(demo: *DemoState) !void {
             );
             zgui.image(
                 @ptrFromInt(tex_id),
-                .{ .w = @floatFromInt(demo.texture.width), .h = @floatFromInt(demo.texture.height) },
+                .{ .w = @floatFromInt(state.texture.width), .h = @floatFromInt(state.texture.height) },
             );
         }
-
-        const draw_list = zgui.getBackgroundDrawList();
-        draw_list.pushClipRect(.{ .pmin = .{ 0, 0 }, .pmax = .{ 400, 400 } });
-        draw_list.addLine(.{
-            .p1 = .{ 0, 0 },
-            .p2 = .{ 400, 400 },
-            .col = zgui.colorConvertFloat3ToU32([_]f32{ 1, 0, 1 }),
-            .thickness = 5.0,
-        });
-        draw_list.popClipRect();
-
-        draw_list.pushClipRectFullScreen();
-        draw_list.addRectFilled(.{
-            .pmin = .{ 100, 100 },
-            .pmax = .{ 300, 200 },
-            .col = zgui.colorConvertFloat3ToU32([_]f32{ 1, 1, 1 }),
-            .rounding = 25.0,
-        });
-        draw_list.addRectFilledMultiColor(.{
-            .pmin = .{ 100, 300 },
-            .pmax = .{ 200, 400 },
-            .col_upr_left = zgui.colorConvertFloat3ToU32([_]f32{ 1, 0, 0 }),
-            .col_upr_right = zgui.colorConvertFloat3ToU32([_]f32{ 0, 1, 0 }),
-            .col_bot_right = zgui.colorConvertFloat3ToU32([_]f32{ 0, 0, 1 }),
-            .col_bot_left = zgui.colorConvertFloat3ToU32([_]f32{ 1, 1, 0 }),
-        });
-        draw_list.addQuadFilled(.{
-            .p1 = .{ 150, 400 },
-            .p2 = .{ 250, 400 },
-            .p3 = .{ 200, 500 },
-            .p4 = .{ 100, 500 },
-            .col = 0xff_ff_ff_ff,
-        });
-        draw_list.addQuad(.{
-            .p1 = .{ 170, 420 },
-            .p2 = .{ 270, 420 },
-            .p3 = .{ 220, 520 },
-            .p4 = .{ 120, 520 },
-            .col = zgui.colorConvertFloat3ToU32([_]f32{ 1, 0, 0 }),
-            .thickness = 3.0,
-        });
-        draw_list.addText(.{ 130, 130 }, 0xff_00_00_ff, "The number is: {}", .{7});
-        draw_list.addCircleFilled(.{
-            .p = .{ 200, 600 },
-            .r = 50,
-            .col = zgui.colorConvertFloat3ToU32([_]f32{ 1, 1, 1 }),
-        });
-        draw_list.addCircle(.{
-            .p = .{ 200, 600 },
-            .r = 30,
-            .col = zgui.colorConvertFloat3ToU32([_]f32{ 1, 0, 0 }),
-            .thickness = 11,
-        });
-        draw_list.addPolyline(
-            &.{ .{ 100, 700 }, .{ 200, 600 }, .{ 300, 700 }, .{ 400, 600 } },
-            .{ .col = zgui.colorConvertFloat3ToU32([_]f32{ 0x11.0 / 0xff.0, 0xaa.0 / 0xff.0, 0 }), .thickness = 7 },
-        );
-        _ = draw_list.getClipRectMin();
-        _ = draw_list.getClipRectMax();
-        draw_list.popClipRect();
-
-        if (zgui.collapsingHeader("Plot: Scatter", .{})) {
-            zgui.plot.pushStyleVar1f(.{ .idx = .marker_size, .v = 3.0 });
-            zgui.plot.pushStyleVar1f(.{ .idx = .marker_weight, .v = 1.0 });
-            if (zgui.plot.beginPlot("Scatter Plot", .{ .flags = .{ .no_title = true } })) {
-                zgui.plot.setupAxis(.x1, .{ .label = "xaxis" });
-                zgui.plot.setupAxisLimits(.x1, .{ .min = 0, .max = 5 });
-                zgui.plot.setupLegend(.{ .north = true, .east = true }, .{});
-                zgui.plot.setupFinish();
-                zgui.plot.plotScatterValues("y data", i32, .{ .v = &.{ 0, 1, 0, 1, 0, 1 } });
-                zgui.plot.plotScatter("xy data", f32, .{
-                    .xv = &.{ 0.1, 0.2, 0.5, 2.5 },
-                    .yv = &.{ 0.1, 0.3, 0.5, 0.9 },
-                });
-                zgui.plot.endPlot();
-            }
-            zgui.plot.popStyleVar(.{ .count = 2 });
-        }
     }
     zgui.end();
-
-    if (zgui.begin("Plot", .{})) {
-        if (zgui.plot.beginPlot("Line Plot", .{ .h = -1.0 })) {
-            zgui.plot.setupAxis(.x1, .{ .label = "xaxis" });
-            zgui.plot.setupAxisLimits(.x1, .{ .min = 0, .max = 5 });
-            zgui.plot.setupLegend(.{ .south = true, .west = true }, .{});
-            zgui.plot.setupFinish();
-            zgui.plot.plotLineValues("y data", i32, .{ .v = &.{ 0, 1, 0, 1, 0, 1 } });
-            zgui.plot.plotLine("xy data", f32, .{
-                .xv = &.{ 0.1, 0.2, 0.5, 2.5 },
-                .yv = &.{ 0.1, 0.3, 0.5, 0.9 },
-            });
-            zgui.plot.endPlot();
-        }
-    }
-    zgui.end();
-
-    // TODO: will not draw on screen for now
-    demo.draw_list.reset();
-    demo.draw_list.addCircle(.{
-        .p = .{ 200, 700 },
-        .r = 30,
-        .col = zgui.colorConvertFloat3ToU32([_]f32{ 1, 1, 0 }),
-        .thickness = 15 + 15 * @as(f32, @floatCast(@sin(glfw.getTime()))),
-    });
 }
 
-fn draw(demo: *DemoState) void {
-    _ = demo;
+fn draw(state: *State) void {
+    _ = state;
 
     zgui.backend.draw();
 }

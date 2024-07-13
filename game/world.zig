@@ -30,12 +30,13 @@ const FrameCount = core.FrameCount;
 const SoundEngine = core.SoundEngine;
 
 // Player
+pub const PLAYER_SPEED: f32 = 5.0;
 pub const FIRE_INTERVAL: f32 = 0.1;
-pub const SPREAD_AMOUNT: i32 = 20; // bullet spread
 pub const PLAYER_COLLISION_RADIUS: f32 = 0.35;
 pub const PLAYER_MODEL_SCALE: f32 = 0.0044;
 pub const PLAYER_MODEL_GUN_HEIGHT: f32 = 110.0;
 pub const PLAYER_MODEL_GUN_MUZZLE_OFFSET: f32 = 100.0;
+pub const ANIM_TRANSITION_TIME: f32 = 0.2;
 
 // Enemies
 pub const MONSTER_Y: f32 = PLAYER_MODEL_SCALE * PLAYER_MODEL_GUN_HEIGHT;
@@ -43,8 +44,16 @@ pub const MONSTER_SPEED: f32 = 0.6;
 pub const ENEMY_SPAWN_INTERVAL: f32 = 1.0; // seconds
 pub const SPAWNS_PER_INTERVAL: i32 = 1;
 pub const SPAWN_RADIUS: f32 = 10.0; // from player
-
 pub const ENEMY_COLLIDER: Capsule = Capsule{ .height = 0.4, .radius = 0.08 };
+
+// Bullets
+pub const SPREAD_AMOUNT: i32 = 20; // bullet spread
+pub const BULLET_SCALE: f32 = 0.3;
+pub const BULLET_LIFETIME: f32 = 1.0;
+pub const BULLET_SPEED: f32 = 15.0;
+pub const ROTATION_PER_BULLET: f32 = 3.0; // in degrees
+pub const BURN_MARK_TIME: f32 = 5.0; // seconds
+pub const BULLET_COLLIDER: Capsule = Capsule{ .height = 0.3, .radius = 0.03 };
 
 pub const CameraType = enum {
     Game,

@@ -2,6 +2,7 @@ const std = @import("std");
 const core = @import("core");
 const math = @import("math");
 const gl = @import("zopengl").bindings;
+const world = @import("world.zig");
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
@@ -17,8 +18,6 @@ const Texture = core.texture.Texture;
 const TextureConfig = core.texture.TextureConfig;
 const TextureWrap = core.texture.TextureWrap;
 const Shader = core.Shader;
-
-const BURN_MARK_TIME: f32 = 5.0;
 
 pub const BurnMark = struct {
     position: Vec3,
@@ -58,7 +57,7 @@ pub const BurnMarks = struct {
     pub fn add_mark(self: *Self, position: Vec3) !void {
         const burn_mark = BurnMark{
             .position = position,
-            .time_left = BURN_MARK_TIME,
+            .time_left = world.BURN_MARK_TIME,
         };
         try self.marks.append(burn_mark);
     }

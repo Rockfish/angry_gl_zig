@@ -4,8 +4,6 @@ const core = @import("core");
 const world = @import("world.zig");
 const geom = @import("geom.zig");
 
-// const gl = @import("zopengl").bindings;
-
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
