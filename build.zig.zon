@@ -11,6 +11,10 @@
         .zopengl = .{ .path = "libs/zopengl" },
         .zgui = .{ .path = "libs/zgui" },
         .zstbi = .{ .path = "libs/zstbi" },
+        .tomlz = .{
+            .url = "https://github.com/mattyhall/tomlz/archive/9a16dd5.tar.gz",
+            .hash = "12204f922cab84980e36b5c058d354ec0ee169bda401c8e0e80a463580349b476569",
+        },
     },
 
     .paths = .{

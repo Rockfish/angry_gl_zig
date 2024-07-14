@@ -25,6 +25,11 @@ pub fn build(b: *std.Build) void {
     cglmlib.addIncludePath(cglm.path("include"));
     b.installArtifact(cglmlib);
 
+    const tomlz = b.dependency("tomlz", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const zglfw = b.dependency("zglfw", .{
         .target = target,
         .optimize = optimize,
@@ -112,6 +117,7 @@ pub fn build(b: *std.Build) void {
         exe.root_module.addImport("zopengl", zopengl.module("root"));
         exe.root_module.addImport("zgui", zgui.module("root"));
         exe.root_module.addImport("zstbi", zstbi.module("root")); // gui
+        exe.root_module.addImport("tomlz", tomlz.module("tomlz"));
 
         exe.addIncludePath(b.path("src/include"));
         exe.addIncludePath(miniaudio.path("include"));
