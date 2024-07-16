@@ -36,9 +36,6 @@ pub fn main() !void {
 
     const allocator = gpa.allocator();
 
-    const game_settings = try settings.getSettings(allocator);
-    std.debug.print("settings: {any}\n", .{game_settings});
-
     try glfw.init();
     defer glfw.terminate();
 
@@ -75,11 +72,16 @@ pub fn main() !void {
 
     frame_counter = FrameCount.new();
 
+    const settings_file = content_dir ++ "settings2.toml";
+    std.debug.print("settings_file = {s}\n", .{settings_file});
+
     while (!window.shouldClose() and window.getKey(.escape) != .press) {
         glfw.pollEvents();
 
         gl.clearColor(0.05, 0.4, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        _ = try settings.getSettings(allocator, settings_file);
 
         try update(guiState);
 
