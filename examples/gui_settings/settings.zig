@@ -6,9 +6,12 @@ const Vec3 = math.Vec3;
 const vec3 = math.vec3;
 
 const Allocator = std.mem.Allocator;
+const log = std.log.scoped(.Settings);
 
 var file_stat: ?std.fs.File.Stat = null;
 var settings: ?GameSettings = null;
+var last_update_time: f32 = 0.0;
+var started = false;
 
 pub const Capsule = struct {
     height: f32,
@@ -95,34 +98,43 @@ const GameSettings = struct {
     }
 };
 
-pub fn getSettings(allocator: Allocator, path: []const u8) !GameSettings {
+pub fn getSettings(allocator: Allocator, path: []const u8, time: f32) !GameSettings {
     var file: ?std.fs.File = null;
-    file = std.fs.cwd().openFile(path, .{}) catch blk: {
-        const g = GameSettings{};
-        file = try std.fs.cwd().createFile(path, .{ .truncate = true });
-        // var buff_out = std.io.bufferedWriter(file.?.writer());
-        const writer = file.?.writer();
-        try tomlz.serialize(allocator, writer, g);
-        file.?.close();
-        file = try std.fs.cwd().openFile(path, .{});
-        break :blk file;
-    };
 
-    defer file.?.close();
-    const stat = try file.?.stat();
+    if (time > last_update_time + 1.0 or settings == null) {
+        file = std.fs.cwd().openFile(path, .{}) catch blk: {
+            // if (!started) {
+            std.debug.print("Writing settings file\n", .{});
+            const g = GameSettings{};
+            file = try std.fs.cwd().createFile(path, .{ .truncate = true });
+            const writer = file.?.writer();
+            try tomlz.serialize(allocator, writer, g);
+            file.?.close();
+            file = try std.fs.cwd().openFile(path, .{});
+            started = true;
+            break :blk file;
+            //     } else {
+            //         @panic("Settings file has been deleted. Please restart.");
+            //     }
+        };
+        defer file.?.close();
 
-    if (file_stat == null or file_stat.?.mtime != stat.mtime) {
-        file_stat = stat;
+        const stat = try file.?.stat();
 
-        const toml = try file.?.readToEndAlloc(allocator, 256 * 1024);
-        defer allocator.free(toml);
-        settings = try tomlz.decode(GameSettings, allocator, toml);
-        std.debug.print("stat = {any}\n", .{stat});
-        std.debug.print("settings = {any}\n", .{settings});
+        if (file_stat == null or stat.mtime > (file_stat.?.mtime + 1_000_000_000)) {
+            const toml = try file.?.readToEndAlloc(allocator, 256 * 1024);
+            defer allocator.free(toml);
+
+            std.debug.print("{s}", .{toml});
+
+            settings = tomlz.decode(GameSettings, allocator, toml) catch {
+                std.debug.print("Error parsing settings file. Will retry.", .{});
+                return settings.?;
+            };
+            file_stat = stat;
+            log.debug("Settings update time: {d}\n", .{last_update_time});
+        }
+        last_update_time = time;
     }
-
     return settings.?;
-    // file = std.fs.cwd().createFile("./hash_log", .{ .truncate = true }) catch unreachable;
-    // file = std.fs.cwd().openFile("./hash_log", .{ .read = true }) catch unreachable;
-
 }

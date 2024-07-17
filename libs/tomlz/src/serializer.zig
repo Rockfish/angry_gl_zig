@@ -339,15 +339,22 @@ pub fn WriteStream(
                         @compileError("Unable to serialize type '" ++ @typeName(T) ++ "'.");
                     }
 
+                    // ensure the printed value can be read as a float
                     if (isInteger(value)) {
-                        // ensure the printed value is a float
                         return self.out_stream.print("{d}.0", .{value});
                     } else {
                         return self.out_stream.print("{d}", .{value});
                     }
                 },
                 .ComptimeInt => return self.writeInline(@as(std.math.IntFittingRange(value, value), value)),
-                .ComptimeFloat => return self.out_stream.print("{d}", .{value}),
+                .ComptimeFloat => {
+                    // ensure the printed value can be read as a float
+                    if (isInteger(value)) {
+                        return self.out_stream.print("{d}.0", .{value});
+                    } else {
+                        return self.out_stream.print("{d}", .{value});
+                    }
+                },
                 .Bool => return self.out_stream.print("{}", .{value}),
 
                 .Enum, .EnumLiteral => {
@@ -518,7 +525,7 @@ pub fn WriteStream(
             if (self.array_depth > 0) {
                 try self.out_stream.writeAll("[[");
             } else {
-                try self.out_stream.writeByte('[');
+                try self.out_stream.writeAll("\n[");
             }
 
             var i: usize = 0;

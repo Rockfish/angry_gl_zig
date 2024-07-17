@@ -72,7 +72,7 @@ pub fn main() !void {
 
     frame_counter = FrameCount.new();
 
-    const settings_file = content_dir ++ "settings2.toml";
+    const settings_file = content_dir ++ "settings.toml";
     std.debug.print("settings_file = {s}\n", .{settings_file});
 
     while (!window.shouldClose() and window.getKey(.escape) != .press) {
@@ -81,7 +81,9 @@ pub fn main() !void {
         gl.clearColor(0.05, 0.4, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        _ = try settings.getSettings(allocator, settings_file);
+        const time: f32 = @floatCast(glfw.getTime());
+
+        _ = try settings.getSettings(allocator, settings_file, time);
 
         try update(guiState);
 
