@@ -1730,7 +1730,7 @@ fn DragFloatGen(comptime T: type) type {
     };
 }
 //--------------------------------------------------------------------------------------------------
-const DragFloat = DragFloatGen(f32);
+pub const DragFloat = DragFloatGen(f32);
 pub fn dragFloat(label: [:0]const u8, args: DragFloat) bool {
     return zguiDragFloat(
         label,
@@ -1752,7 +1752,7 @@ extern fn zguiDragFloat(
     flags: SliderFlags,
 ) bool;
 //--------------------------------------------------------------------------------------------------
-const DragFloat2 = DragFloatGen([2]f32);
+pub const DragFloat2 = DragFloatGen([2]f32);
 pub fn dragFloat2(label: [:0]const u8, args: DragFloat2) bool {
     return zguiDragFloat2(label, args.v, args.speed, args.min, args.max, args.cfmt, args.flags);
 }
@@ -1766,7 +1766,7 @@ extern fn zguiDragFloat2(
     flags: SliderFlags,
 ) bool;
 //--------------------------------------------------------------------------------------------------
-const DragFloat3 = DragFloatGen([3]f32);
+pub const DragFloat3 = DragFloatGen([3]f32);
 pub fn dragFloat3(label: [:0]const u8, args: DragFloat3) bool {
     return zguiDragFloat3(label, args.v, args.speed, args.min, args.max, args.cfmt, args.flags);
 }
@@ -1780,7 +1780,7 @@ extern fn zguiDragFloat3(
     flags: SliderFlags,
 ) bool;
 //--------------------------------------------------------------------------------------------------
-const DragFloat4 = DragFloatGen([4]f32);
+pub const DragFloat4 = DragFloatGen([4]f32);
 pub fn dragFloat4(label: [:0]const u8, args: DragFloat4) bool {
     return zguiDragFloat4(label, args.v, args.speed, args.min, args.max, args.cfmt, args.flags);
 }
@@ -1794,7 +1794,7 @@ extern fn zguiDragFloat4(
     flags: SliderFlags,
 ) bool;
 //--------------------------------------------------------------------------------------------------
-const DragFloatRange2 = struct {
+pub const DragFloatRange2 = struct {
     current_min: *f32,
     current_max: *f32,
     speed: f32 = 1.0,
@@ -1840,7 +1840,7 @@ fn DragIntGen(comptime T: type) type {
     };
 }
 //--------------------------------------------------------------------------------------------------
-const DragInt = DragIntGen(i32);
+pub const DragInt = DragIntGen(i32);
 pub fn dragInt(label: [:0]const u8, args: DragInt) bool {
     return zguiDragInt(label, args.v, args.speed, args.min, args.max, args.cfmt, args.flags);
 }
@@ -1854,7 +1854,7 @@ extern fn zguiDragInt(
     flags: SliderFlags,
 ) bool;
 //--------------------------------------------------------------------------------------------------
-const DragInt2 = DragIntGen([2]i32);
+pub const DragInt2 = DragIntGen([2]i32);
 pub fn dragInt2(label: [:0]const u8, args: DragInt2) bool {
     return zguiDragInt2(label, args.v, args.speed, args.min, args.max, args.cfmt, args.flags);
 }
@@ -1868,7 +1868,7 @@ extern fn zguiDragInt2(
     flags: SliderFlags,
 ) bool;
 //--------------------------------------------------------------------------------------------------
-const DragInt3 = DragIntGen([3]i32);
+pub const DragInt3 = DragIntGen([3]i32);
 pub fn dragInt3(label: [:0]const u8, args: DragInt3) bool {
     return zguiDragInt3(label, args.v, args.speed, args.min, args.max, args.cfmt, args.flags);
 }
@@ -1882,7 +1882,7 @@ extern fn zguiDragInt3(
     flags: SliderFlags,
 ) bool;
 //--------------------------------------------------------------------------------------------------
-const DragInt4 = DragIntGen([4]i32);
+pub const DragInt4 = DragIntGen([4]i32);
 pub fn dragInt4(label: [:0]const u8, args: DragInt4) bool {
     return zguiDragInt4(label, args.v, args.speed, args.min, args.max, args.cfmt, args.flags);
 }

@@ -9,7 +9,7 @@ const Allocator = std.mem.Allocator;
 const log = std.log.scoped(.Settings);
 
 var file_stat: ?std.fs.File.Stat = null;
-var settings: ?GameSettings = null;
+var game_settings: ?GameSettings = null;
 var last_update_time: f32 = 0.0;
 var started = false;
 
@@ -23,7 +23,8 @@ pub const Capsule = struct {
         return .{ .height = height, .radius = radius };
     }
 };
-const PlayerSettings = struct {
+
+pub const PlayerSettings = struct {
     player_speed: f32 = 5.0,
     fire_interval: f32 = 0.1,
     player_collision_radius: f32 = 0.35,
@@ -33,7 +34,7 @@ const PlayerSettings = struct {
     anim_transition_time: f32 = 0.2,
 };
 
-const EnemySettings = struct {
+pub const EnemySettings = struct {
     monster_speed: f32 = 0.6,
     enemy_spawn_interval: f32 = 1.0, // seconds
     spawns_per_interval: i32 = 1,
@@ -41,7 +42,7 @@ const EnemySettings = struct {
     enemy_collider: Capsule = Capsule{ .height = 0.4, .radius = 0.08 },
 };
 
-const BulletSettings = struct {
+pub const BulletSettings = struct {
     spread_amount: i32 = 20, // bullet spread
     bullet_scale: f32 = 0.3,
     bullet_lifetime: f32 = 1.0,
@@ -50,7 +51,7 @@ const BulletSettings = struct {
     burn_mark_time: f32 = 5.0, // seconds
 };
 
-const LightingSettings = struct {
+pub const LightingSettings = struct {
     light_factor: f32 = 0.8,
     non_blue: f32 = 0.9,
     blur_scale: i32 = 2,
@@ -61,7 +62,7 @@ const LightingSettings = struct {
     muzzle_point_light_color: Vec3 = Vec3{ .x = 1.0, .y = 0.2, .z = 0.0 },
 };
 
-const GameSettings = struct {
+pub const GameSettings = struct {
     player_settings: PlayerSettings = PlayerSettings{},
     enemy_settings: EnemySettings = EnemySettings{},
     bullet_settings: BulletSettings = BulletSettings{},
@@ -101,7 +102,7 @@ const GameSettings = struct {
 pub fn getSettings(allocator: Allocator, path: []const u8, time: f32) !GameSettings {
     var file: ?std.fs.File = null;
 
-    if (time > last_update_time + 1.0 or settings == null) {
+    if (time > last_update_time + 1.0 or game_settings == null) {
         file = std.fs.cwd().openFile(path, .{}) catch blk: {
             // if (!started) {
             std.debug.print("Writing settings file\n", .{});
@@ -127,14 +128,23 @@ pub fn getSettings(allocator: Allocator, path: []const u8, time: f32) !GameSetti
 
             std.debug.print("{s}", .{toml});
 
-            settings = tomlz.decode(GameSettings, allocator, toml) catch {
+            game_settings = tomlz.decode(GameSettings, allocator, toml) catch {
                 std.debug.print("Error parsing settings file. Will retry.", .{});
-                return settings.?;
+                return game_settings.?;
             };
             file_stat = stat;
             log.debug("Settings update time: {d}\n", .{last_update_time});
         }
         last_update_time = time;
     }
-    return settings.?;
+    return game_settings.?;
+}
+
+pub fn writeSettings(allocator: Allocator, path: []const u8, settings: GameSettings, time: f32) !void {
+    if (time > last_update_time + 1.0 or game_settings == null) {
+        var file = try std.fs.cwd().createFile(path, .{ .truncate = true });
+        defer file.close();
+        const writer = file.writer();
+        try tomlz.serialize(allocator, writer, settings);
+    }
 }
