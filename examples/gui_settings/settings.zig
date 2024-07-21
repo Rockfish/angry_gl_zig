@@ -36,7 +36,7 @@ pub const PlayerSettings = struct {
 
 pub const EnemySettings = struct {
     monster_speed: f32 = 0.6,
-    enemy_spawn_interval: f32 = 1.0, // seconds
+    spawn_interval: f32 = 1.0, // seconds
     spawns_per_interval: i32 = 1,
     spawn_radius: f32 = 10.0, // from player
     enemy_collider: Capsule = Capsule{ .height = 0.4, .radius = 0.08 },

@@ -14,18 +14,6 @@ const Allocator = std.mem.Allocator;
 const content_dir = @import("build_options").content_dir;
 const window_title = "gui settings";
 
-// only works if file is in the current package
-//const embedded_font_data = @embedFile("FiraCode-Medium.ttf");
-
-const GuiState = struct {
-    texture: *Texture,
-    //font_normal: zgui.Font,
-    //font_large: zgui.Font,
-    alloced_input_text_buf: [:0]u8,
-    alloced_input_text_multiline_buf: [:0]u8,
-    alloced_input_text_with_hint_buf: [:0]u8,
-};
-
 var game_settings: settings.GameSettings = undefined;
 var frame_counter: FrameCount = undefined;
 
@@ -66,8 +54,8 @@ pub fn main() !void {
 
     gl.enable(gl.DEPTH_TEST);
 
-    const guiState = try create(allocator, window);
-    defer destroy(allocator, guiState);
+    try create(allocator, window);
+    defer destroy();
 
     frame_counter = FrameCount.new();
 
@@ -86,17 +74,15 @@ pub fn main() !void {
 
         try settings.writeSettings(allocator, settings_file, game_settings, time);
 
-        try update(guiState);
+        try update();
 
-        draw(guiState);
+        draw();
 
         window.swapBuffers();
     }
 }
 
-fn create(allocator: std.mem.Allocator, window: *glfw.Window) !*GuiState {
-    const texture = try Texture.new(allocator, content_dir ++ "images/genart_0025_5.png");
-
+fn create(allocator: Allocator, window: *glfw.Window) !void {
     zgui.init(allocator);
 
     const scale_factor = scale_factor: {
@@ -111,15 +97,10 @@ fn create(allocator: std.mem.Allocator, window: *glfw.Window) !*GuiState {
     assert(zgui.io.getFont(0) == font_large);
     assert(zgui.io.getFont(1) == font_normal);
 
-    // This needs to be called *after* adding your custom fonts.
     zgui.backend.init(window);
 
-    // This call is optional. Initially, zgui.io.getFont(0) is a default font.
     zgui.io.setDefaultFont(font_normal);
 
-    // You can directly manipulate zgui.Style *before* `newFrame()` call.
-    // Once frame is started (after `newFrame()` call) you have to use
-    // zgui.pushStyleColor*()/zgui.pushStyleVar*() functions.
     const style = zgui.getStyle();
 
     style.window_min_size = .{ 320.0, 240.0 };
@@ -128,55 +109,16 @@ fn create(allocator: std.mem.Allocator, window: *glfw.Window) !*GuiState {
     color[1] = 0.8;
     style.setColor(.scrollbar_grab, color);
     style.scaleAllSizes(scale_factor);
-
-    const guiState = try allocator.create(GuiState);
-    guiState.* = .{
-        .texture = texture,
-        //.font_normal = font_normal,
-        //.font_large = font_large,
-        .alloced_input_text_buf = try allocator.allocSentinel(u8, 4, 0),
-        .alloced_input_text_multiline_buf = try allocator.allocSentinel(u8, 4, 0),
-        .alloced_input_text_with_hint_buf = try allocator.allocSentinel(u8, 4, 0),
-    };
-
-    guiState.alloced_input_text_buf[0] = 0;
-    guiState.alloced_input_text_multiline_buf[0] = 0;
-    guiState.alloced_input_text_with_hint_buf[0] = 0;
-
-    return guiState;
 }
 
-fn destroy(allocator: std.mem.Allocator, state: *GuiState) void {
+fn destroy() void {
     zgui.backend.deinit();
     zgui.deinit();
-    state.texture.deinit();
-    allocator.free(state.alloced_input_text_buf);
-    allocator.free(state.alloced_input_text_multiline_buf);
-    allocator.free(state.alloced_input_text_with_hint_buf);
-    allocator.destroy(state);
 }
 
 var check_b = false;
 
-const SimpleEnum = enum {
-    first,
-    second,
-    third,
-};
-const SparseEnum = enum(i32) {
-    first = 10,
-    second = 100,
-    third = 1000,
-};
-const NonExhaustiveEnum = enum(i32) {
-    first = 10,
-    second = 100,
-    third = 1000,
-    _,
-};
-
-fn update(state: *GuiState) !void {
-    _ = state;
+fn update() !void {
     frame_counter.update();
 
     zgui.backend.newFrame(
@@ -201,8 +143,8 @@ fn update(state: *GuiState) !void {
         );
 
         zgui.separator();
-
         zgui.text("Lighting Settings", .{});
+
         const light_factor: zgui.DragFloat = .{ .v = &game_settings.lighting_settings.light_factor, .max = 1.0, .min = 0.0, .speed = 0.01 };
         const non_blue: zgui.DragFloat = .{ .v = &game_settings.lighting_settings.non_blue, .max = 1.0, .min = 0.0, .speed = 0.01 };
         const blur_scale: zgui.DragInt = .{ .v = &game_settings.lighting_settings.blur_scale, .max = 10, .min = 0, .speed = 1 };
@@ -222,8 +164,8 @@ fn update(state: *GuiState) !void {
         _ = zgui.dragFloat3("muzzle_point_light_color", muzzle_point_light_color);
 
         zgui.separator();
-
         zgui.text("Player Settings", .{});
+
         const player_speed: zgui.DragFloat = .{ .v = &game_settings.player_settings.player_speed, .max = 1.0, .min = 0.0, .speed = 0.01 };
         const fire_interval: zgui.DragFloat = .{ .v = &game_settings.player_settings.fire_interval, .max = 1.0, .min = 0.0, .speed = 0.01 };
         const player_collision_radius: zgui.DragFloat = .{ .v = &game_settings.player_settings.player_collision_radius, .max = 1.0, .min = 0.0, .speed = 0.01 };
@@ -241,87 +183,44 @@ fn update(state: *GuiState) !void {
         _ = zgui.dragFloat("anim_transition_time", anim_transition_time);
 
         zgui.separator();
+        zgui.text("Enemy Settings", .{});
+
+        const monster_speed: zgui.DragFloat = .{ .v = &game_settings.enemy_settings.monster_speed, .max = 1.0, .min = 0.0, .speed = 0.01 };
+        const spawn_interval: zgui.DragFloat = .{ .v = &game_settings.enemy_settings.spawn_interval, .max = 1.0, .min = 0.0, .speed = 0.01 };
+        const spawns_per_interval: zgui.DragInt = .{ .v = &game_settings.enemy_settings.spawns_per_interval, .max = 50, .min = 0, .speed = 1 };
+        const spawn_radius: zgui.DragFloat = .{ .v = &game_settings.enemy_settings.spawn_radius, .max = 1.0, .min = 0.0, .speed = 0.01 };
+        // const enemy_collider: zgui.DragFloat = .{ .v = &game_settings.enemy_settings.enemy_collider, .max = 1.0, .min = 0.0, .speed = 0.01 };
+
+        _ = zgui.dragFloat("monster_speed", monster_speed);
+        _ = zgui.dragFloat("spawn_interval", spawn_interval);
+        _ = zgui.dragInt("spawn_per_interval", spawns_per_interval);
+        _ = zgui.dragFloat("spawn_radius", spawn_radius);
+
+        zgui.separator();
+        zgui.text("Bullet Settings", .{});
+
+        const spread_amount: zgui.DragInt = .{ .v = &game_settings.bullet_settings.spread_amount, .max = 200, .min = 0, .speed = 1 };
+        const bullet_scale: zgui.DragFloat = .{ .v = &game_settings.bullet_settings.bullet_scale, .max = 1.0, .min = 0.0, .speed = 0.01 };
+        const bullet_lifetime: zgui.DragFloat = .{ .v = &game_settings.bullet_settings.bullet_lifetime, .max = 1.0, .min = 0.0, .speed = 0.01 };
+        const bullet_speed: zgui.DragFloat = .{ .v = &game_settings.bullet_settings.bullet_speed, .max = 1.0, .min = 0.0, .speed = 0.01 };
+        const rotation_per_bullet: zgui.DragFloat = .{ .v = &game_settings.bullet_settings.rotation_per_bullet, .max = 1.0, .min = 0.0, .speed = 0.01 };
+        const burn_mark_time: zgui.DragFloat = .{ .v = &game_settings.bullet_settings.burn_mark_time, .max = 1.0, .min = 0.0, .speed = 0.01 };
+
+        _ = zgui.dragInt("spread_amount", spread_amount);
+        _ = zgui.dragFloat("bullet_scale", bullet_scale);
+        _ = zgui.dragFloat("bullet_lifetime", bullet_lifetime);
+        _ = zgui.dragFloat("bullet_speed", bullet_speed);
+        _ = zgui.dragFloat("rotation_per_bullet", rotation_per_bullet);
+        _ = zgui.dragFloat("burn_mark_time", burn_mark_time);
+
+        zgui.separator();
     }
     zgui.end();
 }
 
-fn draw(state: *GuiState) void {
-    _ = state;
-
+fn draw() void {
     zgui.backend.draw();
 }
-
-pub const Texture = struct {
-    id: u32,
-    width: u32,
-    height: u32,
-    allocator: Allocator,
-
-    const Self = @This();
-
-    pub fn deinit(self: *const Texture) void {
-        self.allocator.destroy(self);
-    }
-
-    pub fn new(allocator: std.mem.Allocator, path: [:0]const u8) !*Texture {
-        zstbi.init(allocator);
-        defer zstbi.deinit();
-
-        // zstbi.setFlipVerticallyOnLoad(texture_config.flip_v);
-
-        var image = zstbi.Image.loadFromFile(path, 0) catch |err| {
-            std.debug.print("Texture loadFromFile error: {any}  filepath: {s}\n", .{ err, path });
-            @panic(@errorName(err));
-        };
-        defer image.deinit();
-
-        const format: u32 = switch (image.num_components) {
-            0 => gl.RED,
-            3 => gl.RGB,
-            4 => gl.RGBA,
-            else => gl.RED,
-        };
-
-        var texture_id: gl.Uint = undefined;
-
-        // std.debug.print("Texture: generating a texture\n", .{});
-        gl.genTextures(1, &texture_id);
-
-        // std.debug.print("Texture: binding a texture\n", .{});
-        gl.bindTexture(gl.TEXTURE_2D, texture_id);
-
-        gl.texImage2D(
-            gl.TEXTURE_2D,
-            0,
-            format,
-            @intCast(image.width),
-            @intCast(image.height),
-            0,
-            format,
-            gl.UNSIGNED_BYTE,
-            image.data.ptr,
-        );
-
-        gl.generateMipmap(gl.TEXTURE_2D);
-
-        const wrap_param: i32 = gl.REPEAT;
-
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap_param);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap_param);
-
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-        const texture = try allocator.create(Texture);
-        texture.* = Texture{
-            .id = texture_id,
-            .width = image.width,
-            .height = image.height,
-            .allocator = allocator,
-        };
-        return texture;
-    }
-};
 
 pub const FrameCount = struct {
     last_printed_instant: i64,
