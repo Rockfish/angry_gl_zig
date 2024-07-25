@@ -4,12 +4,16 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const formats = b.option([]const u8, "formats", "Comma separated list of enabled formats or \"all\", for example: STL,3MF,Obj") orelse "";
+    const formats = b.option(
+        []const u8,
+        "formats",
+        "Comma separated list of enabled formats or \"all\", for example: STL,3MF,Obj",
+    ) orelse "";
     // const options_step = b.addOptions();
     // options_step.addOption([]const u8, "formats", formats);
 
     // zig build -Dformats="Obj,Collada"
-    std.debug.print("Selected formats: {s}\n", .{formats});
+    std.debug.print("Assimp built for formats: {s}\n", .{formats});
 
     const use_double_precision = b.option(bool, "double", "All data will be stored as double values") orelse false;
 
@@ -66,7 +70,7 @@ pub fn build(b: *std.Build) !void {
         });
     }
 
-    switch(target.result.os.tag) {
+    switch (target.result.os.tag) {
         .windows => {
             lib.addIncludePath(assimp.path("contrib/zlib"));
             lib.addCSourceFiles(.{
@@ -77,7 +81,7 @@ pub fn build(b: *std.Build) !void {
         },
         .macos => {
             lib.linkSystemLibrary("zlib");
-            lib.addSystemFrameworkPath(.{ .cwd_relative = "/opt/homebrew/Cellar/zlib/1.3.1/lib" } );
+            lib.addSystemFrameworkPath(.{ .cwd_relative = "/opt/homebrew/Cellar/zlib/1.3.1/lib" });
         },
         else => {},
     }

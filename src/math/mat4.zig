@@ -45,24 +45,6 @@ pub const Mat4 = extern struct {
 
     pub fn toArray(self: *const Self) [16]f32 {
         return @as(*[16]f32, @ptrCast(@constCast(self))).*;
-        // return .{
-        //     self.data[0][0],
-        //     self.data[0][1],
-        //     self.data[0][2],
-        //     self.data[0][3],
-        //     self.data[1][0],
-        //     self.data[1][1],
-        //     self.data[1][2],
-        //     self.data[1][3],
-        //     self.data[2][0],
-        //     self.data[2][1],
-        //     self.data[2][2],
-        //     self.data[2][3],
-        //     self.data[3][0],
-        //     self.data[3][1],
-        //     self.data[3][2],
-        //     self.data[3][3],
-        // };
     }
 
     pub fn toArrayPtr(self: *const Self) *[16]f32 {
@@ -178,6 +160,15 @@ pub const Mat4 = extern struct {
         var result: [4]f32 = undefined;
         cglm.glmc_mat4_quat(@constCast(&self.data), &result);
         return Quat{ .data = result };
+    }
+
+    pub fn removeTranslation(self: *const Self) Mat4 {
+        return Mat4{ .data = .{
+            .{ self.data[0][0], self.data[0][1], self.data[0][2], 0.0 },
+            .{ self.data[1][0], self.data[1][1], self.data[1][2], 0.0 },
+            .{ self.data[2][0], self.data[2][1], self.data[2][2], 0.0 },
+            .{ 0.0, 0.0, 0.0, 0.0 },
+        } };
     }
 
     // @brief creates NEW rotation matrix by angle and axis

@@ -97,6 +97,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "bullets", .exe_name = "bullets_example", .source = "examples/bullets/main.zig" },
         .{ .name = "audio", .exe_name = "audio_example", .source = "examples/audio/main.zig" },
         .{ .name = "gui_settings", .exe_name = "gui_example", .source = "examples/gui_settings/gui_settings.zig" },
+        .{ .name = "skybox", .exe_name = "skybox_example", .source = "examples/skybox/main.zig" },
     }) |app| {
         const exe = b.addExecutable(.{
             .name = app.exe_name,
