@@ -144,11 +144,11 @@ pub const ModelBuilder = struct {
         const aiScene: [*c]const Assimp.aiScene = Assimp.aiImportFile(
             c_path,
             Assimp.aiProcess_CalcTangentSpace |
-            Assimp.aiProcess_Triangulate |
-            Assimp.aiProcess_JoinIdenticalVertices |
-            Assimp.aiProcess_SortByPType |
-            Assimp.aiProcess_FlipUVs |
-            Assimp.aiProcess_FindInvalidData,  // this fixes animation by removing duplicate keys
+                Assimp.aiProcess_Triangulate |
+                Assimp.aiProcess_JoinIdenticalVertices |
+                Assimp.aiProcess_SortByPType |
+                Assimp.aiProcess_FlipUVs |
+                Assimp.aiProcess_FindInvalidData, // this fixes animation by removing duplicate keys
         );
 
         // printSceneInfo(aiScene[0]);
@@ -178,9 +178,11 @@ pub const ModelBuilder = struct {
         // const name = node.mName.data[0..@min(1024, node.mName.length)];
 
         const num_children: u32 = node.mNumChildren;
-        for (node.mChildren[0..num_children]) |child| {
-            // std.debug.print("Builder: parent calling child, parent name: '{s}'\n", .{name});
-            try self.processNode(child, aiScene);
+        if (num_children > 0) {
+            for (node.mChildren[0..num_children]) |child| {
+                // std.debug.print("Builder: parent calling child, parent name: '{s}'\n", .{name});
+                try self.processNode(child, aiScene);
+            }
         }
         // std.debug.print("Builder: finished node name: '{s}'  num chidern: {d}\n", .{ name, node.mNumChildren });
     }
@@ -222,7 +224,7 @@ pub const ModelBuilder = struct {
 
         try self.extract_bone_weights_for_vertices(vertices, aiMesh);
 
-        const name = aiMesh.mName.data[0 .. aiMesh.mName.length];
+        const name = aiMesh.mName.data[0..aiMesh.mName.length];
         const model_mesh = try ModelMesh.init(self.allocator, self.mesh_count, name, vertices, indices, textures);
 
         self.mesh_count += 1;
@@ -247,7 +249,7 @@ pub const ModelBuilder = struct {
                 const ai_return = GetMaterialTexture(material, texture_type, @intCast(i), path);
 
                 if (ai_return == Assimp.AI_SUCCESS) {
-                    const texture = try self.loadTexture(TextureConfig.new(texture_type), path.data[0 .. path.length]);
+                    const texture = try self.loadTexture(TextureConfig.new(texture_type), path.data[0..path.length]);
                     try material_textures.append(texture);
                 }
             }
@@ -258,7 +260,7 @@ pub const ModelBuilder = struct {
     fn add_textures(self: *Self) !void {
         for (self.added_textures.items) |added_texture| {
             const mesh: *ModelMesh = for (self.meshes.items) |_mesh| {
-                if (std.mem.eql(u8,_mesh.*.name, added_texture.mesh_name)) {
+                if (std.mem.eql(u8, _mesh.*.name, added_texture.mesh_name)) {
                     break _mesh;
                 }
             } else {
@@ -298,11 +300,10 @@ pub const ModelBuilder = struct {
     }
 
     fn extract_bone_weights_for_vertices(self: *Self, vertices: *ArrayList(ModelVertex), aiMesh: Assimp.aiMesh) !void {
-
         if (aiMesh.mNumBones == 0) {
             return;
         }
-         
+
         for (aiMesh.mBones[0..aiMesh.mNumBones]) |bone| {
             var bone_id: i32 = undefined;
             const bone_name = bone.*.mName.data[0..bone.*.mName.length];
@@ -313,7 +314,7 @@ pub const ModelBuilder = struct {
                 bone_id = result.value_ptr.*.bone_index;
             } else {
                 const bone_data = try self.allocator.create(BoneData);
-                bone_data.* = BoneData {
+                bone_data.* = BoneData{
                     .name = try String.new(bone_name),
                     .bone_index = self.bone_count,
                     .offset_transform = Transform.from_matrix(&assimp.mat4_from_aiMatrix(&bone.*.mOffsetMatrix)),

@@ -55,7 +55,7 @@ pub const Camera = struct {
 
     pub fn new(allocator: Allocator) !*Camera {
         const camera = try allocator.create(Camera);
-        camera.* = Camera {
+        camera.* = Camera{
             .position = vec3(0.0, 0.0, 3.0),
             .front = vec3(0.0, 0.0, -1.0),
             .world_up = vec3(0.0, 1.0, 0.0),
@@ -103,8 +103,8 @@ pub const Camera = struct {
         // calculate the new Front vector
         self.front = vec3(
             std.math.cos(toRadians(self.yaw)) * std.math.cos(toRadians(self.pitch)),
-                std.math.sin(toRadians(self.pitch)),
-                std.math.sin(toRadians(self.yaw)) * std.math.cos(toRadians(self.pitch)),
+            std.math.sin(toRadians(self.pitch)),
+            std.math.sin(toRadians(self.yaw)) * std.math.cos(toRadians(self.pitch)),
         ).normalize();
 
         // also re-calculate the Right and Up vector
@@ -122,9 +122,8 @@ pub const Camera = struct {
     }
 
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
-    pub fn get_view_matrix(self: *Self) Mat4 {
-        const viewTransform = Mat4.lookToRhGl(&self.position, &self.front, &self.up);
-        return viewTransform;
+    pub fn getViewMatrix(self: *Self) Mat4 {
+        return Mat4.lookToRhGl(&self.position, &self.front, &self.up);
     }
 
     // processes input received from any keyboard-like input system. Accepts input parameter
@@ -133,12 +132,24 @@ pub const Camera = struct {
         const velocity: f32 = self.movement_speed * delta_time;
 
         switch (direction) {
-            CameraMovement.Forward => { self.position = self.position.add(&self.front.mulScalar(velocity)); },
-            CameraMovement.Backward => { self.position = self.position.sub(&self.front.mulScalar(velocity)); },
-            CameraMovement.Left =>  { self.position = self.position.sub(&self.right.mulScalar(velocity)); },
-            CameraMovement.Right =>  { self.position = self.position.add(&self.right.mulScalar(velocity)); },
-            CameraMovement.Up =>  {  self.position = self.position.add(&self.up.mulScalar(velocity)); },
-            CameraMovement.Down =>  { self.position = self.position.sub(&self.up.mulScalar(velocity)); },
+            CameraMovement.Forward => {
+                self.position = self.position.add(&self.front.mulScalar(velocity));
+            },
+            CameraMovement.Backward => {
+                self.position = self.position.sub(&self.front.mulScalar(velocity));
+            },
+            CameraMovement.Left => {
+                self.position = self.position.sub(&self.right.mulScalar(velocity));
+            },
+            CameraMovement.Right => {
+                self.position = self.position.add(&self.right.mulScalar(velocity));
+            },
+            CameraMovement.Up => {
+                self.position = self.position.add(&self.up.mulScalar(velocity));
+            },
+            CameraMovement.Down => {
+                self.position = self.position.sub(&self.up.mulScalar(velocity));
+            },
         }
 
         // For FPS: make sure the user stays at the ground level
@@ -146,7 +157,7 @@ pub const Camera = struct {
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
-    pub fn process_mouse_movement(self: *Self, xoffset_in: f32, yoffset_in: f32, constrain_pitch: bool) void {
+    pub fn processDirectionChange(self: *Self, xoffset_in: f32, yoffset_in: f32, constrain_pitch: bool) void {
         const xoffset = xoffset_in * self.mouse_sensitivity;
         const yoffset = yoffset_in * self.mouse_sensitivity;
 

@@ -27,7 +27,8 @@ pub fn main() !void {
     // const model_path = "examples/sample_animation/source/cube_capoeira_martelo_cruzando.FBX.fbx";
     // const model_path = "/Users/john/Dev_Rust/Repos/ogldev/Content/box.obj";
     // const model_path = "/Users/john/Dev_Rust/Repos/OpenGL-Animation/Resources/res/model.dae";
-    const model_path = "/Users/john/Dev/Zig/Dev/angry_gl_zig/angrybots_assets/Models/Player/Player.fbx";
+    //const model_path = "/Users/john/Dev/Zig/Dev/angry_gl_zig/angrybots_assets/Models/Player/Player.fbx";
+    const model_path = "/Users/john/Dev/Repos/ogldev/Content/jeep.obj";
     // const model_path = "examples/sample_animation/colorful_cube/scene.gltf";
 
     const scene = try loadScene(allocator, model_path);

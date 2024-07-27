@@ -154,6 +154,12 @@ pub const Shader = struct {
     }
 
     // ------------------------------------------------------------------------
+    pub fn set_uint(self: *const Shader, uniform: [:0]const u8, value: u32) void {
+        const location = gl.getUniformLocation(self.id, uniform);
+        gl.uniform1ui(location, value);
+    }
+
+    // ------------------------------------------------------------------------
     pub fn set_float(self: *const Shader, uniform: [:0]const u8, value: f32) void {
         const location = gl.getUniformLocation(self.id, uniform);
         gl.uniform1f(location, value);

@@ -223,44 +223,26 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         glfw.pollEvents();
 
-        // if (window.getKey(glfw.Key.escape) == glfw.Action.press) {
-        //     window.setShouldClose(true);
-        // }
-
-        // std.debug.print("Main: use_shader\n", .{});
         shader.use_shader();
 
-        // std.debug.print("Main: update_animation\n", .{});
         try model.update_animation(state.delta_time);
 
         gl.clearColor(0.05, 0.1, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        // fov: 0.7853982
-        // width: 800
-        // height: 800
-        // projection: [[2.4142134, 0, 0, 0], [0, 2.4142134, 0, 0], [0, 0, -1.0001999, -1], [0, 0, -0.20001999, 0]]
-        // view: [[1, 0, 0.00000004371139, 0], [0, 1, -0, 0], [-0.00000004371139, 0, 1, 0], [0.0000052453665, -40, -120, 1]]
-        // model: [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, -10.4, -400, 1]]
-
-        //const projection = Mat4.perspectiveRhGl(toRadians(state.camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
-
         const debug_camera = try Camera.camera_vec3(allocator, vec3(0.0, 40.0, 120.0));
         defer debug_camera.deinit();
 
         const projection = Mat4.perspectiveRhGl(toRadians(debug_camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
-        const view = state.camera.get_view_matrix();
-        var modelTransform = Mat4.identity();
-        modelTransform.translate(&vec3(0.0, -10.4, -400.0));
-        modelTransform.scale(&vec3(1.0, 1.0, 1.0));
+        const view = state.camera.getViewMatrix();
 
-        // std.debug.print("fov: {any}\nwidth: {any}\nheight: {any}\nprojection: {any}\nview: {any}\nmodel: {any}\n\n",
-        // .{toRadians(state.camera.zoom), SCR_WIDTH, SCR_HEIGHT, projection, view, modelTransform});
-        // std.debug.print("Matrix identity: {any}\n", .{Matrix.identity().toArray()});
+        var model_transform = Mat4.identity();
+        model_transform.translate(&vec3(0.0, -10.4, -400.0));
+        model_transform.scale(&vec3(1.0, 1.0, 1.0));
 
         shader.set_mat4("projection", &projection);
         shader.set_mat4("view", &view);
-        shader.set_mat4("model", &modelTransform);
+        shader.set_mat4("model", &model_transform);
 
         shader.set_bool("useLight", true);
         shader.set_vec3("ambient", &ambientColor);
@@ -272,8 +254,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // std.debug.print("Main: render\n", .{});
         try model.render(shader);
 
-        // var model = Mat4.identity();
-        // model *= Mat4::from_rotation_x(-90.0f32.to_radians());
         const bulletTransform = Mat4.fromScale(&vec3(2.0, 2.0, 2.0));
 
         shader.set_mat4("model", &bulletTransform);
@@ -354,7 +334,7 @@ fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callc
     state.last_x = xpos;
     state.last_y = ypos;
 
-    state.camera.process_mouse_movement(xoffset, yoffset, true);
+    state.camera.processDirectionChange(xoffset, yoffset, true);
 }
 
 fn scroll_handler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {
