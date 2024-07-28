@@ -42,8 +42,8 @@ pub const PickingTexture = struct {
             gl.TEXTURE_2D,
             0,
             gl.RGB32F,
-            width,
-            height,
+            @intCast(width),
+            @intCast(height),
             0,
             gl.RGB,
             gl.FLOAT,
@@ -66,8 +66,8 @@ pub const PickingTexture = struct {
             gl.TEXTURE_2D,
             0,
             gl.DEPTH_COMPONENT,
-            width,
-            height,
+            @intCast(width),
+            @intCast(height),
             0,
             gl.DEPTH_COMPONENT,
             gl.FLOAT,
@@ -95,6 +95,11 @@ pub const PickingTexture = struct {
         gl.bindTexture(gl.TEXTURE_2D, 0);
         gl.bindFramebuffer(gl.FRAMEBUFFER, 0);
 
+        const gl_error = gl.getError();
+        if (gl_error != gl.NO_ERROR) {
+            std.debug.print("Gl error: 0x{x}", .{gl_error});
+        }
+
         // return GLCheckError();
         return .{
             .fbo = fbo,
@@ -111,14 +116,14 @@ pub const PickingTexture = struct {
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, 0);
     }
 
-    pub fn readPixel(self: *Self, x: u32, y: u32) PixelInfo {
+    pub fn readPixel(self: *Self, x: i32, y: i32) PixelInfo {
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, self.fbo);
         gl.readBuffer(gl.COLOR_ATTACHMENT0);
 
         var pixel: PixelInfo = undefined;
 
         gl.readPixels(x, y, 1, 1, gl.RGB, gl.FLOAT, &pixel);
-        gl.rReadBuffer(gl.NONE);
+        gl.readBuffer(gl.NONE);
 
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, 0);
 

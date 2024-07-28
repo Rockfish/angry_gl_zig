@@ -28,6 +28,27 @@ int IsGLVersionHigher(int MajorVer, int MinorVer)
 
 class Tutorial29 : public ICallbacks, public OgldevApp
 {
+private:
+
+    PickingTechnique m_pickingEffect;
+    PickingTexture m_pickingTexture;
+
+    BasicLightingTechnique m_lightingEffect;
+    SimpleColorTechnique m_simpleColorEffect;
+
+    Camera* m_pGameCamera;
+    DirectionalLight m_directionalLight;
+    Mesh* m_pMesh;
+
+    struct {
+        bool IsPressed;
+        int x;
+        int y;
+    } m_leftMouseButton;
+
+    Vector3f m_worldPos[2];
+    PersProjInfo m_persProjInfo;	
+
 public:
 
     Tutorial29()
@@ -211,22 +232,6 @@ public:
         }
     }
 
-private:
-
-    BasicLightingTechnique m_lightingEffect;
-    PickingTechnique m_pickingEffect;
-    SimpleColorTechnique m_simpleColorEffect;
-    Camera* m_pGameCamera;
-    DirectionalLight m_directionalLight;
-    Mesh* m_pMesh;
-    PickingTexture m_pickingTexture;
-    struct {
-        bool IsPressed;
-        int x;
-        int y;
-    } m_leftMouseButton;
-    Vector3f m_worldPos[2];
-    PersProjInfo m_persProjInfo;	
 };
 
 

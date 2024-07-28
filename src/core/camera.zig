@@ -157,9 +157,9 @@ pub const Camera = struct {
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
-    pub fn processDirectionChange(self: *Self, xoffset_in: f32, yoffset_in: f32, constrain_pitch: bool) void {
-        const xoffset = xoffset_in * self.mouse_sensitivity;
-        const yoffset = yoffset_in * self.mouse_sensitivity;
+    pub fn processDirectionChange(self: *Self, xoffset_in: i32, yoffset_in: i32, constrain_pitch: bool) void {
+        const xoffset: f32 = @as(f32, @floatFromInt(xoffset_in)) * self.mouse_sensitivity;
+        const yoffset: f32 = @as(f32, @floatFromInt(yoffset_in)) * self.mouse_sensitivity;
 
         self.yaw += xoffset;
         self.pitch += yoffset;

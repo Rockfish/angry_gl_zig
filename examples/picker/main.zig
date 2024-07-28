@@ -6,6 +6,10 @@ const core = @import("core");
 const math = @import("math");
 const Cube = @import("cube.zig").Cube;
 
+const PickingTexture = @import("picking_texture.zig").PickingTexture;
+const PixelInfo = @import("picking_texture.zig").PixelInfo;
+const PickingTechnique = @import("picking_technique.zig").PickingTechnique;
+
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
 const vec3 = math.vec3;
@@ -41,8 +45,10 @@ const State = struct {
     delta_time: f32,
     last_frame: f32,
     first_mouse: bool,
-    last_x: f32,
-    last_y: f32,
+    last_x: i32,
+    last_y: i32,
+    scr_width: i32 = @intFromFloat(SCR_WIDTH),
+    scr_height: i32 = @intFromFloat(SCR_HEIGHT),
     key_presses: EnumSet(glfw.Key),
     key_shift: bool = false,
     mouse_right_button: bool = false,
@@ -50,6 +56,8 @@ const State = struct {
 };
 
 var state: State = undefined;
+var picking_texture: PickingTexture = undefined;
+var picking_technique: PickingTechnique = undefined;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -87,8 +95,7 @@ pub fn main() !void {
     glfw.makeContextCurrent(window);
     glfw.swapInterval(1);
 
-    // tell GLFW to capture our mouse
-    // glfw.setInputMode(window, .cursor, .cursor_disabled); // ?
+    // window.setInputMode(.cursor, glfw.Cursor.Mode.disabled);
 
     try zopengl.loadCoreProfile(glfw.getProcAddress, gl_major, gl_minor);
 
@@ -133,13 +140,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     );
     defer basic_model_shader.deinit();
 
-    const picking_shader = try Shader.new(
-        allocator,
-        "examples/picker/picking.vert",
-        "examples/picker/picking.frag",
-    );
-    defer picking_shader.deinit();
-
     const color_shader = try Shader.new(
         allocator,
         "examples/picker/simple_color.vert",
@@ -151,17 +151,13 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const texture_diffuse = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = false, .gamma_correction = false, .wrap = .Clamp };
 
     var texture_cache = std.ArrayList(*Texture).init(allocator);
-
     var builder = try ModelBuilder.init(allocator, &texture_cache, "bunny", model_path);
     try builder.addTexture("Group", texture_diffuse, "jeep_rood.jpg");
-
     var model = try builder.build();
-
     builder.deinit();
     defer model.deinit();
 
     const cube = Cube.init();
-
     const texture_config = .{
         .texture_type = .Diffuse,
         .filter = .Linear,
@@ -169,7 +165,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .gamma_correction = false,
         .wrap = .Clamp,
     };
-
     const cube_texture = try Texture.new(
         allocator,
         "assets/textures/container.jpg",
@@ -182,6 +177,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const projection = Mat4.perspectiveRhGl(math.degreesToRadians(camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 500.0);
 
+    picking_texture = PickingTexture.init(SCR_WIDTH, SCR_HEIGHT);
+    defer picking_texture.deinit();
+
+    picking_technique = try PickingTechnique.init(allocator);
+    defer picking_technique.deinit();
+
     // render loop
     // -----------
     while (!window.shouldClose()) {
@@ -192,29 +193,60 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         gl.clearColor(0.1, 0.3, 0.1, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        picking_shader.use_shader();
-
         const view = camera.getViewMatrix();
-
-        const cube_transform = Mat4.identity();
-
-        basic_shader.use_shader();
-        basic_shader.set_mat4("model", &cube_transform);
-        basic_shader.set_mat4("view", &view);
-        basic_shader.set_mat4("projection", &projection);
-
-        if (state.mouse_left_button) {
-            cube.draw(cube_texture.id);
-        }
 
         var model_transform = Mat4.identity();
         model_transform.translate(&vec3(0.0, -1.4, -50.0));
         model_transform.scale(&vec3(0.05, 0.05, 0.05));
 
+        // const model_pvm = get_pvm_matrix(projection, view, model_transform);
+
+        // render to picking framebuffer
+        picking_texture.enableWriting(); // bind fbo
+        picking_technique.enable(); // use shader
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        const cube_transform1 = Mat4.identity();
+
+        var cube_transform2 = Mat4.identity();
+        cube_transform2.translate(&vec3(2.0, 0.0, 0.0));
+
+        picking_technique.setObjectIndex(1);
+        picking_technique.setDrawIndex(1); // set draw index
+        picking_technique.setProjectionViewModel(&projection, &view, &cube_transform1);
+        cube.draw(cube_texture.id);
+
+        picking_technique.setObjectIndex(2);
+        picking_technique.setDrawIndex(2); // set draw index
+        picking_technique.setProjectionViewModel(&projection, &view, &cube_transform2);
+        cube.draw(cube_texture.id);
+
+        picking_texture.disableWriting();
+
+        // read from picking framebuffer
+
+        if (state.mouse_left_button) {
+            const pixel_info = picking_texture.readPixel(state.last_x, state.scr_width - state.last_y - 1);
+            std.debug.print(
+                "pixel_info x: {d} y: {d} object_id: {d} draw_id: {d} primative_id: {d}\n",
+                .{ state.last_x, state.last_y, pixel_info.object_id, pixel_info.draw_id, pixel_info.primative_id },
+            );
+        }
+
+        basic_shader.use_shader();
+        basic_shader.set_mat4("projection", &projection);
+        basic_shader.set_mat4("view", &view);
+
+        basic_shader.set_mat4("model", &cube_transform1);
+        cube.draw(cube_texture.id);
+
+        basic_shader.set_mat4("model", &cube_transform2);
+        cube.draw(cube_texture.id);
+
         basic_model_shader.use_shader();
-        basic_model_shader.set_mat4("model", &model_transform);
-        basic_model_shader.set_mat4("view", &view);
         basic_model_shader.set_mat4("projection", &projection);
+        basic_model_shader.set_mat4("view", &view);
+        basic_model_shader.set_mat4("model", &model_transform);
 
         try model.render(basic_model_shader);
 
@@ -228,6 +260,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     texture_cache.deinit();
 
     glfw.terminate();
+}
+
+fn get_pvm_matrix(projection: *const Mat4, view: *const Mat4, model_transform: *const Mat4) Mat4 {
+    return projection.mulMat4(&view.mulMat4(model_transform));
 }
 
 fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
@@ -272,8 +308,11 @@ fn mouse_hander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Act
 
 fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
     _ = window;
-    const xpos: f32 = @floatCast(xposIn);
-    const ypos: f32 = @floatCast(yposIn);
+    var xpos: i32 = @intFromFloat(xposIn);
+    var ypos: i32 = @intFromFloat(yposIn);
+
+    xpos = if (xpos < 0) 0 else if (xpos < state.scr_width) xpos else state.scr_width;
+    ypos = if (ypos < 0) 0 else if (ypos < state.scr_height) ypos else state.scr_height;
 
     if (state.first_mouse) {
         state.last_x = xpos;
