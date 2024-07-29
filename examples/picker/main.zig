@@ -190,9 +190,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         state.delta_time = currentFrame - state.last_frame;
         state.last_frame = currentFrame;
 
-        gl.clearColor(0.1, 0.3, 0.1, 1.0);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
         const view = camera.getViewMatrix();
 
         var model_transform = Mat4.identity();
@@ -204,6 +201,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // render to picking framebuffer
         picking_texture.enableWriting(); // bind fbo
         picking_technique.enable(); // use shader
+        gl.clearColor(0.0, 0.0, 0.0, 0.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         const cube_transform1 = Mat4.identity();
@@ -211,35 +209,46 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         var cube_transform2 = Mat4.identity();
         cube_transform2.translate(&vec3(2.0, 0.0, 0.0));
 
+        picking_technique.setProjectionView(&projection, &view);
+
+        picking_technique.setModel(&cube_transform1);
         picking_technique.setObjectIndex(1);
-        picking_technique.setDrawIndex(1); // set draw index
-        picking_technique.setProjectionViewModel(&projection, &view, &cube_transform1);
+        picking_technique.setDrawIndex(1);
         cube.draw(cube_texture.id);
 
+        picking_technique.setModel(&cube_transform2);
         picking_technique.setObjectIndex(2);
-        picking_technique.setDrawIndex(2); // set draw index
-        picking_technique.setProjectionViewModel(&projection, &view, &cube_transform2);
+        picking_technique.setDrawIndex(2);
         cube.draw(cube_texture.id);
 
         picking_texture.disableWriting();
 
         // read from picking framebuffer
 
+        var pixel_info = PixelInfo{};
         if (state.mouse_left_button) {
-            const pixel_info = picking_texture.readPixel(state.last_x, state.scr_width - state.last_y - 1);
+            pixel_info = picking_texture.readPixel(state.last_x, state.scr_width - state.last_y - 1);
             std.debug.print(
-                "pixel_info x: {d} y: {d} object_id: {d} draw_id: {d} primative_id: {d}\n",
+                "pixel_info x: {d} y: {d} object_id: {d} mesh_id: {d} primative_id: {d}\n",
                 .{ state.last_x, state.last_y, pixel_info.object_id, pixel_info.draw_id, pixel_info.primative_id },
             );
         }
 
         basic_shader.use_shader();
+
+        gl.clearColor(0.1, 0.3, 0.1, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
         basic_shader.set_mat4("projection", &projection);
         basic_shader.set_mat4("view", &view);
 
+        var selected: i32 = if (pixel_info.object_id == 1.0) @intFromFloat(pixel_info.primative_id) else 0;
+        basic_shader.set_int("primative_id", selected);
         basic_shader.set_mat4("model", &cube_transform1);
         cube.draw(cube_texture.id);
 
+        selected = if (pixel_info.object_id == 2.0) @intFromFloat(pixel_info.primative_id) else 0;
+        basic_shader.set_int("primative_id", selected);
         basic_shader.set_mat4("model", &cube_transform2);
         cube.draw(cube_texture.id);
 

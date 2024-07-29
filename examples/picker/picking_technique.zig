@@ -14,6 +14,7 @@ const INVALID_UNIFORM_LOCATION = 0xffffffff;
 
 pub const PickingTechnique = struct {
     pv_location: c_int,
+    model_location: c_int,
     draw_index_location: c_int,
     object_index_location: c_int,
     shader: *Shader,
@@ -32,7 +33,10 @@ pub const PickingTechnique = struct {
         );
         shader.use_shader();
 
-        const pv_location = shader.get_uniform_location("gWVP");
+        //const pv_location = shader.get_uniform_location("gWVP");
+        const pv_location = shader.get_uniform_location("projectionView");
+        const model_location = shader.get_uniform_location("model_transform");
+
         const draw_index_location = shader.get_uniform_location("gObjectIndex");
         const object_index_location = shader.get_uniform_location("gDrawIndex");
 
@@ -45,6 +49,7 @@ pub const PickingTechnique = struct {
 
         return .{
             .pv_location = pv_location,
+            .model_location = model_location,
             .draw_index_location = draw_index_location,
             .object_index_location = object_index_location,
             .shader = shader,
@@ -55,20 +60,22 @@ pub const PickingTechnique = struct {
         self.shader.use_shader();
     }
 
-    pub fn setProjectionViewModel(self: *Self, projection: *const Mat4, view: *const Mat4, model_transform: *const Mat4) void {
-        // const pvm = projection.mulMat4(&view.mulMat4(model_transform));
-        const pvm = projection.mulMat4(view).mulMat4(model_transform);
-        self.setProjectionView(&pvm);
-        // self.shader.set_mat4("projection", projection);
-        // self.shader.set_mat4("view", view);
-        // self.shader.set_mat4("model", model_transform);
+    pub fn setProjectionView(self: *Self, projection: *const Mat4, view: *const Mat4) void {
+        const pv = projection.mulMat4(view);
+        gl.uniformMatrix4fv(self.pv_location, 1, gl.FALSE, pv.toArrayPtr());
     }
 
-    pub fn setProjectionView(self: *Self, pv: *const Mat4) void {
+    pub fn setModel(self: *Self, model_transform: *const Mat4) void {
+        gl.uniformMatrix4fv(self.model_location, 1, gl.FALSE, model_transform.toArrayPtr());
+    }
+
+    pub fn setProjectionViewModel(self: *Self, pv: *const Mat4) void {
+        // const pvm = projection.mulMat4(view).mulMat4(model_transform);
         gl.uniformMatrix4fv(self.pv_location, 1, gl.FALSE, pv.toArrayPtr());
     }
 
     // ah, call back
+    // no wonder this was confusing, Mesh is actually Meshes, and the drawIndex is the mesh number.
     pub fn setDrawIndex(self: *Self, draw_index: u32) void {
         gl.uniform1ui(self.draw_index_location, draw_index);
     }
