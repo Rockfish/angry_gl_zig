@@ -12,6 +12,7 @@ const vec4 = math.vec4;
 const Mat4 = math.Mat4;
 
 const Allocator = std.mem.Allocator;
+const StringHashMap = std.StringHashMap;
 
 const ShaderError = error{
     CompileError,
@@ -23,6 +24,7 @@ pub const Shader = struct {
     vert_file: []const u8,
     frag_file: []const u8,
     geom_file: ?[]const u8,
+    locations: *StringHashMap(c_int),
     allocator: Allocator,
 
     const Self = @This();
@@ -34,6 +36,12 @@ pub const Shader = struct {
             self.allocator.free(self.geom_file.?);
         }
         gl.deleteShader(self.id);
+        var iterator = self.locations.keyIterator();
+        while (iterator.next()) |key| {
+            self.allocator.free(key.*);
+        }
+        self.locations.deinit();
+        self.allocator.destroy(self.locations);
         self.allocator.destroy(self);
     }
 
@@ -114,11 +122,16 @@ pub const Shader = struct {
         } else null;
 
         const shader = try allocator.create(Shader);
+
+        const locations = try allocator.create(StringHashMap(c_int));
+        locations.* = StringHashMap(c_int).init(allocator);
+
         shader.* = Shader{
             .id = shader_id,
             .vert_file = try allocator.dupe(u8, vert_file_path),
             .frag_file = try allocator.dupe(u8, frag_file_path),
             .geom_file = geom_file,
+            .locations = locations,
             .allocator = allocator,
         };
 
@@ -135,69 +148,79 @@ pub const Shader = struct {
         self.set_mat4("view", view);
     }
 
-    pub fn get_uniform_location(self: *const Shader, uniform: [:0]const u8) gl.Int {
-        return gl.getUniformLocation(self.id, uniform);
+    pub fn get_uniform_location(self: *const Shader, uniform: [:0]const u8) c_int {
+        const result = self.locations.get(uniform);
+
+        if (result != null) {
+            return result.?;
+        }
+
+        const key = self.allocator.dupe(u8, uniform) catch unreachable;
+        const val = gl.getUniformLocation(self.id, uniform);
+        self.locations.put(key, val) catch unreachable;
+        //std.debug.print("Shader: {s} saving location: {s} value: {d}\n", .{ self.vert_file, key, val });
+        return val;
     }
 
     // utility uniform functions
     // ------------------------------------------------------------------------
     pub fn set_bool(self: *const Shader, uniform: [:0]const u8, value: bool) void {
         const v: u8 = if (value) 1 else 0;
-        const location = gl.getUniformLocation(self.id, uniform);
+        const location = self.get_uniform_location(uniform);
         gl.uniform1i(location, v);
     }
 
     // ------------------------------------------------------------------------
     pub fn set_int(self: *const Shader, uniform: [:0]const u8, value: i32) void {
-        const location = gl.getUniformLocation(self.id, uniform);
+        const location = self.get_uniform_location(uniform);
         gl.uniform1i(location, value);
     }
 
     // ------------------------------------------------------------------------
     pub fn set_uint(self: *const Shader, uniform: [:0]const u8, value: u32) void {
-        const location = gl.getUniformLocation(self.id, uniform);
+        const location = self.get_uniform_location(uniform);
         gl.uniform1ui(location, value);
     }
 
     // ------------------------------------------------------------------------
     pub fn set_float(self: *const Shader, uniform: [:0]const u8, value: f32) void {
-        const location = gl.getUniformLocation(self.id, uniform);
+        const location = self.get_uniform_location(uniform);
         gl.uniform1f(location, value);
     }
 
     // ------------------------------------------------------------------------
     pub fn set_vec2(self: *const Shader, uniform: [:0]const u8, value: *const Vec2) void {
-        const location = gl.getUniformLocation(self.id, uniform);
+        const location = self.get_uniform_location(uniform);
         gl.uniform2fv(location, 1, value.asArrayPtr());
     }
 
     // ------------------------------------------------------------------------
     pub fn set_vec2_xy(self: *const Shader, uniform: [:0]const u8, x: f32, y: f32) void {
-        const location = gl.getUniformLocation(self.id, uniform);
+        const location = self.get_uniform_location(uniform);
         gl.uniform2f(location, x, y);
     }
 
     // ------------------------------------------------------------------------
     pub fn set_vec3(self: *const Shader, uniform: [:0]const u8, value: *const Vec3) void {
-        const location = gl.getUniformLocation(self.id, uniform);
+        const location = self.get_uniform_location(uniform);
         gl.uniform3fv(location, 1, value.asArrayPtr());
     }
 
     // ------------------------------------------------------------------------
     pub fn set_vec3_xyz(self: *const Shader, uniform: [:0]const u8, x: f32, y: f32, z: f32) void {
-        const location = gl.getUniformLocation(self.id, uniform);
+        const location = self.get_uniform_location(uniform);
         gl.uniform3f(location, x, y, z);
     }
 
     // ------------------------------------------------------------------------
     pub fn set_vec4(self: *const Shader, uniform: [:0]const u8, value: *const Vec4) void {
-        const location = gl.getUniformLocation(self.id, uniform);
+        const location = self.get_uniform_location(uniform);
         gl.uniform4fv(location, 1, value.asArrayPtr());
     }
 
     // ------------------------------------------------------------------------
     pub fn set_vec4_xyzw(self: *const Shader, uniform: [:0]const u8, x: f32, y: f32, z: f32, w: f32) void {
-        const location = gl.getUniformLocation(self.id, uniform);
+        const location = self.get_uniform_location(uniform);
         gl.uniform4f(location, x, y, z, w);
     }
 
@@ -224,7 +247,7 @@ pub const Shader = struct {
 
     // ------------------------------------------------------------------------
     pub fn set_mat4(self: *const Shader, uniform: [:0]const u8, mat: *const Mat4) void {
-        const location = gl.getUniformLocation(self.id, uniform);
+        const location = self.get_uniform_location(uniform);
         // std.debug.print("shader-  uniform: {s}  matrix: {any}\n", .{uniform, &matrix.toArray()});
         gl.uniformMatrix4fv(location, 1, gl.FALSE, mat.toArrayPtr());
     }

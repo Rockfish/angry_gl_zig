@@ -95,11 +95,11 @@ pub const PickingTexture = struct {
         gl.bindTexture(gl.TEXTURE_2D, 0);
         gl.bindFramebuffer(gl.FRAMEBUFFER, 0);
 
-        const gl_error = gl.getError();
-        if (gl_error != gl.NO_ERROR) {
-            std.debug.print("Gl error: 0x{x}", .{gl_error});
-        }
-
+        // const gl_error = gl.getError();
+        // if (gl_error != gl.NO_ERROR) {
+        //     std.debug.print("Gl error: 0x{x}\n", .{gl_error});
+        // }
+        //
         // return GLCheckError();
         return .{
             .fbo = fbo,

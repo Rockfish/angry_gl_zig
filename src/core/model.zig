@@ -63,7 +63,7 @@ pub const Model = struct {
         for (0..MAX_BONES) |i| {
             const bone_transform = self.animator.final_bone_matrices[i];
             const uniform = try std.fmt.bufPrintZ(&buf, "finalBonesMatrices[{d}]", .{i});
-            // std.debug.print("{s} = {any}\n",.{uniform, bone_transform});
+            // std.debug.print("{s} = {any}\n", .{ uniform, bone_transform });
             shader.set_mat4(uniform, &bone_transform);
         }
 
