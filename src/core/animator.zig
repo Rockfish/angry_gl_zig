@@ -144,9 +144,10 @@ pub const Animator = struct {
     const Self = @This();
 
     pub fn deinit(self: *Self) void {
-        var iterator = self.bone_data_map.valueIterator();
-        while (iterator.next()) |bone_data| {
-            bone_data.*.deinit();
+        var iterator = self.bone_data_map.iterator();
+        while (iterator.next()) |entry| {
+            self.allocator.free(entry.key_ptr.*);
+            entry.value_ptr.*.deinit();
         }
         self.bone_data_map.deinit();
         self.allocator.destroy(self.bone_data_map);

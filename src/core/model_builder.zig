@@ -35,7 +35,7 @@ pub const ModelBuilder = struct {
     added_textures: ArrayList(AddedTexture),
     bone_data_map: *StringHashMap(*BoneData),
     bone_count: i32,
-    filepath: []const u8,
+    filepath: [:0]const u8,
     directory: []const u8,
     gamma_correction: bool,
     flip_v: bool,
@@ -80,7 +80,7 @@ pub const ModelBuilder = struct {
         const builder = try allocator.create(Self);
         builder.* = ModelBuilder{
             .name = try allocator.dupe(u8, name),
-            .filepath = try allocator.dupe(u8, path),
+            .filepath = try allocator.dupeZ(u8, path),
             .directory = try allocator.dupe(u8, Path.dirname(path) orelse ""),
             .texture_cache = texture_cache,
             .added_textures = ArrayList(AddedTexture).init(allocator),
@@ -110,7 +110,6 @@ pub const ModelBuilder = struct {
             .texture_filename = try self.allocator.dupe(u8, texture_filename),
         };
         try self.added_textures.append(added);
-        // return self;
     }
 
     pub fn skipModelTextures(self: *Self) void {
@@ -118,7 +117,15 @@ pub const ModelBuilder = struct {
     }
 
     pub fn build(self: *Self) !*Model {
-        const aiScene = try self.loadScene(self.filepath);
+        const aiScene = Assimp.aiImportFile(
+            self.filepath,
+            Assimp.aiProcess_CalcTangentSpace |
+                Assimp.aiProcess_Triangulate |
+                Assimp.aiProcess_JoinIdenticalVertices |
+                Assimp.aiProcess_SortByPType |
+                Assimp.aiProcess_FlipUVs |
+                Assimp.aiProcess_FindInvalidData, // this fixes animation by removing duplicate keys
+        );
 
         try self.load_model(aiScene);
         try self.add_textures();
@@ -133,26 +140,9 @@ pub const ModelBuilder = struct {
             .animator = animator,
         };
 
-        // std.debug.print("Builder: finishing up\n", .{});
+        Assimp.aiReleaseImport(aiScene);
+
         return model;
-    }
-
-    fn loadScene(self: *Self, file_path: []const u8) ![*c]const Assimp.aiScene {
-        const c_path: [:0]const u8 = try self.allocator.dupeZ(u8, file_path);
-        defer self.allocator.free(c_path);
-
-        const aiScene: [*c]const Assimp.aiScene = Assimp.aiImportFile(
-            c_path,
-            Assimp.aiProcess_CalcTangentSpace |
-                Assimp.aiProcess_Triangulate |
-                Assimp.aiProcess_JoinIdenticalVertices |
-                Assimp.aiProcess_SortByPType |
-                Assimp.aiProcess_FlipUVs |
-                Assimp.aiProcess_FindInvalidData, // this fixes animation by removing duplicate keys
-        );
-
-        // printSceneInfo(aiScene[0]);
-        return aiScene;
     }
 
     fn load_model(self: *Self, aiScene: [*]const Assimp.aiScene) !void {
@@ -308,10 +298,10 @@ pub const ModelBuilder = struct {
             var bone_id: i32 = undefined;
             const bone_name = bone.*.mName.data[0..bone.*.mName.length];
 
-            const result = try self.bone_data_map.getOrPut(bone_name);
+            const result = self.bone_data_map.get(bone_name);
 
-            if (result.found_existing) {
-                bone_id = result.value_ptr.*.bone_index;
+            if (result != null) {
+                bone_id = result.?.bone_index;
             } else {
                 const bone_data = try self.allocator.create(BoneData);
                 bone_data.* = BoneData{
@@ -320,7 +310,9 @@ pub const ModelBuilder = struct {
                     .offset_transform = Transform.from_matrix(&assimp.mat4_from_aiMatrix(&bone.*.mOffsetMatrix)),
                     .allocator = self.allocator,
                 };
-                result.value_ptr.* = bone_data;
+
+                const key = try self.allocator.dupe(u8, bone_name);
+                try self.bone_data_map.put(key, bone_data);
                 bone_id = self.bone_count;
                 self.bone_count += 1;
             }
