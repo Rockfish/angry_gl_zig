@@ -129,8 +129,8 @@ pub const BulletStore = struct {
     x_rotations: ArrayList(Quat),
     y_rotations: ArrayList(Quat),
     bullet_vao: gl.Uint,
-    rotation_vbo: gl.Uint,
-    position_vbo: gl.Uint,
+    rotations_vbo: gl.Uint,
+    positions_vbo: gl.Uint,
     bullet_groups: ArrayList(BulletGroup),
     bullet_texture: *Texture,
     bullet_impact_spritesheet: SpriteSheet,
@@ -199,8 +199,8 @@ pub const BulletStore = struct {
             .bullet_groups = ArrayList(BulletGroup).init(allocator),
             .bullet_impact_sprites = ArrayList(?SpriteSheetSprite).init(allocator),
             .bullet_vao = 1000, //bullet_vao,
-            .rotation_vbo = 1000, //instance_rotation_vbo,
-            .position_vbo = 1000, //instance_position_vbo,
+            .rotations_vbo = 1000, //instance_rotation_vbo,
+            .positions_vbo = 1000, //instance_position_vbo,
             .bullet_texture = bullet_texture,
             .bullet_impact_spritesheet = bullet_impact_spritesheet,
             .unit_square_vao = unit_square_vao,
@@ -411,8 +411,8 @@ pub const BulletStore = struct {
         var bullet_vao: gl.Uint = 0;
         var bullet_vertices_vbo: gl.Uint = 0;
         var bullet_indices_ebo: gl.Uint = 0;
-        var instance_rotation_vbo: gl.Uint = 0;
-        var instance_position_vbo: gl.Uint = 0;
+        var rotations_vbo: gl.Uint = 0;
+        var positions_vbo: gl.Uint = 0;
 
         gl.genVertexArrays(1, &bullet_vao);
         gl.genBuffers(1, &bullet_vertices_vbo);
@@ -463,8 +463,8 @@ pub const BulletStore = struct {
         // Per instance data
 
         // per instance rotation vbo
-        gl.genBuffers(1, &instance_rotation_vbo);
-        gl.bindBuffer(gl.ARRAY_BUFFER, instance_rotation_vbo);
+        gl.genBuffers(1, &rotations_vbo);
+        gl.bindBuffer(gl.ARRAY_BUFFER, rotations_vbo);
 
         // location: 2: bullet rotations
         gl.enableVertexAttribArray(2);
@@ -476,11 +476,12 @@ pub const BulletStore = struct {
             SIZE_OF_QUAT,
             null,
         );
-        gl.vertexAttribDivisor(2, 1); // one rotation per bullet instance
+        // one rotation per bullet instance
+        gl.vertexAttribDivisor(2, 1);
 
         // per instance position offset vbo
-        gl.genBuffers(1, &instance_position_vbo);
-        gl.bindBuffer(gl.ARRAY_BUFFER, instance_position_vbo);
+        gl.genBuffers(1, &positions_vbo);
+        gl.bindBuffer(gl.ARRAY_BUFFER, positions_vbo);
 
         // location: 3: bullet position offsets
         gl.enableVertexAttribArray(3);
@@ -492,11 +493,12 @@ pub const BulletStore = struct {
             SIZE_OF_VEC3,
             null,
         );
-        gl.vertexAttribDivisor(3, 1); // one offset per bullet instance
+        // one offset per bullet instance
+        gl.vertexAttribDivisor(3, 1);
 
         self.bullet_vao = bullet_vao;
-        self.rotation_vbo = instance_rotation_vbo;
-        self.position_vbo = instance_position_vbo;
+        self.rotations_vbo = rotations_vbo;
+        self.positions_vbo = positions_vbo;
     }
 
     pub fn draw_bullets(self: *Self, shader: *Shader, projection_view: *const Mat4) void {
@@ -517,18 +519,11 @@ pub const BulletStore = struct {
         shader.bind_texture(0, "texture_diffuse", self.bullet_texture);
         shader.bind_texture(1, "texture_normal", self.bullet_texture);
 
-        self.render_bullet_sprites();
-
-        gl.disable(gl.BLEND);
-        gl.enable(gl.CULL_FACE);
-        gl.depthMask(gl.TRUE);
-    }
-
-    pub fn render_bullet_sprites(self: *Self) void {
+        // bind bullet vertices and indices
         gl.bindVertexArray(self.bullet_vao);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, self.rotation_vbo);
-
+        // bind and load bullet rotations
+        gl.bindBuffer(gl.ARRAY_BUFFER, self.rotations_vbo);
         gl.bufferData(
             gl.ARRAY_BUFFER,
             @intCast(self.all_bullet_rotations.items.len * SIZE_OF_QUAT),
@@ -536,8 +531,8 @@ pub const BulletStore = struct {
             gl.STREAM_DRAW,
         );
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, self.position_vbo);
-
+        // bind and load bullet postions
+        gl.bindBuffer(gl.ARRAY_BUFFER, self.positions_vbo);
         gl.bufferData(
             gl.ARRAY_BUFFER,
             @intCast(self.all_bullet_positions.items.len * SIZE_OF_VEC3),
@@ -545,6 +540,7 @@ pub const BulletStore = struct {
             gl.STREAM_DRAW,
         );
 
+        // draw all bullet instances
         gl.drawElementsInstanced(
             gl.TRIANGLES,
             INDICES.len, // 6,
@@ -552,6 +548,10 @@ pub const BulletStore = struct {
             null,
             @intCast(self.all_bullet_positions.items.len),
         );
+
+        gl.disable(gl.BLEND);
+        gl.enable(gl.CULL_FACE);
+        gl.depthMask(gl.TRUE);
     }
 
     pub fn draw_bullet_impacts(self: *const Self, sprite_shader: *Shader, projection_view: *const Mat4) void {
