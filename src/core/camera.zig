@@ -122,7 +122,7 @@ pub const Camera = struct {
     }
 
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
-    pub fn getViewMatrix(self: *Self) Mat4 {
+    pub fn get_view_matrix(self: *Self) Mat4 {
         return Mat4.lookToRhGl(&self.position, &self.front, &self.up);
     }
 
@@ -157,7 +157,7 @@ pub const Camera = struct {
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
-    pub fn processDirectionChange(self: *Self, xoffset_in: i32, yoffset_in: i32, constrain_pitch: bool) void {
+    pub fn process_direction_change(self: *Self, xoffset_in: i32, yoffset_in: i32, constrain_pitch: bool) void {
         const xoffset: f32 = @as(f32, @floatFromInt(xoffset_in)) * self.mouse_sensitivity;
         const yoffset: f32 = @as(f32, @floatFromInt(yoffset_in)) * self.mouse_sensitivity;
 

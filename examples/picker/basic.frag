@@ -1,20 +1,20 @@
 #version 330 core
-out vec4 FragColor;
+out vec4 fragColor;
 
 in vec2 TexCoords;
 
-//uniform uint gObjectIndex;
-//uniform uint gDrawIndex;
-
+//
+uniform uint object_id;
+uniform uint mesh_i;
 uniform int primative_id;
+
 uniform sampler2D texture1;
 
 void main()
 {
-    FragColor = texture(texture1, TexCoords);
+    fragColor = texture(texture1, TexCoords);
 
     if (gl_PrimitiveID + 1 == primative_id) {
-        FragColor = vec4(1.0, FragColor.g, FragColor.b, FragColor.a);
+        fragColor = vec4(1.0, fragColor.g, fragColor.b, fragColor.a);
     }
 }
-

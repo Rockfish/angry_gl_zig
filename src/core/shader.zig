@@ -50,7 +50,10 @@ pub const Shader = struct {
     }
 
     pub fn new_with_geom(allocator: Allocator, vert_file_path: []const u8, frag_file_path: []const u8, optional_geom_file: ?[]const u8) !*Shader {
-        const vert_file = try std.fs.cwd().openFile(vert_file_path, .{});
+        const vert_file = std.fs.cwd().openFile(vert_file_path, .{}) catch |err| {
+            std.debug.panic("Shader error: {any} file: {s}", .{ err, vert_file_path });
+        };
+
         const vert_code = try vert_file.readToEndAlloc(allocator, 256 * 1024);
         const c_vert_code: [:0]const u8 = try allocator.dupeZ(u8, vert_code);
 

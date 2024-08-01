@@ -68,6 +68,7 @@ pub const Model = struct {
         }
 
         for (self.meshes.items) |mesh| {
+            shader.set_int("mesh_id", mesh.id);
             shader.set_mat4("nodeTransform", &self.animator.final_node_matrices[@intCast(mesh.id)]);
             // std.debug.print("mesh name = {s}  nodeTransform = {any}\n", .{mesh.name, self.animator.final_node_matrices[@intCast(mesh.id)]});
             mesh.render(shader);

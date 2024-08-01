@@ -6,9 +6,8 @@ const core = @import("core");
 const math = @import("math");
 const Cube = @import("cube.zig").Cube;
 
-const PickingTexture = @import("picking_texture.zig").PickingTexture;
-const PixelInfo = @import("picking_texture.zig").PixelInfo;
-const PickingTechnique = @import("picking_technique.zig").PickingTechnique;
+const Picker = @import("picker.zig").Picker;
+const PixelInfo = @import("picker.zig").PixelInfo;
 
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
@@ -56,8 +55,8 @@ const State = struct {
 };
 
 var state: State = undefined;
-var picking_texture: PickingTexture = undefined;
-var picking_technique: PickingTechnique = undefined;
+// var picker: PickingTexture = undefined;
+// var picker: PickingTechnique = undefined;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -140,20 +139,15 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     );
     defer basic_model_shader.deinit();
 
-    const color_shader = try Shader.new(
-        allocator,
-        "examples/picker/simple_color.vert",
-        "examples/picker/simple_color.frag",
-    );
-    defer color_shader.deinit();
-
     const model_path = "/Users/john/Dev/Repos/ogldev/Content/jeep.obj";
     const texture_diffuse = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = false, .gamma_correction = false, .wrap = .Clamp };
 
     var texture_cache = std.ArrayList(*Texture).init(allocator);
     var builder = try ModelBuilder.init(allocator, &texture_cache, "bunny", model_path);
     try builder.addTexture("Group", texture_diffuse, "jeep_rood.jpg");
+
     var model = try builder.build();
+
     builder.deinit();
     defer model.deinit();
 
@@ -177,11 +171,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const projection = Mat4.perspectiveRhGl(math.degreesToRadians(camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 500.0);
 
-    picking_texture = PickingTexture.init(SCR_WIDTH, SCR_HEIGHT);
-    defer picking_texture.deinit();
-
-    picking_technique = try PickingTechnique.init(allocator);
-    defer picking_technique.deinit();
+    var picker = try Picker.init(allocator, SCR_WIDTH, SCR_HEIGHT);
+    defer picker.deinit();
 
     // render loop
     // -----------
@@ -190,44 +181,38 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         state.delta_time = currentFrame - state.last_frame;
         state.last_frame = currentFrame;
 
-        const view = camera.getViewMatrix();
+        const view = camera.get_view_matrix();
 
         var model_transform = Mat4.identity();
         model_transform.translate(&vec3(0.0, -1.4, -50.0));
         model_transform.scale(&vec3(0.05, 0.05, 0.05));
 
-        // const model_pvm = get_pvm_matrix(projection, view, model_transform);
-
-        // render to picking framebuffer
-        picking_texture.enableWriting(); // bind fbo
-        picking_technique.enable(); // use shader
-        gl.clearColor(0.0, 0.0, 0.0, 0.0);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        picker.enable();
 
         const cube_transform1 = Mat4.identity();
 
         var cube_transform2 = Mat4.identity();
         cube_transform2.translate(&vec3(2.0, 0.0, 0.0));
 
-        picking_technique.setProjectionView(&projection, &view);
+        picker.set_projection_view(&projection, &view);
 
-        picking_technique.setModel(&cube_transform1);
-        picking_technique.setObjectIndex(1);
-        picking_technique.setDrawIndex(1);
+        picker.set_model_transform(&cube_transform1);
+        picker.set_object_id(1);
+        picker.set_mesh_id(1);
         cube.draw(cube_texture.id);
 
-        picking_technique.setModel(&cube_transform2);
-        picking_technique.setObjectIndex(2);
-        picking_technique.setDrawIndex(2);
+        picker.set_model_transform(&cube_transform2);
+        picker.set_object_id(2);
+        picker.set_mesh_id(2);
         cube.draw(cube_texture.id);
 
-        picking_texture.disableWriting();
+        picker.disable();
 
         // read from picking framebuffer
 
         var pixel_info = PixelInfo{};
         if (state.mouse_left_button) {
-            pixel_info = picking_texture.readPixel(state.last_x, state.scr_width - state.last_y - 1);
+            pixel_info = picker.read_pixel_info(state.last_x, state.scr_width - state.last_y - 1);
             std.debug.print(
                 "pixel_info x: {d} y: {d} object_id: {d} mesh_id: {d} primative_id: {d}\n",
                 .{ state.last_x, state.last_y, pixel_info.object_id, pixel_info.draw_id, pixel_info.primative_id },
@@ -336,7 +321,7 @@ fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callc
     state.last_y = ypos;
 
     if (state.key_shift) {
-        state.camera.processDirectionChange(xoffset, yoffset, true);
+        state.camera.process_direction_change(xoffset, yoffset, true);
     }
 }
 
