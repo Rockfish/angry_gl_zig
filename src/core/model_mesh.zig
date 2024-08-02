@@ -31,8 +31,8 @@ pub const ModelVertex = extern struct {
             .uv = undefined,
             .tangent = undefined,
             .bi_tangent = undefined,
-            .bone_ids = [_]i32 {-1, -1, -1, -1},
-            .bone_weights = [_]f32 {0.0, 0.0, 0.0, 0.0},
+            .bone_ids = [_]i32{ -1, -1, -1, -1 },
+            .bone_weights = [_]f32{ 0.0, 0.0, 0.0, 0.0 },
         };
     }
 
@@ -107,7 +107,6 @@ pub const ModelMesh = struct {
     }
 
     pub fn render(self: *ModelMesh, shader: *const Shader) void {
-        var buf: [50]u8 = undefined;
         for (self.*.textures.items, 0..) |texture, i| {
             const texture_unit: u32 = @intCast(i);
 
@@ -115,10 +114,7 @@ pub const ModelMesh = struct {
             gl.bindTexture(gl.TEXTURE_2D, texture.id);
 
             const uniform = texture.texture_type.toString();
-            const c_uniform = utils.bufCopyZ(&buf,uniform);
-
-            // std.debug.print("ModelMesh render- uniform: {s}  texture_unit: {d}  texture: {any}  path: {s}\n", .{c_uniform, @as(i32, @intCast(texture_unit)), texture.texture_type, texture.texture_path});
-            shader.set_int(c_uniform, @as(i32, @intCast(texture_unit)));
+            shader.set_int(uniform, @as(i32, @intCast(texture_unit)));
         }
 
         gl.bindVertexArray(self.vao);
@@ -272,8 +268,7 @@ pub fn print_model_mesh(mesh: *ModelMesh) void {
     std.debug.print("size of [4]f32: {d}\n", .{@sizeOf([4]f32)});
 
     std.debug.print("size vertex: {d}\n", .{@sizeOf(ModelVertex)});
-    std.debug.print("size of vertex parts: {d}\n",
-        .{@sizeOf(Vec3) * 4 + @sizeOf(Vec2) + @sizeOf([4]i32) + @sizeOf([4]f32)});
+    std.debug.print("size of vertex parts: {d}\n", .{@sizeOf(Vec3) * 4 + @sizeOf(Vec2) + @sizeOf([4]i32) + @sizeOf([4]f32)});
 
     std.debug.print("mesh.id: {any}\n", .{mesh.id});
     std.debug.print("mesh.vertex[0]: {any}\n", .{mesh.vertices.items[0]});

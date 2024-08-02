@@ -125,7 +125,7 @@ pub const EnemySystem = struct {
         }
     }
 
-    pub fn draw_enemies(self: *Self, shader: *Shader, state: *State) !void {
+    pub fn draw_enemies(self: *Self, shader: *Shader, state: *State) void {
         shader.use_shader();
         shader.set_vec3("nosePos", &vec3(1.0, world.MONSTER_Y, -2.0));
         shader.set_float("time", state.frame_time);
@@ -149,7 +149,7 @@ pub const EnemySystem = struct {
             shader.set_mat4("aimRot", &rot_only);
             shader.set_mat4("model", &model_transform);
 
-            try self.enemy_model.render(shader);
+            self.enemy_model.render(shader);
         }
     }
 };

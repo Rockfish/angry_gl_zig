@@ -5,6 +5,7 @@ const gl = @import("zopengl").bindings;
 const core = @import("core");
 const math = @import("math");
 const Cube = @import("cube.zig").Cube;
+const Cubeboid = core.shapes.Cubeboid;
 
 const Picker = @import("picker.zig").Picker;
 const PixelInfo = @import("picker.zig").PixelInfo;
@@ -152,6 +153,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     defer model.deinit();
 
     const cube = Cube.init();
+    const cubeboid = Cubeboid.init(1.0, 1.0, 2.0);
+
     const texture_config = .{
         .texture_type = .Diffuse,
         .filter = .Linear,
@@ -166,10 +169,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     );
     defer cube_texture.deinit();
 
+    const projection = Mat4.perspectiveRhGl(math.degreesToRadians(camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 500.0);
+
     basic_shader.use_shader();
+    basic_shader.set_mat4("projection", &projection);
     basic_shader.set_uint("texture1", cube_texture.id);
 
-    const projection = Mat4.perspectiveRhGl(math.degreesToRadians(camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 500.0);
+    basic_model_shader.use_shader();
+    basic_model_shader.set_mat4("projection", &projection);
 
     var picker = try Picker.init(allocator, SCR_WIDTH, SCR_HEIGHT);
     defer picker.deinit();
@@ -193,6 +200,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         var cube_transform2 = Mat4.identity();
         cube_transform2.translate(&vec3(2.0, 0.0, 0.0));
+
+        var cubeboid_transform = Mat4.identity();
+        cubeboid_transform.translate(&vec3(-2.0, 0.0, 0.0));
 
         picker.set_projection_view(&projection, &view);
 
@@ -224,7 +234,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         gl.clearColor(0.1, 0.3, 0.1, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        basic_shader.set_mat4("projection", &projection);
         basic_shader.set_mat4("view", &view);
 
         var selected: i32 = if (pixel_info.object_id == 1.0) @intFromFloat(pixel_info.primative_id) else 0;
@@ -238,11 +247,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         cube.draw(cube_texture.id);
 
         basic_model_shader.use_shader();
-        basic_model_shader.set_mat4("projection", &projection);
         basic_model_shader.set_mat4("view", &view);
-        basic_model_shader.set_mat4("model", &model_transform);
 
-        try model.render(basic_model_shader);
+        basic_model_shader.set_mat4("model", &cubeboid_transform);
+        basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
+        cubeboid.render();
+
+        basic_model_shader.set_mat4("model", &model_transform);
+        model.render(basic_model_shader);
 
         window.swapBuffers();
         glfw.pollEvents();

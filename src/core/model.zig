@@ -56,25 +56,20 @@ pub const Model = struct {
         try self.animator.play_weight_animations(weighted_animation, frame_time);
     }
 
-    pub fn render(self: *Self, shader: *const Shader) !void {
+    pub fn render(self: *Self, shader: *const Shader) void {
         var buf: [256:0]u8 = undefined;
 
-        // for (i, bone_transform) in final_bones.iter().enumerate() {
         for (0..MAX_BONES) |i| {
             const bone_transform = self.animator.final_bone_matrices[i];
-            const uniform = try std.fmt.bufPrintZ(&buf, "finalBonesMatrices[{d}]", .{i});
-            // std.debug.print("{s} = {any}\n", .{ uniform, bone_transform });
+            const uniform = std.fmt.bufPrintZ(&buf, "finalBonesMatrices[{d}]", .{i}) catch unreachable;
             shader.set_mat4(uniform, &bone_transform);
         }
 
         for (self.meshes.items) |mesh| {
             shader.set_int("mesh_id", mesh.id);
             shader.set_mat4("nodeTransform", &self.animator.final_node_matrices[@intCast(mesh.id)]);
-            // std.debug.print("mesh name = {s}  nodeTransform = {any}\n", .{mesh.name, self.animator.final_node_matrices[@intCast(mesh.id)]});
             mesh.render(shader);
         }
-
-        // std.debug.print("Model render done.\n",.{});
     }
 
     pub fn set_shader_bones_for_mesh(self: *Self, shader: *const Shader, mesh: *ModelMesh) !void {

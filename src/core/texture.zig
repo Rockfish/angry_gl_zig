@@ -41,7 +41,7 @@ pub const TextureType = enum(u32) {
     Transmission = 21,
     Force32bit = 2147483647,
 
-    pub fn toString(self: *TextureType) []const u8 {
+    pub fn toString(self: *TextureType) [:0]const u8 {
         const name = switch (self.*) {
             TextureType.Diffuse => "texture_diffuse",
             TextureType.Specular => "texture_specular",
@@ -128,10 +128,10 @@ pub const Texture = struct {
         zstbi.setFlipVerticallyOnLoad(texture_config.flip_v);
 
         var buf: [256]u8 = undefined;
-        const c_path = utils.bufCopyZ(&buf,path);
+        const c_path = utils.bufCopyZ(&buf, path);
 
         var image = zstbi.Image.loadFromFile(c_path, 0) catch |err| {
-            std.debug.print("Texture loadFromFile error: {any}  filepath: {s}\n", .{err, path});
+            std.debug.print("Texture loadFromFile error: {any}  filepath: {s}\n", .{ err, path });
             @panic(@errorName(err));
         };
         defer image.deinit();

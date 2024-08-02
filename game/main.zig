@@ -578,7 +578,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         player_shader.set_bool("useLight", true);
 
         // log.info("rendering player", .{});
-        try player.render(player_shader);
+        player.render(player_shader);
 
         wiggly_shader.use_shader();
         wiggly_shader.set_mat4("projectionView", &projection_view);
@@ -586,7 +586,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         wiggly_shader.set_bool("depth_mode", true);
 
         // log.info("rendering enemies", .{});
-        try enemy_system.draw_enemies(wiggly_shader, &state);
+        enemy_system.draw_enemies(wiggly_shader, &state);
 
         // shadows end
 
@@ -603,7 +603,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             player_emissive_shader.set_mat4("model", &player_transform);
 
             // log.info("rendering player with emissive shader", .{});
-            try player.render(player_emissive_shader);
+            player.render(player_emissive_shader);
 
             // doesn't seem to do anything
             // {
@@ -686,7 +686,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         player_shader.set_bool("depth_mode", false);
 
         // log.info("rendering player", .{});
-        try player.render(player_shader);
+        player.render(player_shader);
 
         muzzle_flash.draw(sprite_shader, &projection_view, &muzzle_transform);
 
@@ -696,7 +696,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         wiggly_shader.set_bool("depth_mode", false);
 
         // log.info("rendering enemies", .{});
-        try enemy_system.draw_enemies(wiggly_shader, &state);
+        enemy_system.draw_enemies(wiggly_shader, &state);
 
         // log.info("rendering burn_marks", .{});
         state.burn_marks.draw_marks(basic_texture_shader, &projection_view, state.delta_time);

@@ -202,8 +202,8 @@ pub const Player = struct {
         }
     }
 
-    pub fn render(self: *Self, shader: *const Shader) !void {
-        try self.model.render(shader);
+    pub fn render(self: *Self, shader: *const Shader) void {
+        self.model.render(shader);
     }
 
     pub fn update(self: *Self, state: *State, aim_theta: f32) !void {

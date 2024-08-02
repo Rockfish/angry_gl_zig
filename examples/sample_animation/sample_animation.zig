@@ -254,12 +254,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         shader.set_mat4("lightSpaceMatrix", &identity);
 
         // std.debug.print("Main: render\n", .{});
-        try model.render(shader);
+        model.render(shader);
 
         const bulletTransform = Mat4.fromScale(&vec3(2.0, 2.0, 2.0));
 
         shader.set_mat4("model", &bulletTransform);
-        try bullet_model.render(shader);
+        bullet_model.render(shader);
 
         window.swapBuffers();
     }
