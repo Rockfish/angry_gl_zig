@@ -49,8 +49,10 @@ const State = struct {
     delta_time: f32,
     last_frame: f32,
     first_mouse: bool,
-    last_x: f32,
-    last_y: f32,
+    last_x: i32,
+    last_y: i32,
+    scr_width: i32 = @intFromFloat(SCR_WIDTH),
+    scr_height: i32 = @intFromFloat(SCR_HEIGHT),
 };
 
 const content_dir = "assets";
@@ -297,8 +299,11 @@ fn mouse_hander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Act
 
 fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
     _ = window;
-    const xpos: f32 = @floatCast(xposIn);
-    const ypos: f32 = @floatCast(yposIn);
+    var xpos: i32 = @intFromFloat(xposIn);
+    var ypos: i32 = @intFromFloat(yposIn);
+
+    xpos = if (xpos < 0) 0 else if (xpos < state.scr_width) xpos else state.scr_width;
+    ypos = if (ypos < 0) 0 else if (ypos < state.scr_height) ypos else state.scr_height;
 
     if (state.first_mouse) {
         state.last_x = xpos;

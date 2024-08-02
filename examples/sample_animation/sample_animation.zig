@@ -53,8 +53,10 @@ const State = struct {
     delta_time: f32,
     last_frame: f32,
     first_mouse: bool,
-    last_x: f32,
-    last_y: f32,
+    last_x: i32,
+    last_y: i32,
+    scr_width: i32 = @intFromFloat(SCR_WIDTH),
+    scr_height: i32 = @intFromFloat(SCR_HEIGHT),
 };
 
 const content_dir = "assets";
@@ -234,7 +236,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         defer debug_camera.deinit();
 
         const projection = Mat4.perspectiveRhGl(toRadians(debug_camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
-        const view = state.camera.getViewMatrix();
+        const view = state.camera.get_view_matrix();
 
         var model_transform = Mat4.identity();
         model_transform.translate(&vec3(0.0, -10.4, -400.0));
@@ -319,8 +321,11 @@ fn mouse_hander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Act
 
 fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
     _ = window;
-    const xpos: f32 = @floatCast(xposIn);
-    const ypos: f32 = @floatCast(yposIn);
+    var xpos: i32 = @intFromFloat(xposIn);
+    var ypos: i32 = @intFromFloat(yposIn);
+
+    xpos = if (xpos < 0) 0 else if (xpos < state.scr_width) xpos else state.scr_width;
+    ypos = if (ypos < 0) 0 else if (ypos < state.scr_height) ypos else state.scr_height;
 
     if (state.first_mouse) {
         state.last_x = xpos;
@@ -334,7 +339,7 @@ fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callc
     state.last_x = xpos;
     state.last_y = ypos;
 
-    state.camera.processDirectionChange(xoffset, yoffset, true);
+    state.camera.process_mouse_movement(xoffset, yoffset, true);
 }
 
 fn scroll_handler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {

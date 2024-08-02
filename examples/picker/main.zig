@@ -321,7 +321,7 @@ fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callc
     state.last_y = ypos;
 
     if (state.key_shift) {
-        state.camera.process_direction_change(xoffset, yoffset, true);
+        state.camera.process_mouse_movement(xoffset, yoffset, true);
     }
 }
 
