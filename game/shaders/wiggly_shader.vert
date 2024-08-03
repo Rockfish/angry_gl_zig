@@ -1,14 +1,14 @@
 #version 330 core
 
-layout(location = 0) in vec3 pos;
-layout(location = 1) in vec3 norm;
-layout(location = 2) in vec2 tex;
-layout(location = 3) in vec3 tangent;
-layout(location = 4) in vec3 bitangent;
-layout(location = 5) in ivec4 boneIds;
-layout(location = 6) in vec4 weights;
+layout(location = 0) in vec3 inPosition;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec2 inTexCoord;
+layout(location = 3) in vec3 inTangent;
+layout(location = 4) in vec3 inBiTangent;
+layout(location = 5) in ivec4 inBoneIds;
+layout(location = 6) in vec4 inWeights;
 
-out vec2 TexCoords;
+out vec2 TexCoord;
 out vec3 Norm;
 out vec4 FragPosLightSpace;
 out vec3 FragWorldPos;
@@ -28,21 +28,20 @@ const float wiggleDistModifier = 0.12;
 const float wiggleTimeModifier = 9.4;
 
 void main() {
-  float xOffset = sin(wiggleTimeModifier * time + wiggleDistModifier * distance(nosePos, pos)) * wiggleMagnitude;
+    float xOffset = sin(wiggleTimeModifier * time + wiggleDistModifier * distance(nosePos, inPosition)) * wiggleMagnitude;
 
-  if (depth_mode) {
-    gl_Position = lightSpaceMatrix * model * vec4(pos.x + xOffset, pos.y, pos.z, 1.0);
-  } else {
-    gl_Position = projectionView * model * vec4(pos.x + xOffset, pos.y, pos.z, 1.0);
-  }
+    if (depth_mode) {
+        gl_Position = lightSpaceMatrix * model * vec4(inPosition.x + xOffset, inPosition.y, inPosition.z, 1.0);
+    } else {
+        gl_Position = projectionView * model * vec4(inPosition.x + xOffset, inPosition.y, inPosition.z, 1.0);
+    }
 
-  TexCoords = tex;
+    TexCoord = inTexCoord;
 
-  FragPosLightSpace = lightSpaceMatrix * model * vec4(pos, 1.0);
+    FragPosLightSpace = lightSpaceMatrix * model * vec4(inPosition, 1.0);
 
-  // TODO fix norm for wiggle
-  Norm = vec3(aimRot * vec4(norm, 1.0));
+    // TODO fix norm for wiggle
+    Norm = vec3(aimRot * vec4(inNormal, 1.0));
 
-  FragWorldPos = vec3(model * vec4(pos, 1.0));
+    FragWorldPos = vec3(model * vec4(inPosition, 1.0));
 }
-

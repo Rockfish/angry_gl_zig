@@ -1,6 +1,6 @@
 #version 330 core
 // model data
-layout(location = 0) in vec3 inPos;
+layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec2 inTexCoord;
 
 // Per instance data
@@ -50,7 +50,7 @@ vec3 rotateByQuat(vec3 v, vec4 q_orig) {
 
 void main() {
     // rotate bullet sprite to face in the direction of travel
-    vec3 rotatedInPos = rotateByQuat(inPos, rotationQuat);
+    vec3 rotatedInPos = rotateByQuat(inPosition, rotationQuat);
 
     gl_Position = PV * vec4(rotatedInPos + positionOffset, 1.0);
 
