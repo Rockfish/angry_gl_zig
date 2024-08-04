@@ -4,8 +4,10 @@ const zopengl = @import("zopengl");
 const gl = @import("zopengl").bindings;
 const core = @import("core");
 const math = @import("math");
+
 const Cube = @import("cube.zig").Cube;
 const Cubeboid = core.shapes.Cubeboid;
+const Cylinder = core.shapes.Cylinder;
 
 const Picker = @import("picker.zig").Picker;
 const PixelInfo = @import("picker.zig").PixelInfo;
@@ -154,6 +156,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const cube = Cube.init();
     const cubeboid = Cubeboid.init(1.0, 1.0, 2.0);
+    const cylinder = try Cylinder.init(allocator, 0.5, 4.0, 10);
 
     const texture_config = .{
         .texture_type = .Diffuse,
@@ -252,6 +255,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         basic_model_shader.set_mat4("model", &cubeboid_transform);
         basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
         cubeboid.render();
+
+        const cylinder_transform = Mat4.fromTranslation(&vec3(3.0, 0.0, 0.0));
+        basic_model_shader.set_mat4("model", &cylinder_transform);
+        cylinder.render();
 
         basic_model_shader.set_mat4("model", &model_transform);
         model.render(basic_model_shader);

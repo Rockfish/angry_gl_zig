@@ -46,6 +46,8 @@ pub const radiansToDegrees = std.math.radiansToDegrees;
 pub const lerp = std.math.lerp;
 
 pub const pi: f32 = @as(f32, std.math.pi);
+pub const tau: f32 = @as(f32, std.math.tau);
+
 pub const minFloat: f32 = std.math.floatMin(f32);
 pub const maxFloat: f32 = std.math.floatMax(f32);
 
