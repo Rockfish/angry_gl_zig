@@ -4,6 +4,7 @@ const zopengl = @import("zopengl");
 const gl = @import("zopengl").bindings;
 const core = @import("core");
 const math = @import("math");
+const cam_test = @import("cam_test.zig");
 
 const Cubeboid = core.shapes.Cubeboid;
 const Cylinder = core.shapes.Cylinder;
@@ -19,13 +20,15 @@ const Allocator = std.mem.Allocator;
 const EnumSet = std.EnumSet;
 
 const ModelBuilder = core.ModelBuilder;
-const Camera = core.Camera;
 const Shader = core.Shader;
 const Texture = core.texture.Texture;
 const TextureType = core.texture.TextureType;
 const TextureConfig = core.texture.TextureConfig;
 const TextureFilter = core.texture.TextureFilter;
 const TextureWrap = core.texture.TextureWrap;
+
+const cam = @import("camera.zig");
+const Camera = cam.Camera;
 
 const Window = glfw.Window;
 
@@ -39,6 +42,7 @@ const SIZE_OF_QUAT = @sizeOf(Quat);
 
 const State = struct {
     camera: *Camera,
+    view: cam.ViewType,
     light_postion: Vec3,
     delta_time: f32,
     last_frame: f32,
@@ -63,6 +67,11 @@ pub fn main() !void {
 
     const allocator = gpa.allocator();
     core.string.init(allocator);
+
+    if (true) {
+        cam_test.test_rotation();
+        //return;
+    }
 
     try glfw.init();
     defer glfw.terminate();
@@ -108,13 +117,20 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // const up = vec3(0.0, 1.0, 0.0);
 
     // const camera = try Camera.camera_vec3(allocator, postion);
-    const camera = try Camera.camera_vec3(allocator, vec3(0.0, 2.0, 12.0));
+    const aspect = SCR_WIDTH / SCR_HEIGHT;
+    const camera = try Camera.init(
+        allocator,
+        vec3(0.0, 2.0, 12.0),
+        vec3(0.0, 0.0, 0.0),
+        aspect,
+    );
     defer camera.deinit();
 
     const key_presses = EnumSet(glfw.Key).initEmpty();
 
     state = State{
         .camera = camera,
+        .view = .LookAt,
         .light_postion = vec3(1.2, 1.0, 2.0),
         .delta_time = 0.0,
         .last_frame = 0.0,
@@ -166,7 +182,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     );
     defer surface_texture.deinit();
 
-    const projection = Mat4.perspectiveRhGl(math.degreesToRadians(camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 500.0);
+    //const projection = Mat4.perspectiveRhGl(math.degreesToRadians(45.0), SCR_WIDTH / SCR_HEIGHT, 0.1, 500.0);
+    //const projection = camera.get_ortho_projection();
+    const projection = camera.get_perspective_projection();
 
     basic_model_shader.use_shader();
     basic_model_shader.set_mat4("projection", &projection);
@@ -186,7 +204,15 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         state.delta_time = currentFrame - state.last_frame;
         state.last_frame = currentFrame;
 
-        const view = camera.get_view_matrix();
+        gl.clearColor(0.1, 0.3, 0.1, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        basic_model_shader.use_shader();
+        const view = switch (state.view) {
+            .LookAt => camera.get_lookat_view(),
+            .LookTo => camera.get_lookto_view(),
+        };
+        basic_model_shader.set_mat4("view", &view);
 
         var model_transform = Mat4.identity();
         model_transform.translate(&vec3(0.0, -1.4, -50.0));
@@ -198,20 +224,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         var cubeboid_transform = Mat4.identity();
         cubeboid_transform.translate(&vec3(-2.0, 1.0, 0.0));
 
-        gl.clearColor(0.1, 0.3, 0.1, 1.0);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
         basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
-
-        basic_model_shader.use_shader();
-        basic_model_shader.set_mat4("view", &view);
 
         for (cube_transforms) |t| {
             basic_model_shader.set_mat4("model", &t);
             cubeboid.render();
         }
 
-        const cylinder_transform = Mat4.fromTranslation(&vec3(3.0, 0.0, 0.0));
+        const cylinder_transform = Mat4.fromTranslation(&vec3(0.0, 0.0, 0.0));
         basic_model_shader.set_mat4("model", &cylinder_transform);
         cylinder.render();
 
@@ -247,17 +267,25 @@ fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.
 
     state.key_shift = mods.shift;
 
+    const mode = if (mods.control) cam.MovementMode.Polar else cam.MovementMode.Planar;
+
     var iterator = state.key_presses.iterator();
     while (iterator.next()) |k| {
         switch (k) {
             .escape => window.setShouldClose(true),
             .t => std.debug.print("time: {d}\n", .{state.delta_time}),
-            .w => state.camera.process_keyboard(.Forward, state.delta_time),
-            .s => state.camera.process_keyboard(.Backward, state.delta_time),
-            .a => state.camera.process_keyboard(.Left, state.delta_time),
-            .d => state.camera.process_keyboard(.Right, state.delta_time),
-            .up => state.camera.process_keyboard(.Up, state.delta_time),
-            .down => state.camera.process_keyboard(.Down, state.delta_time),
+            .w => state.camera.process_keyboard(.Forward, mode, state.delta_time),
+            .s => state.camera.process_keyboard(.Backward, mode, state.delta_time),
+            .a => state.camera.process_keyboard(.Left, mode, state.delta_time),
+            .d => state.camera.process_keyboard(.Right, mode, state.delta_time),
+            .up => state.camera.process_keyboard(.Up, mode, state.delta_time),
+            .down => state.camera.process_keyboard(.Down, mode, state.delta_time),
+            .one => {
+                state.view = .LookTo;
+            },
+            .two => {
+                state.view = .LookAt;
+            },
             else => {},
         }
     }

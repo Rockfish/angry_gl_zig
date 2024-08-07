@@ -98,32 +98,28 @@ pub const Camera = struct {
         return camera;
     }
 
-    // calculates the front vector from the Camera's (updated) Euler Angles
     fn update_camera_vectors(self: *Self) void {
         // calculate the new Front vector
         self.front = vec3(
-            std.math.cos(toRadians(self.yaw)) * std.math.cos(toRadians(self.pitch)),
-            std.math.sin(toRadians(self.pitch)),
-            std.math.sin(toRadians(self.yaw)) * std.math.cos(toRadians(self.pitch)),
+            std.math.cos(to_rads(self.yaw)) * std.math.cos(to_rads(self.pitch)),
+            std.math.sin(to_rads(self.pitch)),
+            std.math.sin(to_rads(self.yaw)) * std.math.cos(to_rads(self.pitch)),
         ).normalize();
 
-        // also re-calculate the Right and Up vector
+        // re-calculate the Right and Up vector
         // normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
-        // self.right = self.front.cross(self.world_up).normalize_or_zero();
-        // self.up = self.right.cross(self.front).normalize_or_zero();
         self.right = self.front.cross(&self.world_up).normalize();
-        // std.debug.print("right: {any}\n", .{right});
-
         self.up = self.right.cross(&self.front).normalize();
 
-        // std.debug.print("up: {any}\n", .{up});
         // std.debug.print("front: {any}\nright: {any}\nup: {any}\n", .{self.front, self.right, self.up});
-        // std.debug.print("\n", .{});
     }
 
-    // returns the view matrix calculated using Euler Angles and the LookAt Matrix
-    pub fn get_view_matrix(self: *Self) Mat4 {
+    pub fn get_lookto_view(self: *Self) Mat4 {
         return Mat4.lookToRhGl(&self.position, &self.front, &self.up);
+    }
+
+    pub fn get_lookat_view(self: *Self) Mat4 {
+        return Mat4.lookToRhGl(&self.position, &self.target, &self.up);
     }
 
     // processes input received from any keyboard-like input system. Accepts input parameter
@@ -192,6 +188,6 @@ pub const Camera = struct {
     }
 };
 
-pub inline fn toRadians(degrees: f32) f32 {
-    return degrees * (std.math.pi / 180.0);
+pub inline fn to_rads(degrees: f32) f32 {
+    return degrees * std.math.rad_per_deg;
 }

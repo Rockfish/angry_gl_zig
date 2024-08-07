@@ -191,7 +191,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         state.delta_time = currentFrame - state.last_frame;
         state.last_frame = currentFrame;
 
-        const view = camera.get_view_matrix();
+        const view = camera.get_lookto_view();
 
         var model_transform = Mat4.identity();
         model_transform.translate(&vec3(0.0, -1.4, -50.0));

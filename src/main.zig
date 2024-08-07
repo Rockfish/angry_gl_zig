@@ -215,7 +215,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // model: [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, -10.4, -400, 1]]
 
         const projection = Mat4.perspectiveRhGl(toRadians(state.camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
-        const view = state.camera.get_view_matrix();
+        const view = state.camera.get_lookto_view();
 
         var modelTransform = Mat4.identity();
         modelTransform.translate(&vec3(0.0, -10.4, -400.0));

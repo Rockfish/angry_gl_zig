@@ -174,7 +174,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         const model = Mat4.identity();
-        const view = camera.get_view_matrix();
+        const view = camera.get_lookto_view();
 
         basic_shader.use_shader();
         basic_shader.set_mat4("model", &model);

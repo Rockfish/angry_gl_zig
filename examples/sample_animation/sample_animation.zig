@@ -236,7 +236,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         defer debug_camera.deinit();
 
         const projection = Mat4.perspectiveRhGl(toRadians(debug_camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
-        const view = state.camera.get_view_matrix();
+        const view = state.camera.get_lookto_view();
 
         var model_transform = Mat4.identity();
         model_transform.translate(&vec3(0.0, -10.4, -400.0));
