@@ -4,6 +4,7 @@ const vec = @import("vec.zig");
 const mat3_ = @import("mat3.zig");
 const mat4_ = @import("mat4.zig");
 const quat_ = @import("quat.zig");
+const ray_ = @import("ray.zig");
 const utils = @import("utils.zig");
 
 pub const Versor = cglm.versor;
@@ -25,8 +26,10 @@ pub const mat3 = mat3_.mat3;
 pub const mat4 = mat4_.mat4;
 
 pub const get_world_ray_from_mouse = utils.get_world_ray_from_mouse;
-pub const ray_plane_intersection = utils.ray_plane_intersection;
 pub const screen_to_model_glam = utils.screen_to_model_glam;
+pub const ray_plane_intersection = utils.ray_plane_intersection;
+pub const ray_triangle_intersection = ray_.ray_triangle_intersection;
+pub const ray_sphere_intersection = ray_.ray_sphere_intersection;
 
 // @abs
 pub const inf = std.math.inf;

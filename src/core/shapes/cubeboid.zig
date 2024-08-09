@@ -1,7 +1,8 @@
 const std = @import("std");
 const gl = @import("zopengl").bindings;
-const core = @import("core");
 const math = @import("math");
+
+const AABB = @import("../aabb.zig").AABB;
 
 const Vec3 = math.Vec3;
 const vec3 = math.vec3;
@@ -14,6 +15,7 @@ pub const Cubeboid = struct {
     vbo: u32,
     ebo: u32,
     num_indices: i32,
+    aabb: AABB,
 
     const Self = @This();
 
@@ -68,6 +70,12 @@ pub const Cubeboid = struct {
             16, 17, 18, 18, 19, 16, // top
             20, 21, 22, 22, 23, 20, // bottom
         };
+
+        var aabb = AABB.init();
+        for (0..vertices.len / 8) |i| {
+            const v = 8 * i;
+            aabb.expand_to_include(vec3(vertices[v], vertices[v + 1], vertices[v + 2]));
+        }
 
         var vao: u32 = undefined;
         var vbo: u32 = undefined;
@@ -135,6 +143,7 @@ pub const Cubeboid = struct {
             .vbo = vbo,
             .ebo = ebo,
             .num_indices = @intCast(indices.len),
+            .aabb = aabb,
         };
     }
 

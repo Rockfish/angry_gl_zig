@@ -39,6 +39,8 @@ pub const Vec3 = extern struct {
     y: f32,
     z: f32,
 
+    const Self = @This();
+
     pub fn new(x: f32, y: f32, z: f32) Vec3 {
         return .{ .x = x, .y = y, .z = z };
     }
@@ -132,6 +134,20 @@ pub const Vec3 = extern struct {
             &result,
         );
         return @as(*Vec3, @ptrCast(&result)).*;
+    }
+
+    /// add max of two vectors to result/dest
+    pub fn max_add_to(self: *Self, a: Vec3, b: Vec3) void {
+        self.x = self.x + @max(a.x, b.x);
+        self.y = self.y + @max(a.y, b.y);
+        self.z = self.z + @max(a.z, b.z);
+    }
+
+    /// add min of two vectors to result/dest
+    pub fn min_add_to(self: *Self, a: Vec3, b: Vec3) void {
+        self.x = @min(a.x, b.x);
+        self.y = @min(a.y, b.y);
+        self.z = @min(a.z, b.z);
     }
 };
 

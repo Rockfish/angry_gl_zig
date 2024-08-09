@@ -347,12 +347,12 @@ test "utils.get_world_ray_from_mouse" {
     );
 
     const ray = math.get_world_ray_from_mouse(
-        mouse_x,
-        mouse_y,
         width,
         height,
-        &view_matrix,
         &projection,
+        &view_matrix,
+        mouse_x,
+        mouse_y,
     );
 
     std.debug.print("ray = {any}", .{ray});

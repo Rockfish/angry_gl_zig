@@ -60,6 +60,7 @@ pub const Camera = struct {
     camera_speed: f32,
     target_speed: f32,
     mouse_sensitivity: f32,
+    target_pans: bool,
     allocator: Allocator,
 
     const Self = @This();
@@ -74,7 +75,6 @@ pub const Camera = struct {
             .world_up = vec3(0.0, 1.0, 0.0),
             .position = position,
             .target = target,
-            // front, up, and right are used for panning
             .front = vec3(0.0, 0.0, -1.0),
             .up = vec3(0.0, 1.0, 0.0),
             .right = vec3(0.0, 0.0, 0.0),
@@ -83,11 +83,11 @@ pub const Camera = struct {
             .zoom = 0.0,
             .fovy = FOV,
             .projection = ProjectionType.Perspective,
-            .aspect = aspect, //.front = vec3(0.0, 0.0, -1.0),
-            // .world_up = vec3(0.0, 1.0, 0.0),
+            .aspect = aspect,
             .camera_speed = SPEED,
             .target_speed = SPEED,
             .mouse_sensitivity = SENSITIVITY,
+            .target_pans = true,
             .allocator = allocator,
         };
         camera.update_camera_vectors();
@@ -159,29 +159,47 @@ pub const Camera = struct {
         switch (mode) {
             .Planar => {
                 switch (direction) {
-                    CameraMovement.Forward => {
+                    .Forward => {
                         self.position = self.position.add(&self.front.mulScalar(velocity));
+                        if (self.target_pans) {
+                            self.target = self.target.add(&self.front.mulScalar(velocity));
+                        }
                     },
-                    CameraMovement.Backward => {
+                    .Backward => {
                         self.position = self.position.sub(&self.front.mulScalar(velocity));
+                        if (self.target_pans) {
+                            self.target = self.target.sub(&self.front.mulScalar(velocity));
+                        }
                     },
-                    CameraMovement.Left => {
+                    .Left => {
                         self.position = self.position.sub(&self.right.mulScalar(velocity));
+                        if (self.target_pans) {
+                            self.target = self.target.sub(&self.right.mulScalar(velocity));
+                        }
                     },
-                    CameraMovement.Right => {
+                    .Right => {
                         self.position = self.position.add(&self.right.mulScalar(velocity));
+                        if (self.target_pans) {
+                            self.target = self.target.add(&self.right.mulScalar(velocity));
+                        }
                     },
-                    CameraMovement.Up => {
+                    .Up => {
                         self.position = self.position.add(&self.up.mulScalar(velocity));
+                        if (self.target_pans) {
+                            self.target = self.target.add(&self.up.mulScalar(velocity));
+                        }
                     },
-                    CameraMovement.Down => {
+                    .Down => {
                         self.position = self.position.sub(&self.up.mulScalar(velocity));
+                        if (self.target_pans) {
+                            self.target = self.target.sub(&self.up.mulScalar(velocity));
+                        }
                     },
                 }
             },
             .Polar => {
                 switch (direction) {
-                    CameraMovement.Right => {
+                    .Right => {
                         const angle = to_rads(velocity);
                         const turn_rotation = Quat.fromAxisAngle(&self.up, angle);
                         const radius_vec = self.position.sub(&self.target);
@@ -189,13 +207,27 @@ pub const Camera = struct {
                         self.position = self.target.add(&rotated_vec);
                         //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
                     },
-                    CameraMovement.Left => {
+                    .Left => {
                         const angle = to_rads(velocity);
                         const turn_rotation = Quat.fromAxisAngle(&self.up, -angle);
                         const radius_vec = self.position.sub(&self.target);
                         const rotated_vec = turn_rotation.rotateVec(&radius_vec);
                         self.position = self.target.add(&rotated_vec);
                         //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
+                    },
+                    .Up => {
+                        const angle = to_rads(velocity);
+                        const turn_rotation = Quat.fromAxisAngle(&self.right, -angle);
+                        const radius_vec = self.position.sub(&self.target);
+                        const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                        self.position = self.target.add(&rotated_vec);
+                    },
+                    .Down => {
+                        const angle = to_rads(velocity);
+                        const turn_rotation = Quat.fromAxisAngle(&self.right, angle);
+                        const radius_vec = self.position.sub(&self.target);
+                        const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                        self.position = self.target.add(&rotated_vec);
                     },
                     else => {},
                 }
@@ -207,9 +239,9 @@ pub const Camera = struct {
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
-    pub fn process_mouse_movement(self: *Self, xoffset_in: i32, yoffset_in: i32, constrain_pitch: bool) void {
-        const xoffset: f32 = @as(f32, @floatFromInt(xoffset_in)) * self.mouse_sensitivity;
-        const yoffset: f32 = @as(f32, @floatFromInt(yoffset_in)) * self.mouse_sensitivity;
+    pub fn process_mouse_movement(self: *Self, xoffset_in: f32, yoffset_in: f32, constrain_pitch: bool) void {
+        const xoffset: f32 = xoffset_in * self.mouse_sensitivity;
+        const yoffset: f32 = yoffset_in * self.mouse_sensitivity;
 
         self.yaw += xoffset;
         self.pitch += yoffset;

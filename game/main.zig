@@ -440,12 +440,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // buffer_ready = false;
         if (player.is_alive and buffer_ready) {
             const world_ray = math.get_world_ray_from_mouse(
-                state.mouse_x,
-                state.mouse_y,
                 state.scaled_width,
                 state.scaled_height,
-                &game_view,
                 &state.game_projection,
+                &game_view,
+                state.mouse_x,
+                state.mouse_y,
             );
 
             const xz_plane_point = vec3(0.0, 0.0, 0.0);
@@ -940,12 +940,12 @@ fn test_ray() void {
     );
 
     const ray = math.get_world_ray_from_mouse(
-        mouse_x,
-        mouse_y,
         width,
         height,
-        &view_matrix,
         &projection,
+        &view_matrix,
+        mouse_x,
+        mouse_y,
     );
 
     const xz_plane_point = vec3(0.0, 0.0, 0.0);
