@@ -43,14 +43,12 @@ pub const AABB = extern struct {
     }
 
     pub fn expand_by(self: *Self, f: f32) void {
-        if (self.is_initialize) {
-            self.min.x -= f;
-            self.max.x += f;
-            self.min.y -= f;
-            self.max.y += f;
-            self.min.z -= f;
-            self.max.z += f;
-        }
+        self.min.x -= f;
+        self.max.x += f;
+        self.min.y -= f;
+        self.max.y += f;
+        self.min.z -= f;
+        self.max.z += f;
     }
 
     /// check if AABB constains point
@@ -63,7 +61,7 @@ pub const AABB = extern struct {
     }
 
     /// check if two AABB intersects
-    pub fn aabb_aabb(a: *const Self, b: *const Self) bool {
+    pub fn aabb_intersects(a: *const Self, b: *const Self) bool {
         // zig fmt: off
         return a.min.x <= b.max.x and a.max.x >= b.min.x
            and a.min.y <= b.max.y and a.max.y >= b.min.y
@@ -72,18 +70,18 @@ pub const AABB = extern struct {
     }
 
     /// old way: check if two AABB intersects
-    pub fn aabbs_intersect(a: *Self, b: *Self) bool {
-        // zig fmt: off
-        return a.contains_point(vec3(b.min.x, b.min.y, b.min.z))
-            or a.contains_point(vec3(b.min.x, b.min.y, b.max.z))
-            or a.contains_point(vec3(b.min.x, b.max.y, b.min.z))
-            or a.contains_point(vec3(b.min.x, b.max.y, b.max.z))
-            or a.contains_point(vec3(b.max.x, b.min.y, b.min.z))
-            or a.contains_point(vec3(b.max.x, b.min.y, b.max.z))
-            or a.contains_point(vec3(b.max.x, b.max.y, b.min.z))
-            or a.contains_point(vec3(b.max.x, b.max.y, b.max.z));
-        // zig fmt: on
-    }
+    // pub fn aabbs_intersect(a: *Self, b: *Self) bool {
+    //     // zig fmt: off
+    //     return a.contains_point(vec3(b.min.x, b.min.y, b.min.z))
+    //         or a.contains_point(vec3(b.min.x, b.min.y, b.max.z))
+    //         or a.contains_point(vec3(b.min.x, b.max.y, b.min.z))
+    //         or a.contains_point(vec3(b.min.x, b.max.y, b.max.z))
+    //         or a.contains_point(vec3(b.max.x, b.min.y, b.min.z))
+    //         or a.contains_point(vec3(b.max.x, b.min.y, b.max.z))
+    //         or a.contains_point(vec3(b.max.x, b.max.y, b.min.z))
+    //         or a.contains_point(vec3(b.max.x, b.max.y, b.max.z));
+    //     // zig fmt: on
+    // }
 
     pub fn transform(self: *const Self, t: *const Mat4) AABB {
         const m0 = t.data[0];
@@ -93,10 +91,8 @@ pub const AABB = extern struct {
 
         const xa = vec3(m0[0], m0[1], m0[2]).mulScalar(self.min.x);
         const xb = vec3(m0[0], m0[1], m0[2]).mulScalar(self.max.x);
-
         const ya = vec3(m1[0], m1[1], m1[2]).mulScalar(self.min.y);
-        const yb = vec3(m1[0], m0[1], m1[2]).mulScalar(self.max.y);
-
+        const yb = vec3(m1[0], m1[1], m1[2]).mulScalar(self.max.y);
         const za = vec3(m2[0], m2[1], m2[2]).mulScalar(self.min.z);
         const zb = vec3(m2[0], m2[1], m2[2]).mulScalar(self.max.z);
 
@@ -108,7 +104,6 @@ pub const AABB = extern struct {
         aabb.min.min_add_to(xa, xb);
         aabb.min.min_add_to(ya, yb);
         aabb.min.min_add_to(za, zb);
-
         aabb.max.max_add_to(xa, xb);
         aabb.max.max_add_to(ya, yb);
         aabb.max.max_add_to(za, zb);
@@ -116,7 +111,7 @@ pub const AABB = extern struct {
         return aabb;
     }
 
-    pub fn intersects_ray(self: AABB, ray: Ray) bool {
+    pub fn ray_intersects(self: AABB, ray: Ray) bool {
         var t_min: f32 = math.inf(f32) * -1.0;
         var t_max: f32 = math.inf(f32);
 

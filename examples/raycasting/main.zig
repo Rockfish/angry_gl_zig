@@ -4,7 +4,7 @@ const zopengl = @import("zopengl");
 const gl = @import("zopengl").bindings;
 const core = @import("core");
 const math = @import("math");
-const cam_test = @import("cam_test.zig");
+const tests = @import("tests.zig");
 
 const Cubeboid = core.shapes.Cubeboid;
 const Cylinder = core.shapes.Cylinder;
@@ -78,9 +78,11 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     core.string.init(allocator);
 
-    if (true) {
-        cam_test.test_rotation();
-        //return;
+    if (false) {
+        std.debug.print("---\n", .{});
+        //tests.test_rotation();
+        try tests.test_aabb_transform();
+        return;
     }
 
     try glfw.init();
@@ -137,7 +139,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const aspect = SCR_WIDTH / SCR_HEIGHT;
     const camera = try Camera.init(
         allocator,
-        vec3(0.0, 2.0, 12.0),
+        vec3(0.0, 2.0, 14.0),
         vec3(0.0, 2.0, 0.0),
         aspect,
     );
@@ -283,14 +285,15 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // var cubeboid_transform = Mat4.identity();
         // cubeboid_transform.translate(&vec3(-2.0, 1.0, 0.0));
 
-        for (cube_transforms, 0..) |t, i| {
+        for (cube_transforms) |t| {
             basic_model_shader.set_mat4("model", &t);
             const aabb = cubeboid.aabb.transform(&t);
-            const hit = aabb.intersects_ray(ray);
+            const hit = aabb.ray_intersects(ray);
             if (hit) {
-                std.debug.print("hit cube: {d}\n", .{i});
+                basic_model_shader.set_vec4("hit_color", &vec4(1.0, 0.0, 0.0, 0.0));
             }
             cubeboid.render();
+            basic_model_shader.set_vec4("hit_color", &vec4(0.0, 0.0, 0.0, 0.0));
         }
 
         if (state.mouse_left_button and state.world_point != null) {

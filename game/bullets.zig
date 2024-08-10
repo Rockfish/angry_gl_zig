@@ -1,7 +1,7 @@
 const std = @import("std");
 const core = @import("core");
 const math = @import("math");
-const aabb = @import("aabb.zig");
+//const aabb = @import("aabb.zig");
 const geom = @import("geom.zig");
 const sprites = @import("sprite_sheet.zig");
 const world = @import("world.zig");
@@ -12,7 +12,7 @@ const Enemy = @import("enemy.zig").Enemy;
 const ArrayList = std.ArrayList;
 const HashMap = std.AutoArrayHashMap;
 
-const Aabb = aabb.Aabb;
+const AABB = core.AABB;
 const State = world.State;
 const Shader = core.Shader;
 const Model = core.Model;
@@ -306,7 +306,7 @@ pub const BulletStore = struct {
                         self.all_bullet_positions.items[bullet_index] = position;
                     }
 
-                    var subgroup_bound_box = Aabb.new();
+                    var subgroup_bound_box = AABB.init();
 
                     if (use_aabb) {
                         // -1?

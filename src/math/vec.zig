@@ -145,9 +145,9 @@ pub const Vec3 = extern struct {
 
     /// add min of two vectors to result/dest
     pub fn min_add_to(self: *Self, a: Vec3, b: Vec3) void {
-        self.x = @min(a.x, b.x);
-        self.y = @min(a.y, b.y);
-        self.z = @min(a.z, b.z);
+        self.x = self.x + @min(a.x, b.x);
+        self.y = self.y + @min(a.y, b.y);
+        self.z = self.z + @min(a.z, b.z);
     }
 };
 

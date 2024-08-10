@@ -37,3 +37,18 @@ pub fn test_rotation() void {
 pub inline fn to_rads(degrees: f32) f32 {
     return degrees * std.math.rad_per_deg;
 }
+
+pub fn test_aabb_transform() !void {
+    const aabb = math.AABB{
+        .min = math.vec3(0.0, 1.0, 2.0),
+        .max = math.vec3(3.0, 4.0, 5.0),
+    };
+
+    const transfrom = math.Mat4.identity();
+
+    const result_c = aabb.aabb_transform(&transfrom);
+    const result_zig = aabb.aabb_transform_zig(&transfrom);
+    std.debug.print("aabb: {any}\nresult_c: {any}\nresult_zig: {any}\n", .{ aabb, result_c, result_zig });
+
+    try std.testing.expectEqual(result_c, result_zig);
+}
