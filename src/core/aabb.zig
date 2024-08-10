@@ -111,7 +111,7 @@ pub const AABB = extern struct {
         return aabb;
     }
 
-    pub fn ray_intersects(self: AABB, ray: Ray) bool {
+    pub fn ray_intersects(self: AABB, ray: Ray) ?f32 {
         var t_min: f32 = math.inf(f32) * -1.0;
         var t_max: f32 = math.inf(f32);
 
@@ -147,10 +147,18 @@ pub const AABB = extern struct {
                 t_min = @max(t_min, t_enter);
                 t_max = @min(t_max, t_exit);
             } else if (origin_axis < min_axis or origin_axis > max_axis) {
-                return false; // Ray is parallel and outside the slab
+                return null; // Ray is parallel and outside the slab
             }
         }
 
-        return t_min <= t_max and t_max >= 0;
+        if (t_min <= t_max and t_max >= 0) {
+            if (t_min >= 0) {
+                return t_min; // Intersection point is in front of the ray origin
+            } else {
+                return t_max; // Ray starts inside the AABB, return distance to the farthest intersection
+            }
+        }
+
+        return null; // No intersection
     }
 };

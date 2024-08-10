@@ -285,11 +285,36 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // var cubeboid_transform = Mat4.identity();
         // cubeboid_transform.translate(&vec3(-2.0, 1.0, 0.0));
 
-        for (cube_transforms) |t| {
+        const Picked = struct {
+            id: ?u32,
+            distance: f32,
+        };
+
+        var picked = Picked{
+            .id = null,
+            .distance = 10000.0,
+        };
+
+        for (cube_transforms, 0..) |t, id| {
             basic_model_shader.set_mat4("model", &t);
             const aabb = cubeboid.aabb.transform(&t);
-            const hit = aabb.ray_intersects(ray);
-            if (hit) {
+            const distance = aabb.ray_intersects(ray);
+            if (distance) |d| {
+                if (picked.id != null) {
+                    if (d < picked.distance) {
+                        picked.id = @intCast(id);
+                        picked.distance = d;
+                    }
+                } else {
+                    picked.id = @intCast(id);
+                    picked.distance = d;
+                }
+            }
+        }
+
+        for (cube_transforms, 0..) |t, i| {
+            basic_model_shader.set_mat4("model", &t);
+            if (picked.id != null and picked.id == @as(u32, @intCast(i))) {
                 basic_model_shader.set_vec4("hit_color", &vec4(1.0, 0.0, 0.0, 0.0));
             }
             cubeboid.render();
