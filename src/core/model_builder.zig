@@ -27,6 +27,15 @@ const Assimp = assimp.Assimp;
 const ModelMesh = Model_Mesh.ModelMesh;
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
+const Vec4 = math.Vec4;
+
+// Redefining Assimp.AI_MATKEY's because they are c macros that don't import correctly.
+pub const MaterialKey = [:0]const u8;
+pub const AI_MATKEY_NAME = "?mat.name";
+pub const AI_MATKEY_COLOR_DIFFUSE = "$clr.diffuse";
+pub const AI_MATKEY_COLOR_AMBIENT = "$clr.ambient";
+pub const AI_MATKEY_COLOR_SPECULAR = "$clr.specular";
+pub const AI_MATKEY_COLOR_EMISSIVE = "$clr.emissive";
 
 pub const ModelBuilder = struct {
     name: []const u8,
@@ -197,6 +206,12 @@ pub const ModelBuilder = struct {
                 model_vertex.tangent = vec3FromVector3D(aiMesh.mTangents[i]);
                 model_vertex.bi_tangent = vec3FromVector3D(aiMesh.mBitangents[i]);
             }
+
+            if (aiMesh.mColors[0] != null) {
+                const color = vec4FromColor4D(aiMesh.mColors[0][i]);
+                std.debug.print("v: {d}  mColor: {any}\n", .{ i, color });
+            }
+
             try vertices.append(model_vertex);
         }
 
@@ -207,18 +222,56 @@ pub const ModelBuilder = struct {
             }
         }
 
-        const texture_types = [_]TextureType{ TextureType.Diffuse, TextureType.Specular, TextureType.Emissive, TextureType.Normals };
+        const name = aiMesh.mName.data[0..aiMesh.mName.length];
+        std.debug.print("\nmesh name: {s} verts: {d} indices: {d} \n", .{ name, vertices.items.len, indices.items.len });
 
         var material = aiScene[0].mMaterials[aiMesh.mMaterialIndex][0];
+
+        self.loadMaterialColors(&material);
+
+        const texture_types = [_]TextureType{ .Diffuse, .Specular, .Ambient, .Emissive, .Normals };
         const textures = try self.loadMaterialTextures(&material, texture_types[0..]);
 
         try self.extract_bone_weights_for_vertices(vertices, aiMesh);
 
-        const name = aiMesh.mName.data[0..aiMesh.mName.length];
-        const model_mesh = try ModelMesh.init(self.allocator, self.mesh_count, name, vertices, indices, textures);
+        const model_mesh = try ModelMesh.init(
+            self.allocator,
+            self.mesh_count,
+            name,
+            vertices,
+            indices,
+            textures,
+        );
 
         self.mesh_count += 1;
         return model_mesh;
+    }
+
+    fn loadMaterialColors(self: *Self, material: *Assimp.aiMaterial) void {
+        const material_name = GetMaterialName(material);
+        _ = self;
+
+        if (material_name) |n| {
+            std.debug.print("material_name: {s}\n", .{n});
+        }
+
+        const color_keys = [_]MaterialKey{
+            AI_MATKEY_COLOR_DIFFUSE,
+            AI_MATKEY_COLOR_AMBIENT,
+            AI_MATKEY_COLOR_SPECULAR,
+            AI_MATKEY_COLOR_EMISSIVE,
+        };
+
+        for (color_keys) |color_key| {
+            const color = GetMaterialColor(material, color_key);
+            if (color) |c| {
+                std.debug.print("color {s}: {any}\n", .{ color_key, c });
+            }
+            // const property = GetMaterialProperty(material, color_key);
+            // if (property) |p| {
+            //     std.debug.print("property: {any}\n", .{p});
+            // }
+        }
     }
 
     fn loadMaterialTextures(self: *Self, material: *Assimp.aiMaterial, texture_types: []const TextureType) !*ArrayList(*Texture) {
@@ -240,6 +293,7 @@ pub const ModelBuilder = struct {
 
                 if (ai_return == Assimp.AI_SUCCESS) {
                     const texture = try self.loadTexture(TextureConfig.new(texture_type), path.data[0..path.length]);
+                    //std.debug.print("texture: {any}\n", .{texture});
                     try material_textures.append(texture);
                 }
             }
@@ -334,14 +388,86 @@ inline fn vec3FromVector3D(aiVec: Assimp.aiVector3D) Vec3 {
     return Vec3.new(aiVec.x, aiVec.y, aiVec.z);
 }
 
+inline fn vec4FromColor4D(aiColor: Assimp.aiColor4D) Vec4 {
+    return Vec4.new(aiColor.r, aiColor.g, aiColor.b, aiColor.a);
+}
+
 inline fn GetMaterialTexture(
     material: *Assimp.aiMaterial,
     texture_type: TextureType,
     index: u32,
     path: *Assimp.aiString,
 ) Assimp.aiReturn {
-    return Assimp.aiGetMaterialTexture(material, @intFromEnum(texture_type), index, path, null, null, null, null, null, null);
+    return Assimp.aiGetMaterialTexture(
+        material,
+        @intFromEnum(texture_type),
+        index,
+        path,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+    );
 }
+
+// property: $mat.shadingm
+// property: $mat.illum
+// property: $clr.ambient
+// property: $clr.diffuse
+// property: $clr.specular
+// property: $clr.emissive
+// property: $mat.shininess
+// property: $mat.opacity
+// property: $clr.transparent
+// property: $mat.anisotropyFactor
+// property: $mat.refracti
+
+inline fn GetMaterialColor(
+    material: *Assimp.aiMaterial,
+    material_key: MaterialKey,
+) ?Vec4 {
+    var ai_color: Assimp.aiColor4D = undefined;
+    if (Assimp.AI_SUCCESS == Assimp.aiGetMaterialColor(material, material_key, 0, 0, &ai_color)) {
+        const c = vec4FromColor4D(ai_color);
+        if (c.x == 0.0 and c.y == 0.0 and c.z == 0.0) {
+            return null;
+        }
+        return c;
+    }
+    return null;
+}
+
+inline fn GetMaterialName(
+    material: *Assimp.aiMaterial,
+) ?[]u8 {
+    const property = GetMaterialProperty(material, AI_MATKEY_NAME);
+    if (property) |p| {
+        const mat_name: []u8 = p.*.mData[4 .. p.*.mDataLength - 1];
+        return mat_name;
+    }
+    return null;
+}
+
+inline fn GetMaterialProperty(
+    material: *Assimp.aiMaterial,
+    material_key: MaterialKey,
+) ?*Assimp.aiMaterialProperty {
+    for (0..material.mNumProperties) |i| {
+        const property = material.mProperties[i];
+        const key_name = property.*.mKey.data[0..property.*.mKey.length];
+        if (std.mem.eql(u8, material_key, key_name)) {
+            return property;
+        }
+    }
+    return null;
+}
+
+// var ai_name: Assimp.aiString = undefined;
+// _ = Assimp.aiGetMaterialString(&material,Assimp.AI_MATKEY_NAME,0, 0, &ai_name);
+// const material_name = ai_name.data[0..ai_name.length];
+// std.debug.print("\nmaterial name: {s}\n", .{material_name});
 
 fn printSceneInfo(aiScene: Assimp.aiScene) void {
     std.debug.print("number of meshes: {d}\n", .{aiScene.mNumMeshes});
