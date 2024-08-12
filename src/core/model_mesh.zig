@@ -10,6 +10,7 @@ const ArrayList = std.ArrayList;
 
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
+const Vec4 = math.Vec4;
 
 const MAX_BONE_INFLUENCE: usize = 4;
 
@@ -56,6 +57,11 @@ const OFFSET_OF_BITANGENT = @offsetOf(ModelVertex, "bi_tangent");
 const OFFSET_OF_BONE_IDS = @offsetOf(ModelVertex, "bone_ids");
 const OFFSET_OF_WEIGHTS = @offsetOf(ModelVertex, "bone_weights");
 
+pub const MeshColor = struct {
+    uniform: [:0]const u8,
+    color: Vec4,
+};
+
 pub const ModelMesh = struct {
     allocator: Allocator,
     id: i32,
@@ -63,6 +69,7 @@ pub const ModelMesh = struct {
     vertices: *ArrayList(ModelVertex),
     indices: *ArrayList(u32),
     textures: *ArrayList(*Texture),
+    colors: *ArrayList(*MeshColor),
     vao: c_uint,
     vbo: c_uint,
     ebo: c_uint,
@@ -81,12 +88,25 @@ pub const ModelMesh = struct {
         //     texture.deinit();
         // }
         self.textures.deinit();
+        for (self.colors.items) |color| {
+            self.allocator.destroy(color);
+        }
+        self.colors.deinit();
+        self.allocator.destroy(self.colors);
         self.allocator.destroy(self.textures);
         self.allocator.free(self.name);
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, id: i32, name: []const u8, vertices: *ArrayList(ModelVertex), indices: *ArrayList(u32), textures: *ArrayList(*Texture)) !*ModelMesh {
+    pub fn init(
+        allocator: Allocator,
+        id: i32,
+        name: []const u8,
+        vertices: *ArrayList(ModelVertex),
+        indices: *ArrayList(u32),
+        textures: *ArrayList(*Texture),
+        colors: *ArrayList(*MeshColor),
+    ) !*ModelMesh {
         const model_mesh = try allocator.create(ModelMesh);
         model_mesh.* = ModelMesh{
             .allocator = allocator,
@@ -95,6 +115,7 @@ pub const ModelMesh = struct {
             .vertices = vertices,
             .indices = indices,
             .textures = textures,
+            .colors = colors,
             .vao = 0,
             .vbo = 0,
             .ebo = 0,
@@ -117,6 +138,13 @@ pub const ModelMesh = struct {
             shader.set_int(uniform, @as(i32, @intCast(texture_unit)));
         }
 
+        const has_color = self.*.colors.items.len > 0;
+        shader.set_bool("has_color", has_color);
+
+        for (self.*.colors.items) |mesh_color| {
+            shader.set_vec4(mesh_color.uniform, &mesh_color.color);
+        }
+
         gl.bindVertexArray(self.vao);
         gl.drawElements(
             gl.TRIANGLES,
@@ -125,6 +153,8 @@ pub const ModelMesh = struct {
             null,
         );
         gl.bindVertexArray(0);
+
+        shader.set_bool("has_color", false);
     }
 
     pub fn renderNoTextures(self: *ModelMesh) void {

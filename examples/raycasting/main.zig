@@ -177,13 +177,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     var texture_cache = std.ArrayList(*Texture).init(allocator);
 
-    // const model_path = "/Users/john/Dev/Repos/ogldev/Content/jeep.obj";
-    // var builder = try ModelBuilder.init(allocator, &texture_cache, "bunny", model_path);
-    // try builder.addTexture("Group", texture_diffuse, "jeep_rood.jpg");
-    // var model = try builder.build();
-    // builder.deinit();
-    // defer model.deinit();
-
     const cubeboid = Cubeboid.init(1.0, 1.0, 2.0);
     const plane = Cubeboid.init(20.0, 0.2, 20.0);
     const cylinder = try Cylinder.init(allocator, 0.5, 4.0, 10);
@@ -209,6 +202,13 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         texture_diffuse,
     );
     defer surface_texture.deinit();
+
+    const model_path = "/Users/john/Dev/Assets/spacekit_2/Models/OBJ format/alien.obj";
+    var builder = try ModelBuilder.init(allocator, &texture_cache, "alien", model_path);
+    //try builder.addTexture("Group", texture_diffuse, "jeep_rood.jpg");
+    var model = try builder.build();
+    builder.deinit();
+    defer model.deinit();
 
     basic_model_shader.use_shader();
     basic_model_shader.set_mat4("projection", &projection);
@@ -275,9 +275,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         basic_model_shader.set_mat4("view", &state.view);
         basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
 
-        // var model_transform = Mat4.identity();
-        // model_transform.translate(&vec3(0.0, -1.4, -50.0));
-        // model_transform.scale(&vec3(0.05, 0.05, 0.05));
+        var model_transform = Mat4.identity();
+        model_transform.translate(&vec3(0.0, 0.6, 3.0));
+        model_transform.scale(&vec3(1.0, 1.0, 1.0));
+
+        basic_model_shader.set_mat4("model", &model_transform);
+        model.render(basic_model_shader);
 
         // var cube_transform2 = Mat4.identity();
         // cube_transform2.translate(&vec3(2.0, 1.0, 0.0));

@@ -25,17 +25,22 @@ const TextureFilter = texture_.TextureFilter;
 const TextureWrap = texture_.TextureWrap;
 const Assimp = assimp.Assimp;
 const ModelMesh = Model_Mesh.ModelMesh;
+const MeshColor = Model_Mesh.MeshColor;
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
 
+pub const MaterialKey = struct {
+    ai_key: [:0]const u8,
+    uniform: [:0]const u8,
+};
+
 // Redefining Assimp.AI_MATKEY's because they are c macros that don't import correctly.
-pub const MaterialKey = [:0]const u8;
-pub const AI_MATKEY_NAME = "?mat.name";
-pub const AI_MATKEY_COLOR_DIFFUSE = "$clr.diffuse";
-pub const AI_MATKEY_COLOR_AMBIENT = "$clr.ambient";
-pub const AI_MATKEY_COLOR_SPECULAR = "$clr.specular";
-pub const AI_MATKEY_COLOR_EMISSIVE = "$clr.emissive";
+pub const MATKEY_NAME: MaterialKey = .{ .ai_key = "?mat.name", .uniform = "material_name" };
+pub const MATKEY_COLOR_DIFFUSE: MaterialKey = .{ .ai_key = "$clr.diffuse", .uniform = "diffuse_color" };
+pub const MATKEY_COLOR_AMBIENT: MaterialKey = .{ .ai_key = "$clr.ambient", .uniform = "ambient_color" };
+pub const MATKEY_COLOR_SPECULAR: MaterialKey = .{ .ai_key = "$clr.specular", .uniform = "specular_color" };
+pub const MATKEY_COLOR_EMISSIVE: MaterialKey = .{ .ai_key = "$clr.emissive", .uniform = "emissive_color" };
 
 pub const ModelBuilder = struct {
     name: []const u8,
@@ -227,7 +232,7 @@ pub const ModelBuilder = struct {
 
         var material = aiScene[0].mMaterials[aiMesh.mMaterialIndex][0];
 
-        self.loadMaterialColors(&material);
+        const colors = try self.loadMaterialColors(&material);
 
         const texture_types = [_]TextureType{ .Diffuse, .Specular, .Ambient, .Emissive, .Normals };
         const textures = try self.loadMaterialTextures(&material, texture_types[0..]);
@@ -241,37 +246,41 @@ pub const ModelBuilder = struct {
             vertices,
             indices,
             textures,
+            colors,
         );
 
         self.mesh_count += 1;
         return model_mesh;
     }
 
-    fn loadMaterialColors(self: *Self, material: *Assimp.aiMaterial) void {
+    fn loadMaterialColors(self: *Self, material: *Assimp.aiMaterial) !*ArrayList(*MeshColor) {
         const material_name = GetMaterialName(material);
-        _ = self;
 
         if (material_name) |n| {
             std.debug.print("material_name: {s}\n", .{n});
         }
 
         const color_keys = [_]MaterialKey{
-            AI_MATKEY_COLOR_DIFFUSE,
-            AI_MATKEY_COLOR_AMBIENT,
-            AI_MATKEY_COLOR_SPECULAR,
-            AI_MATKEY_COLOR_EMISSIVE,
+            MATKEY_COLOR_DIFFUSE,
+            MATKEY_COLOR_AMBIENT,
+            MATKEY_COLOR_SPECULAR,
+            MATKEY_COLOR_EMISSIVE,
         };
+
+        const colors = try self.allocator.create(ArrayList(*MeshColor));
+        colors.* = ArrayList(*MeshColor).init(self.allocator);
 
         for (color_keys) |color_key| {
             const color = GetMaterialColor(material, color_key);
             if (color) |c| {
-                std.debug.print("color {s}: {any}\n", .{ color_key, c });
+                std.debug.print("color {s}: {any}\n", .{ color_key.ai_key, c });
+                const mesh_color = try self.allocator.create(MeshColor);
+                mesh_color.* = .{ .uniform = color_key.uniform, .color = c };
+                try colors.*.append(mesh_color);
             }
-            // const property = GetMaterialProperty(material, color_key);
-            // if (property) |p| {
-            //     std.debug.print("property: {any}\n", .{p});
-            // }
         }
+
+        return colors;
     }
 
     fn loadMaterialTextures(self: *Self, material: *Assimp.aiMaterial, texture_types: []const TextureType) !*ArrayList(*Texture) {
@@ -412,24 +421,12 @@ inline fn GetMaterialTexture(
     );
 }
 
-// property: $mat.shadingm
-// property: $mat.illum
-// property: $clr.ambient
-// property: $clr.diffuse
-// property: $clr.specular
-// property: $clr.emissive
-// property: $mat.shininess
-// property: $mat.opacity
-// property: $clr.transparent
-// property: $mat.anisotropyFactor
-// property: $mat.refracti
-
 inline fn GetMaterialColor(
     material: *Assimp.aiMaterial,
     material_key: MaterialKey,
 ) ?Vec4 {
     var ai_color: Assimp.aiColor4D = undefined;
-    if (Assimp.AI_SUCCESS == Assimp.aiGetMaterialColor(material, material_key, 0, 0, &ai_color)) {
+    if (Assimp.AI_SUCCESS == Assimp.aiGetMaterialColor(material, material_key.ai_key, 0, 0, &ai_color)) {
         const c = vec4FromColor4D(ai_color);
         if (c.x == 0.0 and c.y == 0.0 and c.z == 0.0) {
             return null;
@@ -442,7 +439,7 @@ inline fn GetMaterialColor(
 inline fn GetMaterialName(
     material: *Assimp.aiMaterial,
 ) ?[]u8 {
-    const property = GetMaterialProperty(material, AI_MATKEY_NAME);
+    const property = GetMaterialProperty(material, MATKEY_NAME);
     if (property) |p| {
         const mat_name: []u8 = p.*.mData[4 .. p.*.mDataLength - 1];
         return mat_name;
@@ -457,7 +454,7 @@ inline fn GetMaterialProperty(
     for (0..material.mNumProperties) |i| {
         const property = material.mProperties[i];
         const key_name = property.*.mKey.data[0..property.*.mKey.length];
-        if (std.mem.eql(u8, material_key, key_name)) {
+        if (std.mem.eql(u8, material_key.ai_key, key_name)) {
             return property;
         }
     }
