@@ -56,6 +56,8 @@ pub const Camera = struct {
     zoom: f32, // hmm
     fovy: f32,
     projection: ProjectionType,
+    ortho_width: f32,
+    ortho_height: f32,
     aspect: f32,
     camera_speed: f32,
     target_speed: f32,
@@ -69,7 +71,7 @@ pub const Camera = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, position: Vec3, target: Vec3, aspect: f32) !*Camera {
+    pub fn init(allocator: Allocator, position: Vec3, target: Vec3, scr_width: f32, scr_height: f32) !*Camera {
         const camera = try allocator.create(Camera);
         camera.* = Camera{
             .world_up = vec3(0.0, 1.0, 0.0),
@@ -82,8 +84,10 @@ pub const Camera = struct {
             .pitch = PITCH,
             .zoom = 0.0,
             .fovy = FOV,
+            .ortho_width = scr_width / 100.0,
+            .ortho_height = scr_height / 100.0,
             .projection = ProjectionType.Perspective,
-            .aspect = aspect,
+            .aspect = scr_width / scr_height,
             .camera_speed = SPEED,
             .target_speed = SPEED,
             .mouse_sensitivity = SENSITIVITY,
@@ -100,6 +104,11 @@ pub const Camera = struct {
 
     pub fn set_aspect(self: *Self, aspect: f32) void {
         self.aspect = aspect;
+    }
+
+    pub fn set_ortho_dimensions(self: *Self, width: f32, height: f32) void {
+        self.ortho_width = width;
+        self.ortho_height = height;
     }
 
     pub fn set_projection(self: *Self, projection: ProjectionType) void {
@@ -130,9 +139,16 @@ pub const Camera = struct {
     }
 
     pub fn get_ortho_projection(self: *Self) Mat4 {
-        const top = self.fovy / 2.0;
-        const right = top * self.aspect;
-        return Mat4.orthographicRhGl(-right, right, -top, top, NEAR, FAR);
+        // const top = self.fovy / 2.0;
+        // const right = top * self.aspect;
+        return Mat4.orthographicRhGl(
+            -self.ortho_width / 2.0,
+            self.ortho_width / 2.0,
+            -self.ortho_height / 2.0,
+            self.ortho_height / 2.0,
+            NEAR,
+            FAR,
+        );
     }
 
     pub fn get_perspective_projection(self: *Self) Mat4 {

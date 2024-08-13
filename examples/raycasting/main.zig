@@ -48,6 +48,8 @@ const State = struct {
     scaled_height: f32,
     window_scale: [2]f32,
     camera: *Camera,
+    projection: Mat4 = undefined,
+    projection_type: cam.ProjectionType,
     view: Mat4 = undefined,
     view_type: cam.ViewType,
     light_postion: Vec3,
@@ -131,21 +133,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var scaled_width = viewport_width / window_scale[0];
     var scaled_height = viewport_height / window_scale[1];
 
-    // const postion = vec3(0.0, 5.0, -22.0);
-    // const target = vec3(0.0, -0.2, 1.0);
-    // const up = vec3(0.0, 1.0, 0.0);
-
-    // const camera = try Camera.camera_vec3(allocator, postion);
-    const aspect = SCR_WIDTH / SCR_HEIGHT;
     const camera = try Camera.init(
         allocator,
         vec3(0.0, 2.0, 14.0),
         vec3(0.0, 2.0, 0.0),
-        aspect,
+        scaled_width,
+        scaled_height,
     );
     defer camera.deinit();
-
-    const projection = camera.get_perspective_projection();
 
     const key_presses = EnumSet(glfw.Key).initEmpty();
 
@@ -156,6 +151,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .scaled_height = scaled_height,
         .window_scale = window_scale,
         .camera = camera,
+        .projection = camera.get_perspective_projection(),
+        .projection_type = .Perspective,
         .view_type = .LookAt,
         .light_postion = vec3(1.2, 1.0, 2.0),
         .delta_time = 0.0,
@@ -210,9 +207,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     builder.deinit();
     defer model.deinit();
 
-    basic_model_shader.use_shader();
-    basic_model_shader.set_mat4("projection", &projection);
-
     const cube_transforms = [_]Mat4{
         Mat4.fromTranslation(&vec3(3.0, 0.6, 0.0)),
         Mat4.fromTranslation(&vec3(1.5, 0.6, 0.0)),
@@ -249,7 +243,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         const world_ray = math.get_world_ray_from_mouse(
             state.scaled_width,
             state.scaled_height,
-            &projection,
+            &state.projection,
             &state.view,
             state.mouse_x,
             state.mouse_y,
@@ -272,12 +266,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // }
 
         basic_model_shader.use_shader();
+        basic_model_shader.set_mat4("projection", &state.projection);
         basic_model_shader.set_mat4("view", &state.view);
+
         basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
 
         var model_transform = Mat4.identity();
-        model_transform.translate(&vec3(0.0, 0.6, 3.0));
-        model_transform.scale(&vec3(1.0, 1.0, 1.0));
+        model_transform.translate(&vec3(1.0, 0.2, 5.0));
+        model_transform.scale(&vec3(1.5, 1.5, 1.5));
 
         basic_model_shader.set_mat4("model", &model_transform);
         model.render(basic_model_shader);
@@ -339,7 +335,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         plane.render();
 
         if (state.spin) {
-            state.camera.process_keyboard(.Right, .Polar, state.delta_time * 2.0);
+            state.camera.process_keyboard(.Right, .Polar, state.delta_time * 1.0);
         }
 
         window.swapBuffers();
@@ -391,6 +387,14 @@ fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.
             .three => {
                 state.spin = !state.spin;
             },
+            .four => {
+                state.projection_type = .Perspective;
+                state.projection = state.camera.get_perspective_projection();
+            },
+            .five => {
+                state.projection_type = .Orthographic;
+                state.projection = state.camera.get_ortho_projection();
+            },
             else => {},
         }
     }
@@ -400,6 +404,35 @@ fn framebuffer_size_handler(window: *glfw.Window, width: i32, height: i32) callc
     _ = window;
     gl.viewport(0, 0, width, height);
     set_view_port(width, height);
+}
+
+fn set_view_port(w: i32, h: i32) void {
+    const width: f32 = @floatFromInt(w);
+    const height: f32 = @floatFromInt(h);
+
+    state.viewport_width = width;
+    state.viewport_height = height;
+    state.scaled_width = width / state.window_scale[0];
+    state.scaled_height = height / state.window_scale[1];
+
+    // const ortho_width = (state.viewport_width / 500);
+    // const ortho_height = (state.viewport_height / 500);
+    const aspect_ratio = (state.scaled_width / state.scaled_height);
+    state.camera.set_aspect(aspect_ratio);
+
+    switch (state.projection_type) {
+        .Perspective => {
+            state.projection = state.camera.get_perspective_projection();
+        },
+        .Orthographic => {
+            state.camera.set_ortho_dimensions(state.scaled_width, state.scaled_height);
+            state.projection = state.camera.get_ortho_projection();
+        },
+    }
+
+    // state.game_projection = Mat4.perspectiveRhGl(math.degreesToRadians(state.game_camera.zoom), aspect_ratio, 0.1, 100.0);
+    // state.floating_projection = Mat4.perspectiveRhGl(math.degreesToRadians(state.floating_camera.zoom), aspect_ratio, 0.1, 100.0);
+    // state.orthographic_projection = Mat4.orthographicRhGl(-ortho_width, ortho_width, -ortho_height, ortho_height, 0.1, 100.0);
 }
 
 fn mouse_hander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
@@ -439,22 +472,4 @@ fn scroll_handler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void
     _ = window;
     _ = xoffset;
     state.camera.process_mouse_scroll(@floatCast(yoffset));
-}
-
-fn set_view_port(w: i32, h: i32) void {
-    const width: f32 = @floatFromInt(w);
-    const height: f32 = @floatFromInt(h);
-
-    state.viewport_width = width;
-    state.viewport_height = height;
-    state.scaled_width = width / state.window_scale[0];
-    state.scaled_height = height / state.window_scale[1];
-
-    // const ortho_width = (state.viewport_width / 500);
-    // const ortho_height = (state.viewport_height / 500);
-    // const aspect_ratio = (state.viewport_width / state.viewport_height);
-    //
-    // state.game_projection = Mat4.perspectiveRhGl(math.degreesToRadians(state.game_camera.zoom), aspect_ratio, 0.1, 100.0);
-    // state.floating_projection = Mat4.perspectiveRhGl(math.degreesToRadians(state.floating_camera.zoom), aspect_ratio, 0.1, 100.0);
-    // state.orthographic_projection = Mat4.orthographicRhGl(-ortho_width, ortho_width, -ortho_height, ortho_height, 0.1, 100.0);
 }
