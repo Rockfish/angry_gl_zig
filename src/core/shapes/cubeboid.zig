@@ -10,6 +10,15 @@ const vec3 = math.vec3;
 const SIZE_OF_U32 = @sizeOf(u32);
 const SIZE_OF_FLOAT = @sizeOf(f32);
 
+pub const CubeboidConfig = struct {
+    width: f32 = 1.0,
+    height: f32 = 1.0,
+    depth: f32 = 1.0,
+    num_tiles_x: f32 = 1.0,
+    num_tiles_y: f32 = 1.0,
+    num_tiles_z: f32 = 1.0,
+};
+
 pub const Cubeboid = struct {
     vao: u32,
     vbo: u32,
@@ -24,42 +33,46 @@ pub const Cubeboid = struct {
         gl.DeleteBuffers(1, &self.vbo);
     }
 
-    pub fn init(width: f32, height: f32, depth: f32) Self {
-        const max = vec3(width / 2.0, height / 2.0, depth / 2.0);
+    pub fn init(config: CubeboidConfig) Self {
+        const max = vec3(config.width / 2.0, config.height / 2.0, config.depth / 2.0);
         const min = max.mulScalar(-1.0);
+
+        const wraps_x: f32 = config.num_tiles_x;
+        const wraps_y: f32 = config.num_tiles_y;
+        const wraps_z: f32 = config.num_tiles_z;
 
         // position, normal, texcoords
         const vertices = [_]f32{
             // Front
-            min.x, min.y, max.z, 0.0,  0.0,  1.0,  0.0, 0.0,
-            max.x, min.y, max.z, 0.0,  0.0,  1.0,  1.0, 0.0,
-            max.x, max.y, max.z, 0.0,  0.0,  1.0,  1.0, 1.0,
-            min.x, max.y, max.z, 0.0,  0.0,  1.0,  0.0, 1.0,
+            min.x, min.y, max.z, 0.0,  0.0,  1.0,  0.0,     0.0,
+            max.x, min.y, max.z, 0.0,  0.0,  1.0,  wraps_x, 0.0,
+            max.x, max.y, max.z, 0.0,  0.0,  1.0,  wraps_x, wraps_y,
+            min.x, max.y, max.z, 0.0,  0.0,  1.0,  0.0,     wraps_y,
             // Back
-            min.x, max.y, min.z, 0.0,  0.0,  -1.0, 1.0, 0.0,
-            max.x, max.y, min.z, 0.0,  0.0,  -1.0, 0.0, 0.0,
-            max.x, min.y, min.z, 0.0,  0.0,  -1.0, 0.0, 1.0,
-            min.x, min.y, min.z, 0.0,  0.0,  -1.0, 1.0, 1.0,
+            min.x, max.y, min.z, 0.0,  0.0,  -1.0, wraps_x, 0.0,
+            max.x, max.y, min.z, 0.0,  0.0,  -1.0, 0.0,     0.0,
+            max.x, min.y, min.z, 0.0,  0.0,  -1.0, 0.0,     wraps_y,
+            min.x, min.y, min.z, 0.0,  0.0,  -1.0, wraps_x, wraps_y,
             // Right
-            max.x, min.y, min.z, 1.0,  0.0,  0.0,  0.0, 0.0,
-            max.x, max.y, min.z, 1.0,  0.0,  0.0,  1.0, 0.0,
-            max.x, max.y, max.z, 1.0,  0.0,  0.0,  1.0, 1.0,
-            max.x, min.y, max.z, 1.0,  0.0,  0.0,  0.0, 1.0,
+            max.x, min.y, min.z, 1.0,  0.0,  0.0,  0.0,     0.0,
+            max.x, max.y, min.z, 1.0,  0.0,  0.0,  wraps_y, 0.0,
+            max.x, max.y, max.z, 1.0,  0.0,  0.0,  wraps_y, wraps_z,
+            max.x, min.y, max.z, 1.0,  0.0,  0.0,  0.0,     wraps_z,
             // Left
-            min.x, min.y, max.z, -1.0, 0.0,  0.0,  1.0, 0.0,
-            min.x, max.y, max.z, -1.0, 0.0,  0.0,  0.0, 0.0,
-            min.x, max.y, min.z, -1.0, 0.0,  0.0,  0.0, 1.0,
-            min.x, min.y, min.z, -1.0, 0.0,  0.0,  1.0, 1.0,
+            min.x, min.y, max.z, -1.0, 0.0,  0.0,  wraps_y, 0.0,
+            min.x, max.y, max.z, -1.0, 0.0,  0.0,  0.0,     0.0,
+            min.x, max.y, min.z, -1.0, 0.0,  0.0,  0.0,     wraps_z,
+            min.x, min.y, min.z, -1.0, 0.0,  0.0,  wraps_y, wraps_z,
             // Top
-            max.x, max.y, min.z, 0.0,  1.0,  0.0,  1.0, 0.0,
-            min.x, max.y, min.z, 0.0,  1.0,  0.0,  0.0, 0.0,
-            min.x, max.y, max.z, 0.0,  1.0,  0.0,  0.0, 1.0,
-            max.x, max.y, max.z, 0.0,  1.0,  0.0,  1.0, 1.0,
+            max.x, max.y, min.z, 0.0,  1.0,  0.0,  wraps_x, 0.0,
+            min.x, max.y, min.z, 0.0,  1.0,  0.0,  0.0,     0.0,
+            min.x, max.y, max.z, 0.0,  1.0,  0.0,  0.0,     wraps_z,
+            max.x, max.y, max.z, 0.0,  1.0,  0.0,  wraps_x, wraps_z,
             // Bottom
-            max.x, min.y, max.z, 0.0,  -1.0, 0.0,  0.0, 0.0,
-            min.x, min.y, max.z, 0.0,  -1.0, 0.0,  1.0, 0.0,
-            min.x, min.y, min.z, 0.0,  -1.0, 0.0,  1.0, 1.0,
-            max.x, min.y, min.z, 0.0,  -1.0, 0.0,  0.0, 1.0,
+            max.x, min.y, max.z, 0.0,  -1.0, 0.0,  0.0,     0.0,
+            min.x, min.y, max.z, 0.0,  -1.0, 0.0,  wraps_x, 0.0,
+            min.x, min.y, min.z, 0.0,  -1.0, 0.0,  wraps_x, wraps_z,
+            max.x, min.y, min.z, 0.0,  -1.0, 0.0,  0.0,     wraps_z,
         };
 
         const indices = [_]u32{

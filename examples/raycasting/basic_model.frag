@@ -15,9 +15,17 @@ uniform vec4 hit_color;
 
 void main()
 {
+    vec4 color = vec4(1.0);
+
     if (has_color == 1) {
-        FragColor = diffuse_color + hit_color;
+        color = diffuse_color + hit_color;
     } else {
-        FragColor = texture(texture_diffuse, TexCoord) + hit_color;
+        color = texture(texture_diffuse, TexCoord) + hit_color;
     }
+
+    if (color.a < 0.1) {
+        discard;
+    }
+
+    FragColor = color;
 }

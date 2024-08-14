@@ -46,6 +46,8 @@ const State = struct {
     viewport_height: f32,
     scaled_width: f32,
     scaled_height: f32,
+    // scr_width: f32 = SCR_WIDTH,
+    // scr_height: f32 = SCR_HEIGHT,
     window_scale: [2]f32,
     camera: *Camera,
     projection: Mat4 = undefined,
@@ -58,8 +60,6 @@ const State = struct {
     first_mouse: bool,
     mouse_x: f32,
     mouse_y: f32,
-    scr_width: f32 = SCR_WIDTH,
-    scr_height: f32 = SCR_HEIGHT,
     key_presses: EnumSet(glfw.Key),
     key_shift: bool = false,
     mouse_right_button: bool = false,
@@ -128,10 +128,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const window_scale = window.getContentScale();
 
-    var viewport_width = SCR_WIDTH * window_scale[0];
-    var viewport_height = SCR_HEIGHT * window_scale[1];
-    var scaled_width = viewport_width / window_scale[0];
-    var scaled_height = viewport_height / window_scale[1];
+    const viewport_width = SCR_WIDTH * window_scale[0];
+    const viewport_height = SCR_HEIGHT * window_scale[1];
+    const scaled_width = viewport_width / window_scale[0];
+    const scaled_height = viewport_height / window_scale[1];
 
     const camera = try Camera.init(
         allocator,
@@ -174,16 +174,23 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     var texture_cache = std.ArrayList(*Texture).init(allocator);
 
-    const cubeboid = Cubeboid.init(1.0, 1.0, 2.0);
-    const plane = Cubeboid.init(20.0, 0.2, 20.0);
+    const cubeboid = Cubeboid.init(.{ .width = 1.0, .height = 1.0, .depth = 2.0 });
+    const plane = Cubeboid.init(.{
+        .width = 20.0,
+        .height = 2.0,
+        .depth = 20.0,
+        .num_tiles_x = 10.0,
+        .num_tiles_y = 1.0,
+        .num_tiles_z = 10.0,
+    });
     const cylinder = try Cylinder.init(allocator, 0.5, 4.0, 10);
 
-    const texture_diffuse = .{
+    var texture_diffuse = TextureConfig{
         .texture_type = .Diffuse,
         .filter = .Linear,
         .flip_v = false,
         .gamma_correction = false,
-        .wrap = .Clamp,
+        .wrap = TextureWrap.Repeat,
     };
 
     const cube_texture = try Texture.new(
@@ -193,9 +200,11 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     );
     defer cube_texture.deinit();
 
+    texture_diffuse.wrap = TextureWrap.Repeat;
     const surface_texture = try Texture.new(
         allocator,
-        "assets/textures/IMGP5487_seamless.jpg",
+        "angrybots_assets/Models/Floor D.png",
+        //"assets/textures/IMGP5487_seamless.jpg",
         texture_diffuse,
     );
     defer surface_texture.deinit();
@@ -208,11 +217,11 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     defer model.deinit();
 
     const cube_transforms = [_]Mat4{
-        Mat4.fromTranslation(&vec3(3.0, 0.6, 0.0)),
-        Mat4.fromTranslation(&vec3(1.5, 0.6, 0.0)),
-        Mat4.fromTranslation(&vec3(0.0, 0.6, 0.0)),
-        Mat4.fromTranslation(&vec3(-1.5, 0.6, 0.0)),
-        Mat4.fromTranslation(&vec3(-3.0, 0.6, 0.0)),
+        Mat4.fromTranslation(&vec3(3.0, 0.5, 0.0)),
+        Mat4.fromTranslation(&vec3(1.5, 0.5, 0.0)),
+        Mat4.fromTranslation(&vec3(0.0, 0.5, 0.0)),
+        Mat4.fromTranslation(&vec3(-1.5, 0.5, 0.0)),
+        Mat4.fromTranslation(&vec3(-3.0, 0.5, 0.0)),
     };
 
     const xz_plane_point = vec3(0.0, 0.0, 0.0);
@@ -225,12 +234,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         state.delta_time = currentFrame - state.last_frame;
         state.last_frame = currentFrame;
 
-        if (viewport_width != state.viewport_width or viewport_height != state.viewport_height) {
-            viewport_width = state.viewport_width;
-            viewport_height = state.viewport_height;
-            scaled_width = state.scaled_width;
-            scaled_height = state.scaled_height;
-        }
+        // if (viewport_width != state.viewport_width or viewport_height != state.viewport_height) {
+        //     viewport_width = state.viewport_width;
+        //     viewport_height = state.viewport_height;
+        //     scaled_width = state.scaled_width;
+        //     scaled_height = state.scaled_height;
+        // }
 
         state.view = switch (state.view_type) {
             .LookAt => camera.get_lookat_view(),
@@ -272,7 +281,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
 
         var model_transform = Mat4.identity();
-        model_transform.translate(&vec3(1.0, 0.2, 5.0));
+        model_transform.translate(&vec3(1.0, 0.0, 5.0));
         model_transform.scale(&vec3(1.5, 1.5, 1.5));
 
         basic_model_shader.set_mat4("model", &model_transform);
@@ -329,7 +338,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         basic_model_shader.set_mat4("model", &cylinder_transform);
         cylinder.render();
 
-        const plane_transform = Mat4.fromTranslation(&vec3(0.0, 0.0, 0.0));
+        const plane_transform = Mat4.fromTranslation(&vec3(0.0, -1.0, 0.0));
         basic_model_shader.set_mat4("model", &plane_transform);
         basic_model_shader.bind_texture(0, "texture_diffuse", surface_texture);
         plane.render();
@@ -425,7 +434,7 @@ fn set_view_port(w: i32, h: i32) void {
             state.projection = state.camera.get_perspective_projection();
         },
         .Orthographic => {
-            state.camera.set_ortho_dimensions(state.scaled_width, state.scaled_height);
+            state.camera.set_ortho_dimensions(state.scaled_width / 100.0, state.scaled_height / 100.0);
             state.projection = state.camera.get_ortho_projection();
         },
     }
@@ -448,8 +457,8 @@ fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callc
     var xpos: f32 = @floatCast(xposIn);
     var ypos: f32 = @floatCast(yposIn);
 
-    xpos = if (xpos < 0) 0 else if (xpos < state.scr_width) xpos else state.scr_width;
-    ypos = if (ypos < 0) 0 else if (ypos < state.scr_height) ypos else state.scr_height;
+    xpos = if (xpos < 0) 0 else if (xpos < state.scaled_width) xpos else state.scaled_width;
+    ypos = if (ypos < 0) 0 else if (ypos < state.scaled_height) ypos else state.scaled_height;
 
     if (state.first_mouse) {
         state.mouse_x = xpos;

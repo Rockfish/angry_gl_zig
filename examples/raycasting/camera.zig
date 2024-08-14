@@ -55,7 +55,7 @@ pub const Camera = struct {
     right: Vec3, // store?
     zoom: f32, // hmm
     fovy: f32,
-    projection: ProjectionType,
+    projection_type: ProjectionType,
     ortho_width: f32,
     ortho_height: f32,
     aspect: f32,
@@ -86,7 +86,7 @@ pub const Camera = struct {
             .fovy = FOV,
             .ortho_width = scr_width / 100.0,
             .ortho_height = scr_height / 100.0,
-            .projection = ProjectionType.Perspective,
+            .projection_type = ProjectionType.Perspective,
             .aspect = scr_width / scr_height,
             .camera_speed = SPEED,
             .target_speed = SPEED,
@@ -112,7 +112,7 @@ pub const Camera = struct {
     }
 
     pub fn set_projection(self: *Self, projection: ProjectionType) void {
-        self.projection = projection;
+        self.projection_type = projection;
     }
 
     fn update_camera_vectors(self: *Self) void {
@@ -215,6 +215,14 @@ pub const Camera = struct {
             },
             .Polar => {
                 switch (direction) {
+                    .Forward => {
+                        const dir = self.target.sub(&self.position).normalize();
+                        self.position = self.position.add(&dir.mulScalar(velocity));
+                    },
+                    .Backward => {
+                        const dir = self.target.sub(&self.position).normalize();
+                        self.position = self.position.sub(&dir.mulScalar(velocity));
+                    },
                     .Right => {
                         const angle = to_rads(velocity);
                         const turn_rotation = Quat.fromAxisAngle(&self.up, angle);
@@ -245,7 +253,6 @@ pub const Camera = struct {
                         const rotated_vec = turn_rotation.rotateVec(&radius_vec);
                         self.position = self.target.add(&rotated_vec);
                     },
-                    else => {},
                 }
             },
         }
