@@ -105,11 +105,11 @@ pub const Vec3 = extern struct {
         return (lhs.x * rhs.x) + (lhs.y * rhs.y) + (lhs.z * rhs.z);
     }
 
-    pub fn cross(a: *const Vec3, rhs: *const Vec3) Vec3 {
+    pub fn cross(a: *const Vec3, b: *const Vec3) Vec3 {
         return Vec3{
-            .x = a.y * rhs.z - a.z * rhs.y,
-            .y = a.z * rhs.x - a.x * rhs.z,
-            .z = a.x * rhs.y - a.y * rhs.x,
+            .x = a.y * b.z - a.z * b.y,
+            .y = a.z * b.x - a.x * b.z,
+            .z = a.x * b.y - a.y * b.x,
         };
     }
 

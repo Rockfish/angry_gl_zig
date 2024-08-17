@@ -89,6 +89,26 @@ pub fn ray_plane_intersection(ray_origin: *const Vec3, ray_direction: *const Vec
     return null;
 }
 
+pub fn calculate_normal(a: Vec3, b: Vec3, c: Vec3) Vec3 {
+    // Calculate vectors AB and AC
+    const ab = Vec3{
+        .x = b.x - a.x,
+        .y = b.y - a.y,
+        .z = b.z - a.z,
+    };
+    const ac = Vec3{
+        .x = c.x - a.x,
+        .y = c.y - a.y,
+        .z = c.z - a.z,
+    };
+
+    // Compute the cross product of AB and AC to get the normal
+    const normal = ab.cross(&ac);
+
+    // Normalize the resulting normal vector
+    return normal.normalize();
+}
+
 test "utils.get_world_ray_from_mouse" {
     const mouse_x = 1117.3203;
     const mouse_y = 323.6797;

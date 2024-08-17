@@ -30,6 +30,7 @@ pub const screen_to_model_glam = utils.screen_to_model_glam;
 pub const ray_plane_intersection = utils.ray_plane_intersection;
 pub const ray_triangle_intersection = ray_.ray_triangle_intersection;
 pub const ray_sphere_intersection = ray_.ray_sphere_intersection;
+pub const calculate_normal = utils.calculate_normal;
 
 // @abs
 pub const inf = std.math.inf;

@@ -21,12 +21,22 @@ pub const NEAR: f32 = 0.01;
 pub const FAR: f32 = 1000.0;
 
 pub const CameraMovement = enum {
+    // planar movement in relation to up, front, right axes at camera position
     Forward,
     Backward,
     Left,
     Right,
     Up,
     Down,
+    // polar movement in relation to the target axes
+    MoveIn,
+    MoveOut,
+    RotateUp,
+    RotateDown,
+    RotateLeft,
+    RotateRight,
+    //RollRight,
+    //RollLeft,
 };
 
 pub const MovementMode = enum {
@@ -169,92 +179,88 @@ pub const Camera = struct {
     // },
     // processes input received from any keyboard-like input system. Accepts input parameter
     // in the form of camera defined ENUM (to abstract it from windowing systems)
-    pub fn process_keyboard(self: *Self, direction: CameraMovement, mode: MovementMode, delta_time: f32) void {
+    pub fn process_keyboard(self: *Self, direction: CameraMovement, delta_time: f32) void {
         const velocity: f32 = self.camera_speed * delta_time;
 
-        switch (mode) {
-            .Planar => {
-                switch (direction) {
-                    .Forward => {
-                        self.position = self.position.add(&self.front.mulScalar(velocity));
-                        if (self.target_pans) {
-                            self.target = self.target.add(&self.front.mulScalar(velocity));
-                        }
-                    },
-                    .Backward => {
-                        self.position = self.position.sub(&self.front.mulScalar(velocity));
-                        if (self.target_pans) {
-                            self.target = self.target.sub(&self.front.mulScalar(velocity));
-                        }
-                    },
-                    .Left => {
-                        self.position = self.position.sub(&self.right.mulScalar(velocity));
-                        if (self.target_pans) {
-                            self.target = self.target.sub(&self.right.mulScalar(velocity));
-                        }
-                    },
-                    .Right => {
-                        self.position = self.position.add(&self.right.mulScalar(velocity));
-                        if (self.target_pans) {
-                            self.target = self.target.add(&self.right.mulScalar(velocity));
-                        }
-                    },
-                    .Up => {
-                        self.position = self.position.add(&self.up.mulScalar(velocity));
-                        if (self.target_pans) {
-                            self.target = self.target.add(&self.up.mulScalar(velocity));
-                        }
-                    },
-                    .Down => {
-                        self.position = self.position.sub(&self.up.mulScalar(velocity));
-                        if (self.target_pans) {
-                            self.target = self.target.sub(&self.up.mulScalar(velocity));
-                        }
-                    },
+        switch (direction) {
+            .Forward => {
+                self.position = self.position.add(&self.front.mulScalar(velocity));
+                if (self.target_pans) {
+                    self.target = self.target.add(&self.front.mulScalar(velocity));
                 }
             },
-            .Polar => {
-                switch (direction) {
-                    .Forward => {
-                        const dir = self.target.sub(&self.position).normalize();
-                        self.position = self.position.add(&dir.mulScalar(velocity));
-                    },
-                    .Backward => {
-                        const dir = self.target.sub(&self.position).normalize();
-                        self.position = self.position.sub(&dir.mulScalar(velocity));
-                    },
-                    .Right => {
-                        const angle = to_rads(velocity);
-                        const turn_rotation = Quat.fromAxisAngle(&self.up, angle);
-                        const radius_vec = self.position.sub(&self.target);
-                        const rotated_vec = turn_rotation.rotateVec(&radius_vec);
-                        self.position = self.target.add(&rotated_vec);
-                        //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
-                    },
-                    .Left => {
-                        const angle = to_rads(velocity);
-                        const turn_rotation = Quat.fromAxisAngle(&self.up, -angle);
-                        const radius_vec = self.position.sub(&self.target);
-                        const rotated_vec = turn_rotation.rotateVec(&radius_vec);
-                        self.position = self.target.add(&rotated_vec);
-                        //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
-                    },
-                    .Up => {
-                        const angle = to_rads(velocity);
-                        const turn_rotation = Quat.fromAxisAngle(&self.right, -angle);
-                        const radius_vec = self.position.sub(&self.target);
-                        const rotated_vec = turn_rotation.rotateVec(&radius_vec);
-                        self.position = self.target.add(&rotated_vec);
-                    },
-                    .Down => {
-                        const angle = to_rads(velocity);
-                        const turn_rotation = Quat.fromAxisAngle(&self.right, angle);
-                        const radius_vec = self.position.sub(&self.target);
-                        const rotated_vec = turn_rotation.rotateVec(&radius_vec);
-                        self.position = self.target.add(&rotated_vec);
-                    },
+            .Backward => {
+                self.position = self.position.sub(&self.front.mulScalar(velocity));
+                if (self.target_pans) {
+                    self.target = self.target.sub(&self.front.mulScalar(velocity));
                 }
             },
+            .Left => {
+                self.position = self.position.sub(&self.right.mulScalar(velocity));
+                if (self.target_pans) {
+                    self.target = self.target.sub(&self.right.mulScalar(velocity));
+                }
+            },
+            .Right => {
+                self.position = self.position.add(&self.right.mulScalar(velocity));
+                if (self.target_pans) {
+                    self.target = self.target.add(&self.right.mulScalar(velocity));
+                }
+            },
+            .Up => {
+                self.position = self.position.add(&self.up.mulScalar(velocity));
+                if (self.target_pans) {
+                    self.target = self.target.add(&self.up.mulScalar(velocity));
+                }
+            },
+            .Down => {
+                self.position = self.position.sub(&self.up.mulScalar(velocity));
+                if (self.target_pans) {
+                    self.target = self.target.sub(&self.up.mulScalar(velocity));
+                }
+            },
+            // TurnRight
+            // TurnLeft
+            .MoveIn => { // MoveIn on the vector to target
+                const dir = self.target.sub(&self.position).normalize();
+                self.position = self.position.add(&dir.mulScalar(velocity));
+            },
+            .MoveOut => { // MoveOut on vector from target
+                const dir = self.target.sub(&self.position).normalize();
+                self.position = self.position.sub(&dir.mulScalar(velocity));
+            },
+            .RotateRight => { // RotateRight along latitude
+                const angle = to_rads(velocity);
+                const turn_rotation = Quat.fromAxisAngle(&self.up, angle);
+                const radius_vec = self.position.sub(&self.target);
+                const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                self.position = self.target.add(&rotated_vec);
+                //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
+            },
+            .RotateLeft => { // RotateLeft along latitude
+                const angle = to_rads(velocity);
+                const turn_rotation = Quat.fromAxisAngle(&self.up, -angle);
+                const radius_vec = self.position.sub(&self.target);
+                const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                self.position = self.target.add(&rotated_vec);
+                //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
+            },
+            .RotateUp => { // RotateUp along longitude
+                const angle = to_rads(velocity);
+                const turn_rotation = Quat.fromAxisAngle(&self.right, -angle);
+                const radius_vec = self.position.sub(&self.target);
+                const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                self.position = self.target.add(&rotated_vec);
+            },
+            .RotateDown => { // RotateDown along longitude
+                const angle = to_rads(velocity);
+                const turn_rotation = Quat.fromAxisAngle(&self.right, angle);
+                const radius_vec = self.position.sub(&self.target);
+                const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                self.position = self.target.add(&rotated_vec);
+            },
+            // .RollRight
+            // .RollLeft
         }
 
         // For FPS: make sure the user stays at the ground level

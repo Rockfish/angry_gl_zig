@@ -84,7 +84,7 @@ pub const Shader = struct {
         gl.shaderSource(frag_shader, 1, &[_][*c]const u8{c_frag_code.ptr}, 0);
         gl.compileShader(frag_shader);
 
-        check_compile_errors(vertex_shader, "VERTEX");
+        check_compile_errors(frag_shader, "FRAGMENT");
 
         var geom_shader: ?c_uint = null;
         if (optional_geom_file) |geom_file_path| {
@@ -100,7 +100,7 @@ pub const Shader = struct {
             gl.shaderSource(geom_shader.?, 1, &[_][*c]const u8{c_geom_code.ptr}, 0);
             gl.compileShader(geom_shader.?);
 
-            check_compile_errors(vertex_shader, "VERTEX");
+            check_compile_errors(geom_shader.?, "GEOM");
         }
 
         const shader_id = gl.createProgram();

@@ -55,7 +55,7 @@ pub const Cylinder = struct {
             sides,
         );
 
-        // // Bottom of cylinder
+        // Bottom of cylinder
         try add_disk_mesh(
             builder,
             vec3(0.0, 0.0, 0.0),
@@ -161,7 +161,7 @@ pub const Cylinder = struct {
                 .y = position.y,
                 .z = position.z,
             },
-            .normal = vec3(0.0, 0.0, 0.0),
+            .normal = vec3(0.0, 1.0, 0.0),
             .texcoord = Vec2{ .x = 0.5, .y = 0.5 },
         });
 
@@ -179,7 +179,7 @@ pub const Cylinder = struct {
                     .y = position.y,
                     .z = position.z + radius * sin,
                 },
-                .normal = vec3(0.0, 0.0, 0.0),
+                .normal = vec3(0.0, 1.0, 0.0),
                 .texcoord = Vec2{ .x = u, .y = v },
             });
         }
@@ -200,7 +200,8 @@ pub const Cylinder = struct {
 
     pub fn add_tube_mesh(builder: *Builder, position: Vec3, height: f32, radius: f32, sides: u32) !void {
         const intial_count: u32 = @intCast(builder.vertices.items.len);
-        // Top ring of vertices. Add 1 to sides to close the loop.
+        //        const initial_indice_count: u32 = @intCast(builder.indices.items.len);
+
         // Set uv's to wrap texture around the tube
         for (0..sides + 1) |i| {
             const angle: f32 = @as(f32, @floatFromInt(i)) * math.tau / @as(f32, @floatFromInt(sides));
@@ -214,7 +215,7 @@ pub const Cylinder = struct {
                     .y = position.y,
                     .z = position.z + radius * sin,
                 },
-                .normal = vec3(0.0, 0.0, 0.0),
+                .normal = vec3(cos, 0.0, sin),
                 .texcoord = Vec2{ .x = u, .y = 1.0 },
             });
         }
@@ -232,21 +233,65 @@ pub const Cylinder = struct {
                     .y = position.y + height,
                     .z = position.z + radius * sin,
                 },
-                .normal = vec3(0.0, 0.0, 0.0),
+                .normal = vec3(cos, 0.0, sin),
                 .texcoord = Vec2{ .x = u, .y = 0.0 },
             });
         }
 
         // Each side is a quad which is two triangles
-        for (intial_count..(intial_count + sides)) |i| {
-            const i_u32: u32 = @intCast(i);
-            try builder.indices.append(i_u32);
-            try builder.indices.append(i_u32 + 1);
-            try builder.indices.append(i_u32 + sides + 1);
+        for (intial_count..(intial_count + sides)) |c| {
+            const i: u32 = @intCast(c);
 
-            try builder.indices.append(i_u32 + 1);
-            try builder.indices.append(i_u32 + sides + 1);
-            try builder.indices.append(i_u32 + sides + 2);
+            try builder.indices.append(i + sides + 1);
+            try builder.indices.append(i);
+            try builder.indices.append(i + 1);
+
+            try builder.indices.append(i + 1);
+            try builder.indices.append(i + sides + 2);
+            try builder.indices.append(i + sides + 1);
         }
+
+        // std.debug.print("num verts: {d}\n", .{builder.vertices.items.len});
+        // std.debug.print("num indices: {d}\n", .{builder.indices.items.len});
+        // std.debug.print("indices: {any}\n", .{builder.indices.items});
+        // const c = builder.indices.items.len / 3;
+        // for (0..c) |n| {
+        //     const i = n * 3;
+        //     std.debug.print("{d}, {d}, {d}\n", .{ builder.indices.items[i], builder.indices.items[i + 1], builder.indices.items[i + 2] });
+        // }
+
+        // const num_faces = (builder.indices.items.len - initial_indice_count) / 3;
+        // // std.debug.print("num indices: {d}  num_faces: {d}\n", .{ builder.indices.items.len, num_faces });
+        //
+        // // calculating the normals manually to learn how to do it.
+        // for (0..num_faces) |i| {
+        //     const f = initial_indice_count + i * 3;
+        //     const v1 = builder.indices.items[f];
+        //     const v2 = builder.indices.items[f + 1];
+        //     const v3 = builder.indices.items[f + 2];
+        //
+        //     // std.debug.print("face: {d}  indice index: {d}\n", .{ i, f });
+        //     // std.debug.print("i: {d}  v1: {any}\n", .{ f, v1 });
+        //     // std.debug.print("i: {d}  v2: {any}\n", .{ f + 1, v2 });
+        //     // std.debug.print("i: {d}  v3: {any}\n", .{ f + 2, v3 });
+        //
+        //     const normal = math.calculate_normal(
+        //         builder.vertices.items[v3].position,
+        //         builder.vertices.items[v2].position,
+        //         builder.vertices.items[v1].position,
+        //     );
+        //     //std.debug.print("normal: {d}, {d}, {d}\n", .{ normal.x, normal.y, normal.z });
+        //     builder.vertices.items[v1].normal.addTo(&normal);
+        //     builder.vertices.items[v2].normal.addTo(&normal);
+        //     builder.vertices.items[v3].normal.addTo(&normal);
+        // }
+        //
+        // std.debug.print("\n", .{});
+        //
+        // for (intial_count..builder.vertices.items.len) |i| {
+        //     builder.vertices.items[i].normal = builder.vertices.items[i].normal.normalize();
+        //     // const normal = builder.vertices.items[i].normal;
+        //     //std.debug.print("normal: {d}, {d}, {d}\n", .{ normal.x, normal.y, normal.z });
+        // }
     }
 };

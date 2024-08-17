@@ -56,7 +56,7 @@ const State = struct {
     view_type: cam.ViewType,
     light_postion: Vec3,
     delta_time: f32,
-    last_frame: f32,
+    total_time: f32,
     first_mouse: bool,
     mouse_x: f32,
     mouse_y: f32,
@@ -156,7 +156,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .view_type = .LookAt,
         .light_postion = vec3(1.2, 1.0, 2.0),
         .delta_time = 0.0,
-        .last_frame = 0.0,
+        .total_time = 0.0,
         .first_mouse = true,
         .mouse_x = scaled_width / 2.0,
         .mouse_y = scaled_height / 2.0,
@@ -183,7 +183,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .num_tiles_y = 1.0,
         .num_tiles_z = 10.0,
     });
-    const cylinder = try Cylinder.init(allocator, 0.5, 4.0, 10);
+    const cylinder = try Cylinder.init(
+        allocator,
+        1.0,
+        4.0,
+        20.0,
+    );
 
     var texture_diffuse = TextureConfig{
         .texture_type = .Diffuse,
@@ -230,9 +235,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // render loop
     // -----------
     while (!window.shouldClose()) {
-        const currentFrame: f32 = @floatCast(glfw.getTime());
-        state.delta_time = currentFrame - state.last_frame;
-        state.last_frame = currentFrame;
+        const current_time: f32 = @floatCast(glfw.getTime());
+        state.delta_time = current_time - state.total_time;
+        state.total_time = current_time;
 
         // if (viewport_width != state.viewport_width or viewport_height != state.viewport_height) {
         //     viewport_width = state.viewport_width;
@@ -277,6 +282,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         basic_model_shader.use_shader();
         basic_model_shader.set_mat4("projection", &state.projection);
         basic_model_shader.set_mat4("view", &state.view);
+        basic_model_shader.set_vec3("ambient_color", &vec3(1.0, 0.6, 0.6));
+        basic_model_shader.set_vec3("light_color", &vec3(0.35, 0.4, 0.5));
+        basic_model_shader.set_vec3("light_dir", &vec3(3.0, 3.0, 3.0));
 
         basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
 
@@ -344,7 +352,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         plane.render();
 
         if (state.spin) {
-            state.camera.process_keyboard(.Right, .Polar, state.delta_time * 1.0);
+            state.camera.process_keyboard(.RotateRight, state.delta_time * 1.0);
         }
 
         window.swapBuffers();
@@ -374,19 +382,55 @@ fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.
 
     state.key_shift = mods.shift;
 
-    const mode = if (mods.alt) cam.MovementMode.Polar else cam.MovementMode.Planar;
+    // const mode = if (mods.alt) cam.MovementMode.Polar else cam.MovementMode.Planar;
 
     var iterator = state.key_presses.iterator();
     while (iterator.next()) |k| {
         switch (k) {
             .escape => window.setShouldClose(true),
             .t => std.debug.print("time: {d}\n", .{state.delta_time}),
-            .w => state.camera.process_keyboard(.Forward, mode, state.delta_time),
-            .s => state.camera.process_keyboard(.Backward, mode, state.delta_time),
-            .a => state.camera.process_keyboard(.Left, mode, state.delta_time),
-            .d => state.camera.process_keyboard(.Right, mode, state.delta_time),
-            .up => state.camera.process_keyboard(.Up, mode, state.delta_time),
-            .down => state.camera.process_keyboard(.Down, mode, state.delta_time),
+            .w => {
+                if (state.key_shift) {
+                    state.camera.process_keyboard(.Forward, state.delta_time);
+                } else {
+                    state.camera.process_keyboard(.MoveIn, state.delta_time);
+                }
+            },
+            .s => {
+                if (state.key_shift) {
+                    state.camera.process_keyboard(.Backward, state.delta_time);
+                } else {
+                    state.camera.process_keyboard(.MoveOut, state.delta_time);
+                }
+            },
+            .a => {
+                if (state.key_shift) {
+                    state.camera.process_keyboard(.Left, state.delta_time);
+                } else {
+                    state.camera.process_keyboard(.RotateLeft, state.delta_time);
+                }
+            },
+            .d => {
+                if (state.key_shift) {
+                    state.camera.process_keyboard(.Right, state.delta_time);
+                } else {
+                    state.camera.process_keyboard(.RotateRight, state.delta_time);
+                }
+            },
+            .up => {
+                if (state.key_shift) {
+                    state.camera.process_keyboard(.Up, state.delta_time);
+                } else {
+                    state.camera.process_keyboard(.RotateUp, state.delta_time);
+                }
+            },
+            .down => {
+                if (state.key_shift) {
+                    state.camera.process_keyboard(.Down, state.delta_time);
+                } else {
+                    state.camera.process_keyboard(.RotateDown, state.delta_time);
+                }
+            },
             .one => {
                 state.view_type = .LookTo;
             },

@@ -228,7 +228,7 @@ pub const ModelBuilder = struct {
         }
 
         const name = aiMesh.mName.data[0..aiMesh.mName.length];
-        std.debug.print("\nmesh name: {s} verts: {d} indices: {d} \n", .{ name, vertices.items.len, indices.items.len });
+        // std.debug.print("\nmesh name: {s} verts: {d} indices: {d} \n", .{ name, vertices.items.len, indices.items.len });
 
         var material = aiScene[0].mMaterials[aiMesh.mMaterialIndex][0];
 
@@ -254,11 +254,10 @@ pub const ModelBuilder = struct {
     }
 
     fn loadMaterialColors(self: *Self, material: *Assimp.aiMaterial) !*ArrayList(*MeshColor) {
-        const material_name = GetMaterialName(material);
-
-        if (material_name) |n| {
-            std.debug.print("material_name: {s}\n", .{n});
-        }
+        // const material_name = GetMaterialName(material);
+        // if (material_name) |n| {
+        //     std.debug.print("material_name: {s}\n", .{n});
+        // }
 
         const color_keys = [_]MaterialKey{
             MATKEY_COLOR_DIFFUSE,
@@ -273,7 +272,7 @@ pub const ModelBuilder = struct {
         for (color_keys) |color_key| {
             const color = GetMaterialColor(material, color_key);
             if (color) |c| {
-                std.debug.print("color {s}: {any}\n", .{ color_key.ai_key, c });
+                // std.debug.print("color {s}: {any}\n", .{ color_key.ai_key, c });
                 const mesh_color = try self.allocator.create(MeshColor);
                 mesh_color.* = .{ .uniform = color_key.uniform, .color = c };
                 try colors.*.append(mesh_color);
