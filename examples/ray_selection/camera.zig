@@ -21,27 +21,27 @@ pub const NEAR: f32 = 0.01;
 pub const FAR: f32 = 1000.0;
 
 pub const CameraMovement = enum {
-    // planar movement in relation to up, front, right axes at camera position
+    // panning movement in relation to up, front, right axes at camera position
     Forward,
     Backward,
     Left,
     Right,
     Up,
     Down,
-    // polar movement in relation to the target axes
-    MoveIn,
-    MoveOut,
+    // rotation of camera position, ie. yaw and pitch
+    RotateRight,
+    RotateLeft,
     RotateUp,
     RotateDown,
-    RotateLeft,
-    RotateRight,
-    //RollRight,
-    //RollLeft,
-};
-
-pub const MovementMode = enum {
-    Planar,
-    Polar,
+    RollRight,
+    RollLeft,
+    // polar movement around the target
+    MoveIn,
+    MoveOut,
+    OrbitUp,
+    OrbitDown,
+    OrbitLeft,
+    OrbitRight,
 };
 
 pub const ViewType = enum {
@@ -101,7 +101,7 @@ pub const Camera = struct {
             .camera_speed = SPEED,
             .target_speed = SPEED,
             .mouse_sensitivity = SENSITIVITY,
-            .target_pans = true,
+            .target_pans = false,
             .allocator = allocator,
         };
         camera.update_camera_vectors();
@@ -219,8 +219,13 @@ pub const Camera = struct {
                     self.target = self.target.sub(&self.up.mulScalar(velocity));
                 }
             },
-            // TurnRight
-            // TurnLeft
+            .RotateRight => {},
+            .RotateLeft => {},
+            .RotateUp => {},
+            .RotateDown => {},
+            .RollRight => {},
+            .RollLeft => {},
+            // These directions are relative to the target
             .MoveIn => { // MoveIn on the vector to target
                 const dir = self.target.sub(&self.position).normalize();
                 self.position = self.position.add(&dir.mulScalar(velocity));
@@ -229,7 +234,7 @@ pub const Camera = struct {
                 const dir = self.target.sub(&self.position).normalize();
                 self.position = self.position.sub(&dir.mulScalar(velocity));
             },
-            .RotateRight => { // RotateRight along latitude
+            .OrbitRight => { // OrbitRight along latitude
                 const angle = to_rads(velocity);
                 const turn_rotation = Quat.fromAxisAngle(&self.up, angle);
                 const radius_vec = self.position.sub(&self.target);
@@ -237,7 +242,7 @@ pub const Camera = struct {
                 self.position = self.target.add(&rotated_vec);
                 //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
             },
-            .RotateLeft => { // RotateLeft along latitude
+            .OrbitLeft => { // OrbitLeft along latitude
                 const angle = to_rads(velocity);
                 const turn_rotation = Quat.fromAxisAngle(&self.up, -angle);
                 const radius_vec = self.position.sub(&self.target);
@@ -245,22 +250,20 @@ pub const Camera = struct {
                 self.position = self.target.add(&rotated_vec);
                 //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
             },
-            .RotateUp => { // RotateUp along longitude
+            .OrbitUp => { // OrbitUp along longitude
                 const angle = to_rads(velocity);
                 const turn_rotation = Quat.fromAxisAngle(&self.right, -angle);
                 const radius_vec = self.position.sub(&self.target);
                 const rotated_vec = turn_rotation.rotateVec(&radius_vec);
                 self.position = self.target.add(&rotated_vec);
             },
-            .RotateDown => { // RotateDown along longitude
+            .OrbitDown => { // OrbitDown along longitude
                 const angle = to_rads(velocity);
                 const turn_rotation = Quat.fromAxisAngle(&self.right, angle);
                 const radius_vec = self.position.sub(&self.target);
                 const rotated_vec = turn_rotation.rotateVec(&radius_vec);
                 self.position = self.target.add(&rotated_vec);
             },
-            // .RollRight
-            // .RollLeft
         }
 
         // For FPS: make sure the user stays at the ground level

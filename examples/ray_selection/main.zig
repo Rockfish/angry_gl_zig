@@ -167,8 +167,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const basic_model_shader = try Shader.new(
         allocator,
-        "examples/raycasting/basic_model.vert",
-        "examples/raycasting/basic_model.frag",
+        "examples/ray_selection/basic_model.vert",
+        "examples/ray_selection/basic_model.frag",
     );
     defer basic_model_shader.deinit();
 
@@ -352,7 +352,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         plane.render();
 
         if (state.spin) {
-            state.camera.process_keyboard(.RotateRight, state.delta_time * 1.0);
+            state.camera.process_keyboard(.OrbitRight, state.delta_time * 1.0);
         }
 
         window.swapBuffers();
@@ -407,28 +407,28 @@ fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.
                 if (state.key_shift) {
                     state.camera.process_keyboard(.Left, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.RotateLeft, state.delta_time);
+                    state.camera.process_keyboard(.OrbitLeft, state.delta_time);
                 }
             },
             .d => {
                 if (state.key_shift) {
                     state.camera.process_keyboard(.Right, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.RotateRight, state.delta_time);
+                    state.camera.process_keyboard(.OrbitRight, state.delta_time);
                 }
             },
             .up => {
                 if (state.key_shift) {
                     state.camera.process_keyboard(.Up, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.RotateUp, state.delta_time);
+                    state.camera.process_keyboard(.OrbitUp, state.delta_time);
                 }
             },
             .down => {
                 if (state.key_shift) {
                     state.camera.process_keyboard(.Down, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.RotateDown, state.delta_time);
+                    state.camera.process_keyboard(.OrbitDown, state.delta_time);
                 }
             },
             .one => {

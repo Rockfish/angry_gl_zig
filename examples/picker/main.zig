@@ -155,7 +155,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     defer model.deinit();
 
     const cube = Cube.init();
-    const cubeboid = Cubeboid.init(1.0, 1.0, 2.0);
+    const cubeboid = Cubeboid.init(.{ .width = 1.0, .height = 1.0, .depth = 2.0 });
     const cylinder = try Cylinder.init(allocator, 0.5, 4.0, 10);
 
     const texture_config = .{
