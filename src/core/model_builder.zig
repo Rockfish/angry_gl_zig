@@ -5,7 +5,7 @@ const ModelVertex = @import("model_mesh.zig").ModelVertex;
 const Model = @import("model.zig").Model;
 const Animator = @import("animator.zig").Animator;
 const assimp = @import("assimp.zig");
-const BoneData = @import("model_animation.zig").BoneData;
+const ModelBone = @import("model_animation.zig").ModelBone;
 const Transform = @import("transform.zig").Transform;
 const String = @import("string.zig").String;
 const Model_Mesh = @import("model_mesh.zig");
@@ -47,7 +47,7 @@ pub const ModelBuilder = struct {
     meshes: *ArrayList(*ModelMesh),
     texture_cache: *ArrayList(*Texture),
     added_textures: ArrayList(AddedTexture),
-    bone_data_map: *StringHashMap(*BoneData),
+    model_bone_map: *StringHashMap(*ModelBone),
     bone_count: i32,
     filepath: [:0]const u8,
     directory: []const u8,
@@ -88,8 +88,8 @@ pub const ModelBuilder = struct {
         const meshes = try allocator.create(ArrayList(*ModelMesh));
         meshes.* = ArrayList(*ModelMesh).init(allocator);
 
-        const bone_data_map = try allocator.create(StringHashMap(*BoneData));
-        bone_data_map.* = StringHashMap(*BoneData).init(allocator);
+        const model_bone_map = try allocator.create(StringHashMap(*ModelBone));
+        model_bone_map.* = StringHashMap(*ModelBone).init(allocator);
 
         const builder = try allocator.create(Self);
         builder.* = ModelBuilder{
@@ -100,7 +100,7 @@ pub const ModelBuilder = struct {
             .added_textures = ArrayList(AddedTexture).init(allocator),
             .meshes = meshes,
             .mesh_count = 0,
-            .bone_data_map = bone_data_map,
+            .model_bone_map = model_bone_map,
             .bone_count = 0,
             .gamma_correction = false,
             .flip_v = false,
@@ -144,7 +144,7 @@ pub const ModelBuilder = struct {
         try self.load_model(aiScene);
         try self.add_textures();
 
-        const animator = try Animator.init(self.allocator, aiScene, self.bone_data_map);
+        const animator = try Animator.init(self.allocator, aiScene, self.model_bone_map);
 
         const model = try self.allocator.create(Model);
         model.* = Model{
@@ -360,21 +360,21 @@ pub const ModelBuilder = struct {
             var bone_id: i32 = undefined;
             const bone_name = bone.*.mName.data[0..bone.*.mName.length];
 
-            const result = self.bone_data_map.get(bone_name);
+            const result = self.model_bone_map.get(bone_name);
 
             if (result != null) {
                 bone_id = result.?.bone_index;
             } else {
-                const bone_data = try self.allocator.create(BoneData);
-                bone_data.* = BoneData{
-                    .name = try String.new(bone_name),
+                const model_bone = try self.allocator.create(ModelBone);
+                model_bone.* = ModelBone{
+                    .bone_name = try String.new(bone_name),
                     .bone_index = self.bone_count,
-                    .offset_transform = Transform.from_matrix(&assimp.mat4_from_aiMatrix(&bone.*.mOffsetMatrix)),
+                    .offset_transform = Transform.from_matrix(&assimp.mat4FromAiMatrix(&bone.*.mOffsetMatrix)),
                     .allocator = self.allocator,
                 };
 
                 const key = try self.allocator.dupe(u8, bone_name);
-                try self.bone_data_map.put(key, bone_data);
+                try self.model_bone_map.put(key, model_bone);
                 bone_id = self.bone_count;
                 self.bone_count += 1;
             }

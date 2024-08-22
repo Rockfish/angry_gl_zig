@@ -49,6 +49,14 @@ pub const Vec3 = extern struct {
         return .{ .x = 0.0, .y = 0.0, .z = 0.0 };
     }
 
+    pub fn zero() Vec3 {
+        return .{ .x = 0.0, .y = 0.0, .z = 0.0 };
+    }
+
+    pub fn one() Vec3 {
+        return .{ .x = 1.0, .y = 1.0, .z = 1.0 };
+    }
+
     pub fn splat(v: f32) Vec3 {
         return .{ .x = v, .y = v, .z = v };
     }

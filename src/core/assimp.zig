@@ -16,7 +16,7 @@ const vec4 = math.vec4;
 const Mat4 = math.Mat4;
 const Quat = math.Quat;
 
-pub fn mat4_from_aiMatrix(aiMat: *const Assimp.aiMatrix4x4) Mat4 {
+pub fn mat4FromAiMatrix(aiMat: *const Assimp.aiMatrix4x4) Mat4 {
     const data: [4][4]f32 = .{
         .{aiMat.a1, aiMat.b1, aiMat.c1, aiMat.d1}, // m00, m01, m02, m03
         .{aiMat.a2, aiMat.b2, aiMat.c2, aiMat.d2}, // m10, m11, m12, m13
@@ -27,11 +27,11 @@ pub fn mat4_from_aiMatrix(aiMat: *const Assimp.aiMatrix4x4) Mat4 {
     return Mat4 { .data = data };
 }
 
-pub fn vec3_from_aiVector3D(vec3d: Assimp.aiVector3D) Vec3 {
+pub fn vec3FromAiVector3D(vec3d: Assimp.aiVector3D) Vec3 {
     return .{.x = vec3d.x, .y = vec3d.y, .z = vec3d.z };
 }
 
-pub fn quat_from_aiQuaternion(aiQuat: Assimp.aiQuaternion) Quat {
+pub fn quatFromAiQuaternion(aiQuat: Assimp.aiQuaternion) Quat {
     return Quat { .data =.{aiQuat.x, aiQuat.y, aiQuat.z, aiQuat.w} };
 }
 

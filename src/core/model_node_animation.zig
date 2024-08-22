@@ -33,8 +33,8 @@ pub const KeyScale = struct {
     time_stamp: f32,
 };
 
-pub const NodeAnimation = struct {
-    name: *String,
+pub const ModelNodeAnimation = struct {
+    node_name: *String,
     positions: *ArrayList(KeyPosition),
     rotations: *ArrayList(KeyRotation),
     scales: *ArrayList(KeyScale),
@@ -42,7 +42,7 @@ pub const NodeAnimation = struct {
 
     const Self = @This();
 
-    pub fn new(allocator: Allocator, name: Assimp.aiString, aiNodeAnim: [*c]Assimp.aiNodeAnim) !*NodeAnimation {
+    pub fn new(allocator: Allocator, name: Assimp.aiString, aiNodeAnim: [*c]Assimp.aiNodeAnim) !*ModelNodeAnimation {
         const name_string = try String.from_aiString(name);
         const positions = try allocator.create(ArrayList(KeyPosition));
         const rotations = try allocator.create(ArrayList(KeyRotation));
@@ -59,7 +59,7 @@ pub const NodeAnimation = struct {
         for (aiNodeAnim.*.mPositionKeys[0..num_positions]) |positionKey| {
             const time_stamp: f32 = @floatCast(positionKey.mTime);
             const key = KeyPosition{
-                .position = assimp.vec3_from_aiVector3D(positionKey.mValue),
+                .position = assimp.vec3FromAiVector3D(positionKey.mValue),
                 .time_stamp = time_stamp,
             };
             try positions.append(key);
@@ -68,7 +68,7 @@ pub const NodeAnimation = struct {
         for (aiNodeAnim.*.mRotationKeys[0..num_rotations]) |rotationKey| {
             const time_stamp: f32 = @floatCast(rotationKey.mTime);
             const key = KeyRotation{
-                .orientation = assimp.quat_from_aiQuaternion(rotationKey.mValue),
+                .orientation = assimp.quatFromAiQuaternion(rotationKey.mValue),
                 .time_stamp = time_stamp,
             };
             try rotations.append(key);
@@ -77,15 +77,15 @@ pub const NodeAnimation = struct {
         for (aiNodeAnim.*.mScalingKeys[0..num_scales]) |scaleKey| {
             const time_stamp: f32 = @floatCast(scaleKey.mTime);
             const key = KeyScale{
-                .scale = assimp.vec3_from_aiVector3D(scaleKey.mValue),
+                .scale = assimp.vec3FromAiVector3D(scaleKey.mValue),
                 .time_stamp = time_stamp,
             };
             try scales.append(key);
         }
 
-        const node_animation = try allocator.create(NodeAnimation);
-        node_animation.* = NodeAnimation{
-            .name = name_string,
+        const node_animation = try allocator.create(ModelNodeAnimation);
+        node_animation.* = ModelNodeAnimation{
+            .node_name = name_string,
             .positions = positions,
             .rotations = rotations,
             .scales = scales,
@@ -99,7 +99,7 @@ pub const NodeAnimation = struct {
         self.positions.deinit();
         self.rotations.deinit();
         self.scales.deinit();
-        self.name.deinit();
+        self.node_name.deinit();
         self.allocator.destroy(self.positions);
         self.allocator.destroy(self.rotations);
         self.allocator.destroy(self.scales);
@@ -134,7 +134,11 @@ pub const NodeAnimation = struct {
         );
 
         // final_position
-        return self.positions.items[p0_index].position.lerp(&self.positions.items[p1_index].position, scale_factor);
+        return Vec3.lerp(
+            &self.positions.items[p0_index].position,
+            &self.positions.items[p1_index].position,
+            scale_factor,
+        );
     }
 
     fn interpolate_rotation(self: *Self, animation_time: f32) Quat {
@@ -154,7 +158,11 @@ pub const NodeAnimation = struct {
         );
 
         // final_rotation
-        const final_rotation = Quat.slerp(&self.rotations.items[p0_index].orientation, &self.rotations.items[p1_index].orientation, scale_factor);
+        const final_rotation = Quat.slerp(
+            &self.rotations.items[p0_index].orientation,
+            &self.rotations.items[p1_index].orientation,
+            scale_factor,
+        );
         return final_rotation;
     }
 
@@ -166,10 +174,18 @@ pub const NodeAnimation = struct {
         const p0_index = self.get_scale_index(animation_time);
         const p1_index = p0_index + 1;
 
-        const scale_factor = self.get_scale_factor(self.scales.items[p0_index].time_stamp, self.scales.items[p1_index].time_stamp, animation_time);
+        const scale_factor = self.get_scale_factor(
+            self.scales.items[p0_index].time_stamp,
+            self.scales.items[p1_index].time_stamp,
+            animation_time,
+        );
 
         // final_scale
-        return self.scales.items[p0_index].scale.lerp(&self.scales.items[p1_index].scale, scale_factor);
+        return Vec3.lerp(
+            &self.scales.items[p0_index].scale,
+            &self.scales.items[p1_index].scale,
+            scale_factor,
+        );
     }
 
     fn get_position_index(self: *Self, animation_time: f32) usize {
@@ -199,10 +215,10 @@ pub const NodeAnimation = struct {
         @panic("animation time out of bounds");
     }
 
-    fn get_scale_factor(self: *Self, last_timestamp: f32, next_timestamp: f32, animation_time: f32) f32 {
+    fn get_scale_factor(self: *Self, previous_timestamp: f32, next_timestamp: f32, current_time: f32) f32 {
         _ = self;
-        const mid_way_length = animation_time - last_timestamp;
-        const frames_diff = next_timestamp - last_timestamp;
+        const mid_way_length = current_time - previous_timestamp;
+        const frames_diff = next_timestamp - previous_timestamp;
         return mid_way_length / frames_diff;
     }
 };

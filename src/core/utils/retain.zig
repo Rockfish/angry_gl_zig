@@ -3,7 +3,7 @@ const debug = std.debug;
 const assert = debug.assert;
 const testing = std.testing;
 
-pub fn retain(comptime TA: type, comptime TS: type, list: *std.ArrayList(?TA), tester: TS) !void {
+pub fn retain(comptime TA: type, comptime TS: type, list: *std.ArrayList(?TA), filter: TS) !void {
     const length = list.items.len;
     var i: usize = 0;
     var f: usize = 0;
@@ -12,13 +12,13 @@ pub fn retain(comptime TA: type, comptime TS: type, list: *std.ArrayList(?TA), t
 
     while (true) {
         // test if false
-        if (i < length and (list.items[i] == null or !tester.predicate(list.items[i].?))) {
+        if (i < length and (list.items[i] == null or !filter.predicate(list.items[i].?))) {
             if (flag) {
                 f = i;
                 flag = false;
             }
 
-            while (i < length and (list.items[i] == null or !tester.predicate(list.items[i].?))) {
+            while (i < length and (list.items[i] == null or !filter.predicate(list.items[i].?))) {
                 i += 1;
             }
 

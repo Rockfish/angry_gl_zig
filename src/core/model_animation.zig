@@ -2,7 +2,7 @@ const std = @import("std");
 const math = @import("math");
 const Assimp = @import("assimp.zig").Assimp;
 const Transform = @import("transform.zig").Transform;
-const NodeAnimation = @import("node_animation.zig").NodeAnimation;
+const ModelNodeAnimation = @import("model_node_animation.zig").ModelNodeAnimation;
 const String = @import("string.zig").String;
 
 const Allocator = std.mem.Allocator;
@@ -10,10 +10,10 @@ const ArrayList = std.ArrayList;
 
 const Mat4 = math.Mat4;
 
-pub const NodeData = struct {
-    name: *String,
+pub const ModelNode = struct {
+    node_name: *String,
     transform: Transform,
-    childern: *ArrayList(*NodeData),
+    childern: *ArrayList(*ModelNode),
     meshes: *ArrayList(u32),
     allocator: Allocator,
 
@@ -24,30 +24,30 @@ pub const NodeData = struct {
             child.deinit();
         }
         self.childern.deinit();
-        self.name.deinit();
+        self.node_name.deinit();
         self.meshes.deinit();
         self.allocator.destroy(self.childern);
         self.allocator.destroy(self.meshes);
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, name: *String) !*NodeData {
-        const node_data = try allocator.create(NodeData);
-        node_data.* = NodeData {
-            .name = name,
+    pub fn init(allocator: Allocator, name: *String) !*ModelNode {
+        const node = try allocator.create(ModelNode);
+        node.* = ModelNode {
+            .node_name = name,
             .transform = Transform.default(),
-            .childern = try allocator.create(ArrayList(*NodeData)),
+            .childern = try allocator.create(ArrayList(*ModelNode)),
             .meshes = try allocator.create(ArrayList(u32)),
             .allocator = allocator,
         };
-        node_data.childern.* = ArrayList(*NodeData).init(allocator);
-        node_data.meshes.* = ArrayList(u32).init(allocator);
-        return node_data;
+        node.childern.* = ArrayList(*ModelNode).init(allocator);
+        node.meshes.* = ArrayList(u32).init(allocator);
+        return node;
     }
 };
 
-pub const BoneData = struct {
-    name: *String,
+pub const ModelBone = struct {
+    bone_name: *String,
     bone_index: i32,
     offset_transform: Transform,
     allocator: Allocator,
@@ -55,27 +55,27 @@ pub const BoneData = struct {
     const Self = @This();
 
     pub fn deinit(self: *Self) void {
-        self.name.deinit();
+        self.bone_name.deinit();
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, name: []const u8, id: i32, offset: Mat4) !*BoneData {
-        const bone_data = try allocator.create(BoneData);
-        bone_data.* = BoneData{
-            .name = String.new(name),
+    pub fn init(allocator: Allocator, name: []const u8, id: i32, offset: Mat4) !*ModelBone {
+        const bone = try allocator.create(ModelBone);
+        bone.* = ModelBone {
+            .bone_name = String.new(name),
             .bone_index = id,
             .offset_transform = Transform.from_matrix(offset),
             .allocator = allocator,
         };
 
-        return bone_data;
+        return bone;
     }
 };
 
 pub const ModelAnimation = struct {
     duration: f32,
     ticks_per_second: f32,
-    node_animations: *ArrayList(*NodeAnimation),
+    node_animations: *ArrayList(*ModelNodeAnimation),
     allocator: Allocator,
 
     const Self = @This();
@@ -90,8 +90,8 @@ pub const ModelAnimation = struct {
     }
 
     pub fn init(allocator: Allocator, aiScene: [*c]const Assimp.aiScene) !*Self {
-        const node_animations = try allocator.create(ArrayList(*NodeAnimation));
-        node_animations.* = ArrayList(*NodeAnimation).init(allocator);
+        const node_animations = try allocator.create(ArrayList(*ModelNodeAnimation));
+        node_animations.* = ArrayList(*ModelNodeAnimation).init(allocator);
 
         const model_animation = try allocator.create(ModelAnimation);
         model_animation.* = .{
@@ -114,13 +114,9 @@ pub const ModelAnimation = struct {
         const num_channels = animation.*.mNumChannels;
 
         for (animation.*.mChannels[0..num_channels]) |channel| {
-            const node_animation = try NodeAnimation.new(allocator, channel.*.mNodeName, channel);
+            const node_animation = try ModelNodeAnimation.new(allocator, channel.*.mNodeName, channel);
             try model_animation.node_animations.append(node_animation);
         }
-
-        // std.debug.print("NodeAnimation[0] position[0] = {any}\n", .{model_animation.node_animations.items[0].positions.items[0]});
-        // std.debug.print("NodeAnimation[0] rotations[0] = {any}\n", .{model_animation.node_animations.items[0].rotations.items[0]});
-        // std.debug.print("NodeAnimation[0] scales[0] = {any}\n", .{model_animation.node_animations.items[0].scales.items[0]});
 
         return model_animation;
     }
