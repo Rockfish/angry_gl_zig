@@ -32,6 +32,10 @@ pub const Transform = struct {
         return from_matrix(&Mat4.identity());
     }
 
+    pub fn init() Transform {
+        return from_matrix(&Mat4.identity());
+    }
+
     pub fn mul_transform_weighted(self: *const Self, transform: Transform, weight: f32) Self {
         const translation = self.translation.lerp( &transform.translation, weight);
         const rotation = self.rotation.slerp(&transform.rotation, weight);

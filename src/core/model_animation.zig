@@ -73,6 +73,7 @@ pub const ModelBone = struct {
 };
 
 pub const ModelAnimation = struct {
+    animation_name: *String,
     duration: f32,
     ticks_per_second: f32,
     node_animations: *ArrayList(*ModelNodeAnimation),
@@ -81,6 +82,7 @@ pub const ModelAnimation = struct {
     const Self = @This();
 
     pub fn deinit(self: *Self) void {
+        self.animation_name.deinit();
         for (self.node_animations.items) |node_animation| {
             node_animation.deinit();
         }
@@ -95,6 +97,7 @@ pub const ModelAnimation = struct {
 
         const model_animation = try allocator.create(ModelAnimation);
         model_animation.* = .{
+            .animation_name = try String.new(""),
             .duration = 0.0,
             .ticks_per_second = 0.0,
             .node_animations = node_animations,
@@ -108,6 +111,7 @@ pub const ModelAnimation = struct {
 
         // only handling the first animation
         const animation = aiScene.*.mAnimations[0..num_animations][0];
+        model_animation.*.animation_name = try String.from_aiString(animation.*.mName);
         model_animation.*.duration = @as(f32, @floatCast(animation.*.mDuration));
         model_animation.*.ticks_per_second = @as(f32, @floatCast(animation.*.mTicksPerSecond));
 

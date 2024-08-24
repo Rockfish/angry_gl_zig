@@ -98,7 +98,8 @@ pub fn build(b: *std.Build) void {
         .{ .name = "gui_settings", .exe_name = "gui_example", .source = "examples/gui_settings/gui_settings.zig" },
         .{ .name = "skybox", .exe_name = "skybox_example", .source = "examples/skybox/main.zig" },
         .{ .name = "picker", .exe_name = "picker_example", .source = "examples/picker/main.zig" },
-        .{ .name = "ray_selection", .exe_name = "ray_selection_example", .source = "examples/ray_selection//main.zig" },
+        .{ .name = "ray_selection", .exe_name = "ray_selection_example", .source = "examples/ray_selection/main.zig" },
+        .{ .name = "scene_tree", .exe_name = "scene_tree_example", .source = "examples/scene_tree/main.zig" },
     }) |app| {
         const exe = b.addExecutable(.{
             .name = app.exe_name,

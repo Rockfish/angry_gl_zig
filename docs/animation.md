@@ -30,7 +30,7 @@
 ```
 ### ModelNode
  - ModelNode is the object that is used to build the parent / child relationship of the nodes and contains each
-   node's transform and the mesh it applies to.
+   node's transform and the mesh, if any, it applies to. The child's transform is relative to its parent.
 ```
   ModelNode = struct {
       node_name: *String,
@@ -61,9 +61,11 @@
   };
 ```
 ### ModelAnimation
- - ModelAnimation holds the model's list of ModelNodeAnimation data.
+ - ModelAnimation holds the model's list of node animation data. There can be zero or
+   more model animations per model. Currently only supporting one animation per model.
 ```
   ModelAnimation = struct {
+      animation_name: *String,
       duration: f32,
       ticks_per_second: f32,
       node_animations: *ArrayList(*ModelNodeAnimation),
@@ -86,6 +88,17 @@
       global_inverse_transform: Mat4,
       final_bone_matrices: [MAX_BONES]Mat4,
       final_node_matrices: [MAX_NODES]Mat4,
+  };
+```
+### Model
+ - The Model object connects the model's mesh with the model's animation and provides an interface for 
+   animating and rendering the model
+```
+  Model = struct {
+      allocator: Allocator,
+      name: []const u8,
+      meshes: *ArrayList(*ModelMesh),
+      animator: *Animator,
   };
 ```
 
