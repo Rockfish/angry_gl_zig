@@ -118,12 +118,41 @@ pub fn main() !void {
     try run(allocator, window);
 }
 
-pub const CubeboidNode = struct {
-    cubeboid: *Cubeboid,
+pub const BasicNode = struct {
+    const Self = @This();
 
-    pub fn init(cubeboid: *Cubeboid) CubeboidNode {
+    pub fn init() Self {
         return .{
-            .cubeboid = cubeboid,
+        };
+    }
+
+    pub fn hello(ptr: *anyopaque) void {
+        const self: *Self = @ptrCast(@alignCast(ptr));
+        std.debug.print("BasicNode. self: {any}\n", .{self});
+    }
+};
+
+
+pub const ShapeNode = struct {
+    ptr: *anyopaque,
+    renderfn: *const fn(ptr: *anyopaque) void,
+
+    const Self = @This();
+
+    pub fn init(ptr: anytype) Self {
+        const T = @TypeOf(ptr);
+        const ptr_info = @typeInfo(T);
+
+        const gen = struct {
+            pub fn render(pointer: *anyopaque) void {
+                const self: T = @ptrCast(@alignCast(pointer));
+                return ptr_info.Pointer.child.render(self);
+            }
+        };
+
+        return .{
+            .ptr = ptr,
+            .renderfn = gen.render,
         };
     }
 
@@ -132,13 +161,52 @@ pub const CubeboidNode = struct {
         _ = st;
     }
 
-    pub fn render(ptr: *anyopaque, st: *State, transform: Transform) anyerror!void {
-        _ = st;
-        _ = transform;
-        const self: *Cubeboid = @ptrCast(@alignCast(ptr));
-        self.render();
+    pub fn render(ptr: *anyopaque, shader: *Shader) void {
+        _ = shader; 
+        const self: *Self = @ptrCast(@alignCast(ptr));
+        self.renderfn(self.ptr);
+    }
+
+    pub fn hello(ptr: *anyopaque) void {
+        const self: *Self = @ptrCast(@alignCast(ptr));
+        std.debug.print("hello from ShapeNode. self: {any}\n", .{self});
     }
 };
+
+pub const SceneModelNode = struct {
+    ptr: *anyopaque,
+    renderfn: *const fn(ptr: *anyopaque, shader: *Shader) void,
+
+    const Self = @This();
+
+    pub fn init(ptr: anytype) Self {
+        const T = @TypeOf(ptr);
+        const ptr_info = @typeInfo(T);
+
+        const gen = struct {
+            pub fn render(pointer: *anyopaque, shader: *Shader) void {
+                const self: T = @ptrCast(@alignCast(pointer));
+                return ptr_info.Pointer.child.render(self, shader);
+            }
+        };
+
+        return .{
+            .ptr = ptr,
+            .renderfn = gen.render,
+        };
+    }
+
+    pub fn update(ptr: *anyopaque, st: *State) anyerror!void {
+        _ = ptr;
+        _ = st;
+    }
+
+    pub fn render(ptr: *anyopaque, shader: *Shader) void {
+        const self: *Self = @ptrCast(@alignCast(ptr));
+        self.renderfn(self.ptr, shader);
+    }
+};
+
 
 pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     gl.enable(gl.DEPTH_TEST);
@@ -202,7 +270,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .num_tiles_z = 10.0,
     });
 
-    const cylinder = try Cylinder.init(
+    var cylinder = try Cylinder.init(
         allocator,
         1.0,
         4.0,
@@ -235,15 +303,43 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const model_path = "/Users/john/Dev/Assets/spacekit_2/Models/OBJ format/alien.obj";
     var builder = try ModelBuilder.init(allocator, &texture_cache, "alien", model_path);
-    //try builder.addTexture("Group", texture_diffuse, "jeep_rood.jpg");
     var model = try builder.build();
     builder.deinit();
     defer model.deinit();
 
-    var cubeboidNode = CubeboidNode.init(&cubeboid);
-    const node = try Node.init(allocator, CubeboidNode, "cubeboid", &cubeboidNode);
 
-    std.debug.print("node_types: {any}\n", .{node});
+    var basic = BasicNode.init();
+    var cubeShape = ShapeNode.init(&cubeboid);
+    var cylinderShape = ShapeNode.init(&cylinder);
+    var scene_model = SceneModelNode.init(model);
+
+    const root_node = try Node.init(allocator, "root_node", &basic, &state);
+
+    const node_model = try Node.init(allocator, "node_model", &scene_model, &state);
+    defer node_model.deinit();
+ 
+    const node_cylinder = try Node.init(allocator, "shape_cylinder", &cylinderShape, &state);
+    defer node_cylinder.deinit();
+
+    root_node.addChild(node_model);
+    root_node.addChild(node_cylinder);
+
+    const cube_positions = [_]Vec3{
+        vec3(3.0, 0.5, 0.0),
+        vec3(1.5, 0.5, 0.0),
+        vec3(0.0, 0.5, 0.0),
+        vec3(-1.5, 0.5, 0.0),
+        vec3(-3.0, 0.5, 0.0),
+    };
+
+    for (cube_positions) |position| {
+        const cube = try Node.init(allocator, "shape_cubeboid", &cubeShape, &state);
+        cube.transform.translation = position; // .add(&vec3(0.0, 1.0, 0.0));
+        root_node.addChild(cube);
+    }
+
+    const node_cube = try Node.init(allocator, "shape_cubeboid", &cubeShape, &state);
+    defer node_cube.deinit();
 
     const cube_transforms = [_]Mat4{
         Mat4.fromTranslation(&vec3(3.0, 0.5, 0.0)),
@@ -252,6 +348,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         Mat4.fromTranslation(&vec3(-1.5, 0.5, 0.0)),
         Mat4.fromTranslation(&vec3(-3.0, 0.5, 0.0)),
     };
+
 
     const xz_plane_point = vec3(0.0, 0.0, 0.0);
     const xz_plane_normal = vec3(0.0, 1.0, 0.0);
@@ -309,7 +406,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         basic_model_shader.set_vec3("ambient_color", &vec3(1.0, 0.6, 0.6));
         basic_model_shader.set_vec3("light_color", &vec3(0.35, 0.4, 0.5));
         basic_model_shader.set_vec3("light_dir", &vec3(3.0, 3.0, 3.0));
-
         basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
 
         var model_transform = Mat4.identity();
@@ -317,13 +413,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         model_transform.scale(&vec3(1.5, 1.5, 1.5));
 
         basic_model_shader.set_mat4("model", &model_transform);
-        model.render(basic_model_shader);
-
-        // var cube_transform2 = Mat4.identity();
-        // cube_transform2.translate(&vec3(2.0, 1.0, 0.0));
-        //
-        // var cubeboid_transform = Mat4.identity();
-        // cubeboid_transform.translate(&vec3(-2.0, 1.0, 0.0));
+        node_model.render(basic_model_shader);
+        node_model.hello();
 
         const Picked = struct {
             id: ?u32,
@@ -352,13 +443,16 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             }
         }
 
-        for (cube_transforms, 0..) |t, i| {
-            basic_model_shader.set_mat4("model", &t);
+        for (cube_positions, 0..) |t, i| {
             if (picked.id != null and picked.id == @as(u32, @intCast(i))) {
                 basic_model_shader.set_vec4("hit_color", &vec4(1.0, 0.0, 0.0, 0.0));
             }
-            // cubeboid.render();
-            node.render();
+
+            //basic_model_shader.set_mat4("model", &t);
+            node_cube.transform.translation = t;
+            node_cube.updateTransform(null);
+            node_cube.render(basic_model_shader);
+
             basic_model_shader.set_vec4("hit_color", &vec4(0.0, 0.0, 0.0, 0.0));
         }
 
@@ -366,10 +460,17 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             state.selected_position = state.world_point.?;
         }
 
-        const cylinder_transform = Mat4.fromTranslation(&state.selected_position);
+        // const cylinder_transform = Mat4.fromTranslation(&state.selected_position);
+        // basic_model_shader.set_mat4("model", &cylinder_transform);
 
-        basic_model_shader.set_mat4("model", &cylinder_transform);
-        cylinder.render();
+        // node_cylinder.transform.translation = state.selected_position;
+        // var transform = Transform.init();
+        // transform.translation = vec3(0.0, 2.0, 0.0);
+        // node_cylinder.updateTransform(&transform);
+
+        root_node.transform.translation = state.selected_position;
+        root_node.updateTransform(null);
+        root_node.render(basic_model_shader);
 
         const plane_transform = Mat4.fromTranslation(&vec3(0.0, -1.0, 0.0));
         basic_model_shader.set_mat4("model", &plane_transform);
