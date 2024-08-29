@@ -4,7 +4,7 @@ const zopengl = @import("zopengl");
 const gl = @import("zopengl").bindings;
 const core = @import("core");
 const math = @import("math");
-const nodes_ = @import("interface_nodes.zig");
+const nodes_ = @import("nodes.zig");
 
 const Cubeboid = core.shapes.Cubeboid;
 const Cylinder = core.shapes.Cylinder;
@@ -136,10 +136,11 @@ pub const BasicNode = struct {
 pub const ShapeNode = struct {
     ptr: *anyopaque,
     renderfn: *const fn(ptr: *anyopaque) void,
+    name: []const u8,
 
     const Self = @This();
 
-    pub fn init(ptr: anytype) Self {
+    pub fn init(ptr: anytype, name: []const u8) Self {
         const T = @TypeOf(ptr);
         const ptr_info = @typeInfo(T);
 
@@ -153,6 +154,7 @@ pub const ShapeNode = struct {
         return .{
             .ptr = ptr,
             .renderfn = gen.render,
+            .name = name,
         };
     }
 
@@ -167,7 +169,11 @@ pub const ShapeNode = struct {
         self.renderfn(self.ptr);
     }
 
-    pub fn hello(ptr: *anyopaque) void {
+    pub fn hello(self: *Self) void {
+        std.debug.print("hello from self: {s}\n", .{self.name});
+    }
+
+    pub fn hellox(ptr: *anyopaque) void {
         const self: *Self = @ptrCast(@alignCast(ptr));
         std.debug.print("hello from ShapeNode. self: {any}\n", .{self});
     }
@@ -207,6 +213,14 @@ pub const SceneModelNode = struct {
     }
 };
 
+// updatefn
+pub fn updateSpin(node: *Node, st: *State) void {
+    const up = vec3(0.0, 1.0, 0.0); 
+    const velocity: f32 = 5.0 * st.delta_time;
+    const angle = math.degreesToRadians(velocity);
+    const turn_rotation = Quat.fromAxisAngle(&up, angle);
+    node.transform.rotation = node.transform.rotation.mulQuat(&turn_rotation);
+}
 
 pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     gl.enable(gl.DEPTH_TEST);
@@ -252,8 +266,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const basic_model_shader = try Shader.new(
         allocator,
-        "examples/ray_selection/basic_model.vert",
-        "examples/ray_selection/basic_model.frag",
+        "examples/scene_tree/basic_model.vert",
+        "examples/scene_tree/basic_model.frag",
     );
     defer basic_model_shader.deinit();
 
@@ -309,10 +323,18 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
 
     var basic = BasicNode.init();
-    var cubeShape = ShapeNode.init(&cubeboid);
-    var cylinderShape = ShapeNode.init(&cylinder);
+    var cubeShape = ShapeNode.init(&cubeboid, "cubeShape");
+    var cylinderShape = ShapeNode.init(&cylinder, "cylinderShape");
     var scene_model = SceneModelNode.init(model);
 
+
+    const node_test = nodes_.Node2.init2(&cubeShape);
+    std.debug.print("node_test: {any}\n", .{node_test});
+    // this works since we're passing an actual ShapeNode object pointer
+    node_test.hellofn(&cubeShape);
+    // This fails because there is no valid ShapeNode object pointer in node_test
+    // node_test.hello();
+ 
     const root_node = try Node.init(allocator, "root_node", &basic, &state);
 
     const node_model = try Node.init(allocator, "node_model", &scene_model, &state);
@@ -338,8 +360,17 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         root_node.addChild(cube);
     }
 
+    const node_cube_spin = try Node.init(allocator, "shape_cubeboid", &cubeShape, &state);
+    defer node_cube_spin.deinit();
+    node_cube_spin.transform.translation = vec3(0.0, 4.0, 0.0);
+
+    node_cylinder.addChild(node_cube_spin);
+
     const node_cube = try Node.init(allocator, "shape_cubeboid", &cubeShape, &state);
     defer node_cube.deinit();
+
+    node_cube.hello();
+    node_model.hello();
 
     const cube_transforms = [_]Mat4{
         Mat4.fromTranslation(&vec3(3.0, 0.5, 0.0)),
@@ -348,7 +379,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         Mat4.fromTranslation(&vec3(-1.5, 0.5, 0.0)),
         Mat4.fromTranslation(&vec3(-3.0, 0.5, 0.0)),
     };
-
 
     const xz_plane_point = vec3(0.0, 0.0, 0.0);
     const xz_plane_normal = vec3(0.0, 1.0, 0.0);
@@ -399,13 +429,23 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // if (state.world_point) |point| {
         //     std.debug.print("world_point: {d}, {d}, {d}\n", .{ point.x, point.y, point.z });
         // }
+        // const near_plane: f32 = 1.0;
+        // const far_plane: f32 = 50.0;
+        // const ortho_size: f32 = 10.0;
+        //
+        // const light_projection = Mat4.orthographicRhGl(-ortho_size, ortho_size, -ortho_size, ortho_size, near_plane, far_plane);
+        // const light_view = Mat4.lookAtRhGl(&vec3(3.0, 3.0, -3.0), &vec3(0.0, 0.0, 0.0), &vec3(0.0, 1.0, 0.0));
+        // const light_space_matrix = light_projection.mulMat4(&light_view);
+        // basic_model_shader.set_mat4("light_space_matrix", &light_space_matrix);
 
         basic_model_shader.use_shader();
         basic_model_shader.set_mat4("projection", &state.projection);
         basic_model_shader.set_mat4("view", &state.view);
+
         basic_model_shader.set_vec3("ambient_color", &vec3(1.0, 0.6, 0.6));
         basic_model_shader.set_vec3("light_color", &vec3(0.35, 0.4, 0.5));
         basic_model_shader.set_vec3("light_dir", &vec3(3.0, 3.0, 3.0));
+
         basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
 
         var model_transform = Mat4.identity();
@@ -414,7 +454,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         basic_model_shader.set_mat4("model", &model_transform);
         node_model.render(basic_model_shader);
-        node_model.hello();
 
         const Picked = struct {
             id: ?u32,
@@ -459,6 +498,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         if (state.mouse_left_button and state.world_point != null) {
             state.selected_position = state.world_point.?;
         }
+
+        updateSpin(node_cylinder, &state);
+        //basic_model_shader.set_mat4("modelRot", &node_cylinder.transform.get_matrix());
 
         // const cylinder_transform = Mat4.fromTranslation(&state.selected_position);
         // basic_model_shader.set_mat4("model", &cylinder_transform);

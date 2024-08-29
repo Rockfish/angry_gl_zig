@@ -14,6 +14,42 @@ const vec4 = math.vec4;
 const Mat4 = math.Mat4;
 const Quat = math.Quat;
 
+
+pub const Node2 = struct {
+    ptr: *anyopaque,
+    hellofn: *const fn(ptr: *anyopaque) void,
+
+    pub fn init2(node_ptr: anytype) Node2 { 
+        const TN = @TypeOf(node_ptr);
+        const node_ptr_info = @typeInfo(TN);
+
+        const gen = struct {
+
+            pub fn hello(pointer: *anyopaque) void {
+                if (std.meta.hasMethod(TN, "hello")) {
+                    const self: TN = @ptrCast(@alignCast(pointer));
+                    return switch (@typeInfo(TN)) {
+                        .Pointer => |ptr| ptr.child.hello(self),
+                        .Struct, .Union, .Enum => TN.hello(self),
+                        else => unreachable,
+                    };
+                } else {
+                    std.log.warn("Function 'hello' is not implemented by type: {any}", .{node_ptr_info.Pointer.child});
+                }
+            }
+        };
+
+        return Node2 {
+            .ptr = node_ptr,
+            .hellofn = gen.hello,
+        };
+    }
+
+    pub fn hello(self: *Node2) void {
+        self.hellofn(self.ptr);
+    }
+};
+
 pub const Node = struct {
     allocator: Allocator,
     name: []const u8,
@@ -22,12 +58,19 @@ pub const Node = struct {
     children: std.ArrayList(*Node),
     transform: Transform,
     global_transform: Transform,
+    impl: Interface,
     // interface
-    updatefn: *const fn(ptr: *anyopaque, state: *anyopaque) anyerror!void,
-    renderfn: *const fn(ptr: *anyopaque, shader: *Shader) void,
-    hellofn: *const fn(ptr: *anyopaque) void,
+    // updatefn: *const fn(ptr: *anyopaque, state: *anyopaque) anyerror!void,
+    // renderfn: *const fn(ptr: *anyopaque, shader: *Shader) void,
+    // hellofn: *const fn(ptr: *anyopaque) void,
 
     const Self = @This();
+
+    const Interface = struct {
+        updatefn: *const fn(ptr: *anyopaque, state: *anyopaque) anyerror!void,
+        renderfn: *const fn(ptr: *anyopaque, shader: *Shader) void,
+        hellofn: *const fn(ptr: *anyopaque) void,
+    };
 
     pub fn deinit(self: *Self) void {
         self.children.deinit();  // use depth first from root to delete children.
@@ -48,6 +91,8 @@ pub const Node = struct {
                     const self: TN = @ptrCast(@alignCast(node_pointer));
                     const state: TS = @ptrCast(@alignCast(state_pointer));
                     return node_ptr_info.Pointer.child.update(self, state);
+                } else {
+                    std.log.warn("Function 'update' is not implemented by type: {any}", .{node_ptr_info.Pointer.child});
                 }
             }
 
@@ -55,36 +100,26 @@ pub const Node = struct {
                 if (std.meta.hasFn(node_ptr_info.Pointer.child, "render")) {
                     const self: TN = @ptrCast(@alignCast(pointer));
                     return node_ptr_info.Pointer.child.render(self, shader);
+                } else {
+                    const state = struct { var has_warned: bool = false; };
+                    if (!state.has_warned) {
+                        std.log.warn("Function 'render' is not implemented by type: {any}", .{node_ptr_info.Pointer.child});
+                        state.has_warned = true;
+                    }
                 }
             }
 
             pub fn hello(pointer: *anyopaque) void {
                 if (std.meta.hasFn(node_ptr_info.Pointer.child, "hello")) {
-                     const self: TN = @ptrCast(@alignCast(pointer));
-                     return node_ptr_info.Pointer.child.hello(self);
-                 }
+                    const self: TN = @ptrCast(@alignCast(pointer));
+                    return node_ptr_info.Pointer.child.hello(self);
+                } else {
+                    std.log.warn("Function 'hello' is not implemented by type: {any}", .{node_ptr_info.Pointer.child});
+                }
             }
         };
 
-        // const TN = @TypeOf(node_ptr);
-        // const node_ptr_info = @typeInfo(TN);
-        // if (std.meta.hasFn(node_ptr_info.Pointer.child, "hello")) {
-        //     std.debug.print("node_ptr_info has hello\n", .{});
-        // } else {
-        //     std.debug.print("node_ptr_info does not have hello\n", .{});
-        // }
-        //
-        // const has_hello = std.meta.hasFn(node_ptr_info.Pointer.child, "hello");
-        //
-        // const gen2 = if (has_hello) 
-        //     struct {
-        //         pub fn hello(pointer: *anyopaque) void {
-        //             const self: TN = @ptrCast(@alignCast(pointer));
-        //             return node_ptr_info.Pointer.child.hello(self);
-        //         }
-        //     }
-        //  else 
-        //     struct {};
+        std.debug.print("gen type: {any}\n", .{@TypeOf(gen)});
 
         const node = try allocator.create(Node);
         node.* = Node{
@@ -95,9 +130,11 @@ pub const Node = struct {
             .children = std.ArrayList(*Node).init(allocator),
             .transform = Transform.init(),
             .global_transform = Transform.init(),
-            .updatefn = gen.update,
-            .renderfn = gen.render,
-            .hellofn = gen.hello,
+            .impl = .{
+                .updatefn = gen.update,
+                .renderfn = gen.render,
+                .hellofn = gen.hello,
+            }, 
         };
         return node;
     }
@@ -120,20 +157,20 @@ pub const Node = struct {
     }
 
     pub fn update(self: *Node, state: *anyopaque) anyerror!void {
-        try self.updatefn(self.ptr, state);
+        try self.impl.updatefn(self.ptr, state);
     }
 
     pub fn render(self: *Node, shader: *Shader) void {
         const mat = self.global_transform.get_matrix();
         shader.set_mat4("model", &mat);
-        self.renderfn(self.ptr, shader);
+        self.impl.renderfn(self.ptr, shader);
         for (self.children.items) |child| {
             child.render(shader);
         }
     }
 
     pub fn hello(self: *Node) void {
-        self.hellofn(self.ptr);
+        self.impl.hellofn(self.ptr);
     }
 };
 

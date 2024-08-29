@@ -9,6 +9,7 @@ uniform int mesh_id;
 uniform vec3 ambient_color;
 uniform vec3 light_color;
 uniform vec3 light_dir;
+// uniform mat4 light_space_matrix;
 
 uniform int has_color;
 uniform vec4 diffuse_color;
@@ -19,7 +20,7 @@ uniform vec4 hit_color;
 
 void main()
 {
-    vec3 ambient = 0.4 * ambient_color;
+    vec3 ambient = 0.1 * ambient_color;
     vec3 diffuse = max(dot(normal, light_dir), 0.0) * light_color;
 
     vec4 color = vec4(1.0);

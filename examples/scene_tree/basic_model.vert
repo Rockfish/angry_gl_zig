@@ -10,6 +10,7 @@ layout(location = 6) in vec4 inWeights;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform mat4 modelRot;
 
 out vec2 TexCoord;
 out vec3 normal;
@@ -18,5 +19,9 @@ void main()
 {
     TexCoord = inTexCoord;
     gl_Position = projection * view * model * vec4(inPosition, 1.0);
+
     normal = inNormal;
+    //normal = vec3(modelRot * vec4(inNormal, 1.0));
+    //normal = normalize(projection * view * model * vec4(inNormal, 1.0)).xyz;
+    // normal = normalize(model * vec4(inNormal, 1.0)).xyz;
 }
