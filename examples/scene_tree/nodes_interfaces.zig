@@ -2,6 +2,7 @@ const std = @import("std");
 const math = @import("math");
 const Transform = @import("core").Transform;
 const Shader = @import("core").Shader;
+const State = @import("main.zig").State;
 
 const Allocator = std.mem.Allocator;
 
@@ -14,41 +15,6 @@ const vec4 = math.vec4;
 const Mat4 = math.Mat4;
 const Quat = math.Quat;
 
-
-pub const Node2 = struct {
-    ptr: *anyopaque,
-    hellofn: *const fn(ptr: *anyopaque) void,
-
-    pub fn init2(node_ptr: anytype) Node2 { 
-        const TN = @TypeOf(node_ptr);
-        const node_ptr_info = @typeInfo(TN);
-
-        const gen = struct {
-
-            pub fn hello(pointer: *anyopaque) void {
-                if (std.meta.hasMethod(TN, "hello")) {
-                    const self: TN = @ptrCast(@alignCast(pointer));
-                    return switch (@typeInfo(TN)) {
-                        .Pointer => |ptr| ptr.child.hello(self),
-                        .Struct, .Union, .Enum => TN.hello(self),
-                        else => unreachable,
-                    };
-                } else {
-                    std.log.warn("Function 'hello' is not implemented by type: {any}", .{node_ptr_info.Pointer.child});
-                }
-            }
-        };
-
-        return Node2 {
-            .ptr = node_ptr,
-            .hellofn = gen.hello,
-        };
-    }
-
-    pub fn hello(self: *Node2) void {
-        self.hellofn(self.ptr);
-    }
-};
 
 pub const Node = struct {
     allocator: Allocator,
@@ -93,6 +59,17 @@ pub const Node = struct {
                     return node_ptr_info.Pointer.child.update(self, state);
                 } else {
                     std.log.warn("Function 'update' is not implemented by type: {any}", .{node_ptr_info.Pointer.child});
+                }
+            }
+
+            // Maybe this will work 
+            pub fn update_maybe(comptime node: anytype, comptime state: anytype) anyerror!void {
+                const T = @TypeOf(node);
+                //if (std.meta.hasFn(node_ptr_info.Pointer.child, "update")) {
+                if (std.meta.hasMethod(T, "update")) {
+                    // hmm, there code in the zig sources that suggest something along this line...
+                    // see src/link/tapi/yaml.zig
+                    return node.update(state);
                 }
             }
 
@@ -171,6 +148,100 @@ pub const Node = struct {
 
     pub fn hello(self: *Node) void {
         self.impl.hellofn(self.ptr);
+    }
+};
+
+pub const BasicNode = struct {
+    const Self = @This();
+
+    pub fn init() Self {
+        return .{
+        };
+    }
+
+    pub fn hello(ptr: *anyopaque) void {
+        const self: *Self = @ptrCast(@alignCast(ptr));
+        std.debug.print("BasicNode. self: {any}\n", .{self});
+    }
+};
+
+pub const ShapeNode = struct {
+    ptr: *anyopaque,
+    renderfn: *const fn(ptr: *anyopaque) void,
+    name: []const u8,
+
+    const Self = @This();
+
+    pub fn init(ptr: anytype, name: []const u8) Self {
+        const T = @TypeOf(ptr);
+        const ptr_info = @typeInfo(T);
+
+        const gen = struct {
+            pub fn render(pointer: *anyopaque) void {
+                const self: T = @ptrCast(@alignCast(pointer));
+                return ptr_info.Pointer.child.render(self);
+            }
+        };
+
+        return .{
+            .ptr = ptr,
+            .renderfn = gen.render,
+            .name = name,
+        };
+    }
+
+    pub fn update(ptr: *anyopaque, st: *State) anyerror!void {
+        _ = ptr;
+        _ = st;
+    }
+
+    pub fn render(ptr: *anyopaque, shader: *Shader) void {
+        _ = shader; 
+        const self: *Self = @ptrCast(@alignCast(ptr));
+        self.renderfn(self.ptr);
+    }
+
+    pub fn hello(self: *Self) void {
+        std.debug.print("hello from self: {s}\n", .{self.name});
+    }
+
+    pub fn hellox(ptr: *anyopaque) void {
+        const self: *Self = @ptrCast(@alignCast(ptr));
+        std.debug.print("hello from ShapeNode. self: {any}\n", .{self});
+    }
+};
+
+pub const SceneModelNode = struct {
+    ptr: *anyopaque,
+    renderfn: *const fn(ptr: *anyopaque, shader: *Shader) void,
+
+    const Self = @This();
+
+    pub fn init(ptr: anytype) Self {
+        const T = @TypeOf(ptr);
+        const ptr_info = @typeInfo(T);
+
+        const gen = struct {
+            pub fn render(pointer: *anyopaque, shader: *Shader) void {
+                const self: T = @ptrCast(@alignCast(pointer));
+                return ptr_info.Pointer.child.render(self, shader);
+            }
+        };
+
+        return .{
+            .ptr = ptr,
+            .renderfn = gen.render,
+        };
+    }
+
+    pub fn update(ptr: *anyopaque, st: *State) anyerror!void {
+        _ = ptr;
+        _ = st;
+    }
+
+    pub fn render(ptr: *anyopaque, shader: *Shader) void {
+        const self: *Self = @ptrCast(@alignCast(ptr));
+        self.renderfn(self.ptr, shader);
     }
 };
 

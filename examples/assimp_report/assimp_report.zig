@@ -23,15 +23,21 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    // const model_path = "examples/sample_animation/animated_cube/AnimatedCube.gltf";
-    // const model_path = "examples/sample_animation/source/cube_capoeira_martelo_cruzando.FBX.fbx";
-    // const model_path = "/Users/john/Dev_Rust/Repos/ogldev/Content/box.obj";
-    // const model_path = "/Users/john/Dev_Rust/Repos/OpenGL-Animation/Resources/res/model.dae";
-    //const model_path = "/Users/john/Dev/Zig/Dev/angry_gl_zig/angrybots_assets/Models/Player/Player.fbx";
-    const model_path = "/Users/john/Dev/Repos/ogldev/Content/jeep.obj";
+    const model_paths = [_][]const u8 {
+        "examples/sample_animation/animated_cube/AnimatedCube.gltf",
+        "/Users/john/Dev/Dev_Rust/small_gl_core/examples/sample_animation/source/cube_capoeira_martelo_cruzando.fbx",
+        "/Users/john/Dev_Rust/Repos/ogldev/Content/box.obj",
+        "/Users/john/Dev_Rust/Repos/OpenGL-Animation/Resources/res/model.dae",
+        "/Users/john/Dev/Zig/Dev/angry_gl_zig/angrybots_assets/Models/Player/Player.fbx",
+        "/Users/john/Dev/Repos/ogldev/Content/jeep.obj",
+        "/Users/john/Dev/Assets/glTF-Sample-Models/1.0/RiggedFigure/glTF/RiggedFigure.gltf",
+        "/Users/john/Dev/Repos/irrlicht/media/faerie.md2", // skipModelTextures
+        "/Users/john/Downloads/Robot2.fbx",
+    };
+
     // const model_path = "examples/sample_animation/colorful_cube/scene.gltf";
 
-    const scene = try loadScene(allocator, model_path);
+    const scene = try loadScene(allocator, model_paths[8]);
 
     var parse = SceneParser.new(allocator);
     parse.parse_scene(scene);

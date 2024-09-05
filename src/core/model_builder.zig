@@ -141,6 +141,10 @@ pub const ModelBuilder = struct {
                 Assimp.aiProcess_FindInvalidData, // this fixes animation by removing duplicate keys
         );
 
+        if (aiScene == null) {
+            std.debug.panic("aiImportFile failed. aiScene is null. file: {s}", .{self.filepath});
+        }
+
         try self.load_model(aiScene);
         try self.add_textures();
 
