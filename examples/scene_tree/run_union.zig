@@ -99,8 +99,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var texture_cache = std.ArrayList(*Texture).init(allocator);
 
     var cubeboid = try shapes.createCube(allocator, .{ .width = 1.0, .height = 1.0, .depth = 2.0, },);
+    defer cubeboid.deinit();
 
-    const plane = try shapes.createCube(
+    var plane = try shapes.createCube(
     allocator,
     .{
         .width = 20.0,
@@ -110,6 +111,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .num_tiles_y = 1.0,
         .num_tiles_z = 10.0,
     },);
+    defer plane.deinit();
 
     var cylinder = try shapes.createCylinder(
         allocator,
@@ -117,8 +119,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         4.0,
         20.0,
     );
+    defer cylinder.deinit();
 
-    const sphere = try shapes.createSphere(allocator, 1.0, 20, 20);
+    var sphere = try shapes.createSphere(allocator, 1.0, 20, 20);
+    defer sphere.deinit();
 
     var texture_diffuse = TextureConfig{
         .texture_type = .Diffuse,
@@ -166,24 +170,32 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     builder.deinit();
     defer model.deinit();
 
+    var node_list = std.ArrayList(*nodes_.Node).init(allocator);
+    defer {
+        for (node_list.items) |node| {
+            node.deinit();
+        }
+        node_list.deinit();
+    }
+
     var basic_obj = nodes_.BasicObj.init("basic");
     var cube_obj = nodes_.ShapeObj.init(&cubeboid, "cubeShape", cube_texture);
     var cylinder_obj = nodes_.ShapeObj.init(&cylinder, "cylinderShape", cube_texture);
-    // var sphere_obj = nodes_.
     var model_obj = nodes_.ModelObj.init(model, "Bot_Model");
 
-    const root_node = try nodes_.NodeObj.init(allocator, "root_node", .{ .basic = &basic_obj });
+    const root_node = try nodes_.Node.init(allocator, "root_node", .{ .basic = &basic_obj });
+    try node_list.append(root_node);
 
-    const node_model = try nodes_.NodeObj.init(allocator, "node_model", .{ .model = &model_obj });
-    defer node_model.deinit();
+    const node_model = try nodes_.Node.init(allocator, "node_model", .{ .model = &model_obj });
+    try node_list.append(node_model);
 
     //node_model.transform.translation = vec3(0.0, 0.0, 2.0);
     node_model.transform.translation = vec3(2.0, 0.0, 2.0);
     //node_model.transform.rotation = Quat.fromAxisAngle(&vec3(1.0, 0.0, 0.0), math.degreesToRadians(-90.0));
     node_model.transform.scale = vec3(1.5, 1.5, 1.5);
 
-    const node_cylinder = try nodes_.NodeObj.init(allocator, "shape_cylinder", .{ .shape = &cylinder_obj });
-    defer node_cylinder.deinit();
+    const node_cylinder = try nodes_.Node.init(allocator, "shape_cylinder", .{ .shape = &cylinder_obj });
+    try node_list.append(node_cylinder);
 
     try root_node.addChild(node_model);
     try root_node.addChild(node_cylinder);
@@ -197,23 +209,21 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     };
 
     for (cube_positions) |position| {
-        const cube = try nodes_.NodeObj.init(allocator, "shape_cubeboid", .{ .shape = &cube_obj });
+        const cube = try nodes_.Node.init(allocator, "shape_cubeboid", .{ .shape = &cube_obj });
+        try node_list.append(cube);
         cube.transform.translation = position; // .add(&vec3(0.0, 1.0, 0.0));
         try root_node.addChild(cube);
     }
 
-    const node_cube_spin = try nodes_.NodeObj.init(allocator, "shape_cubeboid", .{ .shape = &cube_obj });
-    defer node_cube_spin.deinit();
+    const node_cube_spin = try nodes_.Node.init(allocator, "shape_cubeboid", .{ .shape = &cube_obj });
+    try node_list.append(node_cube_spin);
 
     node_cube_spin.transform.translation = vec3(0.0, 4.0, 0.0);
 
     try node_cylinder.addChild(node_cube_spin);
 
-    const node_cube = try nodes_.NodeObj.init(allocator, "shape_cubeboid", .{ .shape = &cube_obj });
-    defer node_cube.deinit();
-
-    // node_cube.hello();
-    // node_model.hello();
+    const node_cube = try nodes_.Node.init(allocator, "shape_cubeboid", .{ .shape = &cube_obj });
+    try node_list.append(node_cube);
 
     const cube_transforms = [_]Mat4{
         Mat4.fromTranslation(&vec3(3.0, 0.5, 0.0)),
@@ -352,7 +362,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 }
 
 // updatefn
-pub fn updateSpin(node: *nodes_.NodeObj, st: *State) void {
+pub fn updateSpin(node: *nodes_.Node, st: *State) void {
     const up = vec3(0.0, 1.0, 0.0);
     const velocity: f32 = 5.0 * st.delta_time;
     const angle = math.degreesToRadians(velocity);

@@ -20,14 +20,14 @@ const Quat = math.Quat;
 
 pub const BasicObj = struct {
     name: []const u8,
-    transform: Transform,
-    global_transform: Transform,
+    // transform: Transform,
+    // global_transform: Transform,
 
     pub fn init(name: []const u8) BasicObj {
         return .{
             .name = name,
-            .transform = Transform.default(),
-            .global_transform = Transform.default(),
+            // .transform = Transform.default(),
+            // .global_transform = Transform.default(),
         };
     }
 };
@@ -36,17 +36,16 @@ pub const ShapeObj = struct {
     name: []const u8,
     shape: *core.shapes.Shape,
     texture: *core.texture.Texture,
-    transform: Transform,
-    global_transform: Transform,
-    // texture
+    // transform: Transform,
+    // global_transform: Transform,
  
     pub fn init(shape: *core.shapes.Shape, name: []const u8, texture: *core.texture.Texture) ShapeObj {
         return .{
             .name = name,
             .shape = shape,
             .texture = texture,
-            .transform = Transform.default(),
-            .global_transform = Transform.default(),
+            // .transform = Transform.default(),
+            // .global_transform = Transform.default(),
         };
     }
 
@@ -59,15 +58,15 @@ pub const ShapeObj = struct {
 pub const ModelObj = struct {
     name: []const u8,
     model: *Model,
-    transform: Transform,
-    global_transform: Transform,
+    // transform: Transform,
+    // global_transform: Transform,
 
     pub fn init(model: *Model, name: []const u8) ModelObj {
         return .{
             .name = name,
             .model = model,
-            .transform = Transform.default(),
-            .global_transform = Transform.default(),
+            // .transform = Transform.default(),
+            // .global_transform = Transform.default(),
         };
     }
 
@@ -82,48 +81,24 @@ pub const Object = union(enum) {
     model: *ModelObj,
 
     inline fn calcTransform(actor: Object, transform: Transform) Transform {
-        // return switch(actor) {
-        //     .basic => |obj| obj.transform.mul_transform(transform),
-        //     .cube => |obj| obj.transform.mul_transform(transform),
-        //     .cylinder => |obj| obj.transform.mul_transform(transform),
-        //     .model => |obj| obj.transform.mul_transform(transform),
-        // };
         return switch(actor) {
             inline else => |obj| obj.transform.mul_transform(transform),
         };
     } 
 
     inline fn setTransform(actor: Object, transform: Transform) void {
-        // return switch(actor) {
-        //     .basic => |obj| obj.transform = transform,
-        //     .cube => |obj| obj.transform = transform,
-        //     .cylinder => |obj| obj.transform = transform,
-        //     .model => |obj| obj.transform = transform,
-        // };
         return switch(actor) {
             inline else => |obj| obj.transform = transform,
         };
     }
 
     inline fn getTransform(actor: Object) Transform {
-        // return switch(actor) {
-        //     .basic => |obj| obj.transform,
-        //     .cube => |obj| obj.transform,
-        //     .cylinder => |obj| obj.transform,
-        //     .model => |obj| obj.transform,
-        // };
         return switch(actor) {
             inline else => |obj| obj.transform,
         };
     }
 
     inline fn render(actor: Object, shader: *Shader) void {
-        // return switch(actor) {
-        //     .basic => {},
-        //     .cube => |obj| obj.render(shader),
-        //     .cylinder => |obj| obj.render(shader),
-        //     .model => |obj| obj.render(shader),
-        // };
         return switch(actor) {
             .basic => {},
             inline else => |obj| obj.render(shader),
@@ -138,35 +113,36 @@ pub const Object = union(enum) {
     }
 };
 
-pub const NodeObj = struct {
+pub const Node = struct {
     allocator: Allocator,
     name: []const u8,
     object: Object,
     transform: Transform,
     global_transform: Transform,
-    parent: ?*NodeObj,
-    children: std.ArrayList(*NodeObj),
+    parent: ?*Node,
+    children: std.ArrayList(*Node),
 
-    pub fn init(allocator: Allocator, name: []const u8, object: Object) !*NodeObj {
-        const node_obj = try allocator.create(NodeObj);
-        node_obj.* = .{
+    pub fn init(allocator: Allocator, name: []const u8, object: Object) !*Node {
+        const node = try allocator.create(Node);
+        node.* = .{
             .allocator = allocator,
             .name = name,
             .object = object,
-            .transform = object.getTransform(),
+            .transform = Transform.default(), // object.getTransform(),
             .global_transform = Transform.default(),
             .parent = null,
-            .children = std.ArrayList(*NodeObj).init(allocator),
+            .children = std.ArrayList(*Node).init(allocator),
         };
-        return node_obj;
+        return node;
     }
 
-    pub fn deinit(self: NodeObj) void {
-        _ = self;
+    pub fn deinit(self: *Node) void {
+        self.children.deinit();
+        self.allocator.destroy(self);
     }
 
     /// Add child
-    pub fn addChild(self: *NodeObj, child: *NodeObj) !void {
+    pub fn addChild(self: *Node, child: *Node) !void {
         assert(self != child);
         if (child.parent) |p| {
             if (p == self) return;
@@ -186,7 +162,7 @@ pub const NodeObj = struct {
     }
 
     /// Remove child
-    pub fn removeChild(self: *NodeObj, child: *NodeObj) void {
+    pub fn removeChild(self: *Node, child: *Node) void {
         if (child.parent) |p| {
             if (p != self) return;
 
@@ -202,7 +178,7 @@ pub const NodeObj = struct {
     }
 
     /// Remove itself from scene
-    pub fn removeSelf(self: *NodeObj) void {
+    pub fn removeSelf(self: *Node) void {
         if (self.parent) |p| {
             // Leave old parent
             for (p.children.items, 0..) |c, idx| {
@@ -217,7 +193,7 @@ pub const NodeObj = struct {
     }
 
     /// Update all objects' transform matrix in tree
-    pub fn updateTransforms(self: *NodeObj, parent_transform: ?*Transform) void {
+    pub fn updateTransforms(self: *Node, parent_transform: ?*Transform) void {
         if (parent_transform) |transform| {
             self.global_transform = transform.mul_transform(self.transform);
         } else {
@@ -230,12 +206,12 @@ pub const NodeObj = struct {
     }
 
     /// Change object's transform matrix, and update it's children accordingly
-    pub fn setTransform(self: *NodeObj, transform: Transform) void {
+    pub fn setTransform(self: *Node, transform: Transform) void {
         self.transform = transform;
         self.updateTransforms(null);
     }
 
-    pub fn render(self: *NodeObj, shader: *Shader) void {
+    pub fn render(self: *Node, shader: *Shader) void {
         const mat = self.global_transform.get_matrix();
         shader.set_mat4("model", &mat);
         self.object.render(shader);
@@ -244,7 +220,7 @@ pub const NodeObj = struct {
         }
     }
 
-    pub fn updateAnimation(self: *NodeObj, delta_time: f32) void {
+    pub fn updateAnimation(self: *Node, delta_time: f32) void {
         self.object.updateAnimation(delta_time);
         for (self.children.items) |child| {
             child.updateAnimation(delta_time);
@@ -252,7 +228,7 @@ pub const NodeObj = struct {
     }
 
     // example of how to get the type from a union(enum)
-    pub fn getModel(self: *NodeObj) !Model {
+    pub fn getModel(self: *Node) !Model {
         if (self.object != .model) return error.TypeMismatch;
         return self.object.model;
     }

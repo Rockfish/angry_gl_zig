@@ -19,9 +19,10 @@ pub fn fileExists(path: []const u8) bool {
 }
 
 /// Attempts to fix odd file paths that might be found in model files.
+/// Returns owned string
 pub fn getExistsFilename(allocator: std.mem.Allocator, directory: []const u8, filename: []const u8) ![]const u8 {
     if (fileExists(filename)) {
-        return filename;
+        return try allocator.dupe(u8, filename);
     }
 
     var path = try std.fs.path.join(allocator, &[_][]const u8{ directory, filename });

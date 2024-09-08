@@ -81,8 +81,8 @@ pub const Shape = struct {
     const Self = @This();
 
     pub fn deinit(self: *Self) void {
-        gl.DeleteVertexArrays(1, &self.vao);
-        gl.DeleteBuffers(1, &self.vbo);
+        gl.deleteVertexArrays(1, &self.vao);
+        gl.deleteBuffers(1, &self.vbo);
     }
 
     pub fn render(self: *const Self) void {
