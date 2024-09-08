@@ -6,12 +6,12 @@ const core = @import("core");
 const math = @import("math");
 const nodes_ = @import("nodes_union.zig");
 
-const State = @import("main.zig").State;
 const main = @import("main.zig");
+const shapes = core.shapes;
 
-const Cubeboid = core.shapes.Cubeboid;
-const Cylinder = core.shapes.Cylinder;
-const Sphere = core.shapes.Sphere;
+// const Cubeboid = core.shapes.Cubeboid;
+// const Cylinder = core.shapes.Cylinder;
+// const Sphere = core.shapes.Sphere;
 
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
@@ -24,6 +24,7 @@ const Ray = core.Ray;
 const Allocator = std.mem.Allocator;
 const EnumSet = std.EnumSet;
 
+const State = @import("main.zig").State;
 const ModelBuilder = core.ModelBuilder;
 const Shader = core.Shader;
 const Texture = core.texture.Texture;
@@ -97,25 +98,27 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     var texture_cache = std.ArrayList(*Texture).init(allocator);
 
-    var cubeboid = Cubeboid.init(.{ .width = 1.0, .height = 1.0, .depth = 2.0 });
+    var cubeboid = try shapes.createCube(allocator, .{ .width = 1.0, .height = 1.0, .depth = 2.0, },);
 
-    const plane = Cubeboid.init(.{
+    const plane = try shapes.createCube(
+    allocator,
+    .{
         .width = 20.0,
         .height = 2.0,
         .depth = 20.0,
         .num_tiles_x = 10.0,
         .num_tiles_y = 1.0,
         .num_tiles_z = 10.0,
-    });
+    },);
 
-    var cylinder = try Cylinder.init(
+    var cylinder = try shapes.createCylinder(
         allocator,
         1.0,
         4.0,
         20.0,
     );
 
-    const sphere = try Sphere.init(allocator, 1.0, 20, 20);
+    const sphere = try shapes.createSphere(allocator, 1.0, 20, 20);
 
     var texture_diffuse = TextureConfig{
         .texture_type = .Diffuse,
@@ -164,8 +167,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     defer model.deinit();
 
     var basic_obj = nodes_.BasicObj.init("basic");
-    var cube_obj = nodes_.CubeObj.init(&cubeboid, "cubeShape", cube_texture);
-    var cylinder_obj = nodes_.CylinderObj.init(&cylinder, "cylinderShape", cube_texture);
+    var cube_obj = nodes_.ShapeObj.init(&cubeboid, "cubeShape", cube_texture);
+    var cylinder_obj = nodes_.ShapeObj.init(&cylinder, "cylinderShape", cube_texture);
     // var sphere_obj = nodes_.
     var model_obj = nodes_.ModelObj.init(model, "Bot_Model");
 
@@ -179,7 +182,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     //node_model.transform.rotation = Quat.fromAxisAngle(&vec3(1.0, 0.0, 0.0), math.degreesToRadians(-90.0));
     node_model.transform.scale = vec3(1.5, 1.5, 1.5);
 
-    const node_cylinder = try nodes_.NodeObj.init(allocator, "shape_cylinder", .{ .cylinder = &cylinder_obj });
+    const node_cylinder = try nodes_.NodeObj.init(allocator, "shape_cylinder", .{ .shape = &cylinder_obj });
     defer node_cylinder.deinit();
 
     try root_node.addChild(node_model);
@@ -194,19 +197,19 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     };
 
     for (cube_positions) |position| {
-        const cube = try nodes_.NodeObj.init(allocator, "shape_cubeboid", .{ .cube = &cube_obj });
+        const cube = try nodes_.NodeObj.init(allocator, "shape_cubeboid", .{ .shape = &cube_obj });
         cube.transform.translation = position; // .add(&vec3(0.0, 1.0, 0.0));
         try root_node.addChild(cube);
     }
 
-    const node_cube_spin = try nodes_.NodeObj.init(allocator, "shape_cubeboid", .{ .cube = &cube_obj });
+    const node_cube_spin = try nodes_.NodeObj.init(allocator, "shape_cubeboid", .{ .shape = &cube_obj });
     defer node_cube_spin.deinit();
 
     node_cube_spin.transform.translation = vec3(0.0, 4.0, 0.0);
 
     try node_cylinder.addChild(node_cube_spin);
 
-    const node_cube = try nodes_.NodeObj.init(allocator, "shape_cubeboid", .{ .cube = &cube_obj });
+    const node_cube = try nodes_.NodeObj.init(allocator, "shape_cubeboid", .{ .shape = &cube_obj });
     defer node_cube.deinit();
 
     // node_cube.hello();

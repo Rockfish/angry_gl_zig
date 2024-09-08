@@ -32,50 +32,27 @@ pub const BasicObj = struct {
     }
 };
 
-pub const CubeObj = struct {
+pub const ShapeObj = struct {
     name: []const u8,
-    cube: *core.shapes.Cubeboid,
+    shape: *core.shapes.Shape,
     texture: *core.texture.Texture,
     transform: Transform,
     global_transform: Transform,
     // texture
  
-    pub fn init(cube: *core.shapes.Cubeboid, name: []const u8, texture: *core.texture.Texture) CubeObj {
+    pub fn init(shape: *core.shapes.Shape, name: []const u8, texture: *core.texture.Texture) ShapeObj {
         return .{
             .name = name,
-            .cube = cube,
+            .shape = shape,
             .texture = texture,
             .transform = Transform.default(),
             .global_transform = Transform.default(),
         };
     }
 
-    pub fn render(self: *CubeObj, shader: *Shader) void {
+    pub fn render(self: *ShapeObj, shader: *Shader) void {
         shader.bind_texture(0, "texture_diffuse", self.texture);
-        self.cube.render();
-    }
-};
-
-pub const CylinderObj = struct {
-    name: []const u8,
-    cylinder: *core.shapes.Cylinder,
-    texture: *core.texture.Texture,
-    transform: Transform,
-    global_transform: Transform,
-    // texture
- 
-    pub fn init(cylinder: *core.shapes.Cylinder, name: []const u8, texture: *core.texture.Texture) CylinderObj {
-        return .{
-            .name = name,
-            .cylinder = cylinder,
-            .texture = texture,
-            .transform = Transform.default(),
-            .global_transform = Transform.default(),
-        };
-    }
-    pub fn render(self: *CylinderObj, shader: *Shader) void {
-        shader.bind_texture(0, "texture_diffuse", self.texture);
-        self.cylinder.render();
+        self.shape.render();
     }
 };
 
@@ -101,8 +78,7 @@ pub const ModelObj = struct {
 
 pub const Object = union(enum) {
     basic: *BasicObj,
-    cube: *CubeObj,
-    cylinder: *CylinderObj,
+    shape: *ShapeObj,
     model: *ModelObj,
 
     inline fn calcTransform(actor: Object, transform: Transform) Transform {

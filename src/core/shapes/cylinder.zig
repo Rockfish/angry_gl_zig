@@ -2,6 +2,7 @@ const std = @import("std");
 const gl = @import("zopengl").bindings;
 const core = @import("core");
 const math = @import("math");
+const shape = @import("shape.zig");
 
 const Vec2 = math.Vec2;
 const vec2 = math.vec2;
@@ -14,17 +15,6 @@ const ArrayList = std.ArrayList;
 const SIZE_OF_U32 = @sizeOf(u32);
 const SIZE_OF_FLOAT = @sizeOf(f32);
 
-const Builder = struct {
-    allocator: Allocator,
-    vertices: ArrayList(Vertex),
-    indices: ArrayList(u32),
-};
-
-pub const Vertex = extern struct {
-    position: Vec3,
-    normal: Vec3,
-    texcoord: Vec2,
-};
 
 pub const Cylinder = struct {
     vao: u32,
@@ -34,22 +24,13 @@ pub const Cylinder = struct {
 
     const Self = @This();
 
-    pub fn init(allocator: Allocator, radius: f32, height: f32, sides: u32) !Self {
-        const builder = try allocator.create(Builder);
-        builder.* = Builder{
-            .allocator = allocator,
-            .vertices = ArrayList(Vertex).init(allocator),
-            .indices = ArrayList(u32).init(allocator),
-        };
-        defer {
-            builder.vertices.deinit();
-            builder.indices.deinit();
-            allocator.destroy(builder);
-        }
+    pub fn init(allocator: Allocator, radius: f32, height: f32, sides: u32) !shape.Shape {
+        var builder = shape.ShapeBuilder.init(allocator, .Cylinder);
+        defer builder.deinit();
 
         // Top of cylinder
         try add_disk_mesh(
-            builder,
+            &builder,
             vec3(0.0, height, 0.0),
             radius / 2.0,
             sides,
@@ -57,7 +38,7 @@ pub const Cylinder = struct {
 
         // Bottom of cylinder
         try add_disk_mesh(
-            builder,
+            &builder,
             vec3(0.0, 0.0, 0.0),
             radius / 2.0,
             sides,
@@ -65,104 +46,31 @@ pub const Cylinder = struct {
 
         // // Tube - cylinder wall
         try add_tube_mesh(
-            builder,
+            &builder,
             vec3(0.0, 0.0, 0.0),
             height,
             radius / 2.0,
             sides,
         );
 
-        var vao: u32 = undefined;
-        var vbo: u32 = undefined;
-        var ebo: u32 = undefined;
+        for (builder.vertices.items) |v| {
+            builder.aabb.expand_to_include(v.position);
+        }
 
-        gl.genVertexArrays(1, &vao);
-        gl.genBuffers(1, &vbo);
-        gl.genBuffers(1, &ebo);
-
-        gl.bindVertexArray(vao);
-
-        // vertices
-        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-        gl.bufferData(
-            gl.ARRAY_BUFFER,
-            @intCast(builder.vertices.items.len * @sizeOf(Vertex)),
-            builder.vertices.items.ptr,
-            gl.STATIC_DRAW,
-        );
-
-        // indices
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
-        gl.bufferData(
-            gl.ELEMENT_ARRAY_BUFFER,
-            @intCast(builder.indices.items.len * @sizeOf(u32)),
-            builder.indices.items.ptr,
-            gl.STATIC_DRAW,
-        );
-
-        // position
-        gl.vertexAttribPointer(
-            0,
-            3,
-            gl.FLOAT,
-            gl.FALSE,
-            SIZE_OF_FLOAT * 8,
-            @ptrFromInt(0),
-        );
-        gl.enableVertexAttribArray(0);
-
-        // normal
-        gl.vertexAttribPointer(
-            1,
-            3,
-            gl.FLOAT,
-            gl.FALSE,
-            SIZE_OF_FLOAT * 8,
-            @ptrFromInt(SIZE_OF_FLOAT * 3),
-        );
-        gl.enableVertexAttribArray(1);
-
-        // texcoords
-        gl.vertexAttribPointer(
-            2,
-            2,
-            gl.FLOAT,
-            gl.FALSE,
-            SIZE_OF_FLOAT * 8,
-            @ptrFromInt(SIZE_OF_FLOAT * 6),
-        );
-        gl.enableVertexAttribArray(2);
-
-        return .{
-            .vao = vao,
-            .vbo = vbo,
-            .ebo = ebo,
-            .num_indices = @intCast(builder.indices.items.len),
-        };
+        return shape.initGLBuffers(&builder);
     }
 
-    pub fn render(self: *const Self) void {
-        gl.bindVertexArray(self.vao);
-        gl.drawElements(
-            gl.TRIANGLES,
-            self.num_indices,
-            gl.UNSIGNED_INT,
-            null,
-        );
-        gl.bindVertexArray(0);
-    }
-
-    fn add_disk_mesh(builder: *Builder, position: Vec3, radius: f32, sides: u32) !void {
+    fn add_disk_mesh(builder: *shape.ShapeBuilder, position: Vec3, radius: f32, sides: u32) !void {
         const intial_count: u32 = @intCast(builder.vertices.items.len);
         // Start with adding the center vertex in the center of the disk.
-        try builder.vertices.append(Vertex{
+        try builder.vertices.append(shape.Vertex{
             .position = Vec3{
                 .x = position.x,
                 .y = position.y,
                 .z = position.z,
             },
             .normal = vec3(0.0, 1.0, 0.0),
-            .texcoord = Vec2{ .x = 0.5, .y = 0.5 },
+            .texcoords = Vec2{ .x = 0.5, .y = 0.5 },
         });
 
         // Add vertices on the edge of the face. The disk is on the x,z plane. Y is up.
@@ -173,14 +81,14 @@ pub const Cylinder = struct {
             // uv's are in percentages of the texture
             const u = 0.5 + 0.5 * cos;
             const v = 0.5 + 0.5 * sin;
-            try builder.vertices.append(Vertex{
+            try builder.vertices.append(shape.Vertex{
                 .position = Vec3{
                     .x = position.x + radius * cos,
                     .y = position.y,
                     .z = position.z + radius * sin,
                 },
                 .normal = vec3(0.0, 1.0, 0.0),
-                .texcoord = Vec2{ .x = u, .y = v },
+                .texcoords = Vec2{ .x = u, .y = v },
             });
         }
 
@@ -198,7 +106,7 @@ pub const Cylinder = struct {
         try builder.indices.append(num_vertices - 1);
     }
 
-    pub fn add_tube_mesh(builder: *Builder, position: Vec3, height: f32, radius: f32, sides: u32) !void {
+    pub fn add_tube_mesh(builder: *shape.ShapeBuilder, position: Vec3, height: f32, radius: f32, sides: u32) !void {
         const intial_count: u32 = @intCast(builder.vertices.items.len);
         //        const initial_indice_count: u32 = @intCast(builder.indices.items.len);
 
@@ -209,14 +117,14 @@ pub const Cylinder = struct {
             const cos = math.cos(angle);
             // uv's are percentages of the texture size
             const u: f32 = 1.0 - 1.0 / @as(f32, @floatFromInt(sides)) * @as(f32, @floatFromInt(i));
-            try builder.vertices.append(Vertex{
+            try builder.vertices.append(shape.Vertex{
                 .position = Vec3{
                     .x = position.x + radius * cos,
                     .y = position.y,
                     .z = position.z + radius * sin,
                 },
                 .normal = vec3(cos, 0.0, sin),
-                .texcoord = Vec2{ .x = u, .y = 1.0 },
+                .texcoords = Vec2{ .x = u, .y = 1.0 },
             });
         }
 
@@ -227,14 +135,14 @@ pub const Cylinder = struct {
             const cos = math.cos(angle);
             // uv's are percentages of the texture size
             const u: f32 = 1.0 - 1.0 / @as(f32, @floatFromInt(sides)) * @as(f32, @floatFromInt(i));
-            try builder.vertices.append(Vertex{
+            try builder.vertices.append(shape.Vertex{
                 .position = Vec3{
                     .x = position.x + radius * cos,
                     .y = position.y + height,
                     .z = position.z + radius * sin,
                 },
                 .normal = vec3(cos, 0.0, sin),
-                .texcoord = Vec2{ .x = u, .y = 0.0 },
+                .texcoords = Vec2{ .x = u, .y = 0.0 },
             });
         }
 
