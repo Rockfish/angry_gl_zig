@@ -6,6 +6,7 @@ const Transform = @import("core").Transform;
 const Shader = @import("core").Shader;
 const State = @import("main.zig").State;
 const Model = @import("core").Model;
+const AABB = @import("core").AABB;
 
 const Allocator = std.mem.Allocator;
 
@@ -49,6 +50,10 @@ pub const ShapeObj = struct {
         };
     }
 
+    pub fn getBoundingBox(self: *ShapeObj) AABB {
+        return self.shape.aabb;
+    }
+
     pub fn render(self: *ShapeObj, shader: *Shader) void {
         shader.bind_texture(0, "texture_diffuse", self.texture);
         self.shape.render();
@@ -70,6 +75,10 @@ pub const ModelObj = struct {
         };
     }
 
+    // pub fn getBoundingBox(self: *ModelObj) AABB {
+    //     return self.model.aabb;
+    // }
+
     pub fn render(self: *ModelObj, shader: *Shader) void {
         self.model.render(shader);
     }
@@ -80,32 +89,40 @@ pub const Object = union(enum) {
     shape: *ShapeObj,
     model: *ModelObj,
 
-    inline fn calcTransform(actor: Object, transform: Transform) Transform {
+    pub inline fn calcTransform(actor: Object, transform: Transform) Transform {
         return switch(actor) {
             inline else => |obj| obj.transform.mul_transform(transform),
         };
     } 
 
-    inline fn setTransform(actor: Object, transform: Transform) void {
+    pub inline fn setTransform(actor: Object, transform: Transform) void {
         return switch(actor) {
             inline else => |obj| obj.transform = transform,
         };
     }
 
-    inline fn getTransform(actor: Object) Transform {
+    pub inline fn getTransform(actor: Object) Transform {
         return switch(actor) {
             inline else => |obj| obj.transform,
         };
     }
 
-    inline fn render(actor: Object, shader: *Shader) void {
+    pub inline fn getBoundingBox(actor: Object) ?AABB {
+        return switch(actor) {
+            .basic => null,
+            .model => null,
+            inline else => |obj| obj.getBoundingBox(),
+        };
+    }
+
+    pub inline fn render(actor: Object, shader: *Shader) void {
         return switch(actor) {
             .basic => {},
             inline else => |obj| obj.render(shader),
         };
     }
 
-    inline fn updateAnimation(actor: Object, delta_time: f32) void {
+    pub inline fn updateAnimation(actor: Object, delta_time: f32) void {
         switch (actor) {
             .model => |obj| obj.updateAnimation(delta_time),
             else => {},
@@ -205,19 +222,33 @@ pub const Node = struct {
         }
     }
 
-    /// Change object's transform matrix, and update it's children accordingly
     pub fn setTransform(self: *Node, transform: Transform) void {
         self.transform = transform;
         self.updateTransforms(null);
     }
 
+    pub fn setTranslation(self: *Node, translation: Vec3) void {
+        self.transform.translation = translation;
+        self.updateTransforms(null);
+    }
+
+    pub fn setRotation(self: *Node, rotation: Quat) void {
+        self.transform.rotation = rotation;
+        self.updateTransforms(null);
+    }
+
+    pub fn setScale(self: *Node, scale: Vec3) void {
+        self.transform.scale = scale;
+        self.updateTransforms(null);
+    }
+
     pub fn render(self: *Node, shader: *Shader) void {
-        const mat = self.global_transform.get_matrix();
-        shader.set_mat4("model", &mat);
+        const model_mat = self.global_transform.get_matrix();
+        shader.set_mat4("matModel", &model_mat);
         self.object.render(shader);
-        for (self.children.items) |child| {
-            child.render(shader);
-        }
+        // for (self.children.items) |child| {
+        //     child.render(shader);
+        // }
     }
 
     pub fn updateAnimation(self: *Node, delta_time: f32) void {

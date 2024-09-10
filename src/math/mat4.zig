@@ -51,6 +51,12 @@ pub const Mat4 = extern struct {
         return @as(*[16]f32, @ptrCast(@constCast(self)));
     }
 
+    pub fn getTranspose(m: *const Mat4) Mat4 {
+        var result: [4][4]f32 = undefined;
+        cglm.glmc_mat4_transpose_to(@constCast(&m.data), &result);
+        return Mat4{ .data = result };
+    }
+
     pub fn getInverse(m: *const Mat4) Self {
         var result: [4][4]f32 = undefined;
         cglm.glmc_mat4_inv(@constCast(&m.data), &result);

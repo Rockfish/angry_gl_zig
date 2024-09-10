@@ -101,11 +101,11 @@ pub fn main() !void {
     );
     defer window.destroy();
 
-    _ = window.setKeyCallback(key_handler);
-    _ = window.setFramebufferSizeCallback(framebuffer_size_handler);
-    _ = window.setCursorPosCallback(cursor_position_handler);
-    _ = window.setScrollCallback(scroll_handler);
-    _ = window.setMouseButtonCallback(mouse_hander);
+    _ = window.setKeyCallback(keyHandler);
+    _ = window.setFramebufferSizeCallback(framebufferSizeHandler);
+    _ = window.setCursorPosCallback(cursorPositionHandler);
+    _ = window.setScrollCallback(scrollHandler);
+    _ = window.setMouseButtonCallback(mouseHandler);
     // window.setInputMode(.cursor, glfw.Cursor.Mode.disabled);
  
     glfw.makeContextCurrent(window);
@@ -117,11 +117,11 @@ pub fn main() !void {
     try run_union(allocator, window);
 }
 
-fn get_pvm_matrix(projection: *const Mat4, view: *const Mat4, model_transform: *const Mat4) Mat4 {
+fn getPVMMatrix(projection: *const Mat4, view: *const Mat4, model_transform: *const Mat4) Mat4 {
     return projection.mulMat4(&view.mulMat4(model_transform));
 }
 
-fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
+fn keyHandler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = scancode;
 
     switch (action) {
@@ -132,12 +132,19 @@ fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.
 
     state.key_shift = mods.shift;
 
-    // const mode = if (mods.alt) cam.MovementMode.Polar else cam.MovementMode.Planar;
+    if (key == .escape) {
+        window.setShouldClose(true);
+    }
+}
+
+pub fn processKeys() void {
+    const toggle = struct {
+        var spin_is_set: bool = false;
+    };
 
     var iterator = state.key_presses.iterator();
     while (iterator.next()) |k| {
         switch (k) {
-            .escape => window.setShouldClose(true),
             .t => std.debug.print("time: {d}\n", .{state.delta_time}),
             .w => {
                 if (state.key_shift) {
@@ -188,7 +195,9 @@ fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.
                 state.view_type = .LookAt;
             },
             .three => {
-                state.spin = !state.spin;
+                if (!toggle.spin_is_set) {
+                    state.spin = !state.spin;
+                }
             },
             .four => {
                 state.projection_type = .Perspective;
@@ -201,15 +210,16 @@ fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.
             else => {},
         }
     }
+    toggle.spin_is_set = state.key_presses.contains(.three);
 }
 
-fn framebuffer_size_handler(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {
+fn framebufferSizeHandler(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {
     _ = window;
     gl.viewport(0, 0, width, height);
-    set_view_port(width, height);
+    setViewPort(width, height);
 }
 
-fn set_view_port(w: i32, h: i32) void {
+fn setViewPort(w: i32, h: i32) void {
     const width: f32 = @floatFromInt(w);
     const height: f32 = @floatFromInt(h);
 
@@ -232,13 +242,9 @@ fn set_view_port(w: i32, h: i32) void {
             state.projection = state.camera.get_ortho_projection();
         },
     }
-
-    // state.game_projection = Mat4.perspectiveRhGl(math.degreesToRadians(state.game_camera.zoom), aspect_ratio, 0.1, 100.0);
-    // state.floating_projection = Mat4.perspectiveRhGl(math.degreesToRadians(state.floating_camera.zoom), aspect_ratio, 0.1, 100.0);
-    // state.orthographic_projection = Mat4.orthographicRhGl(-ortho_width, ortho_width, -ortho_height, ortho_height, 0.1, 100.0);
 }
 
-fn mouse_hander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
+fn mouseHandler(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = window;
     _ = mods;
 
@@ -246,7 +252,7 @@ fn mouse_hander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Act
     state.mouse_right_button = action == .press and button == glfw.MouseButton.right;
 }
 
-fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
+fn cursorPositionHandler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
     _ = window;
     var xpos: f32 = @floatCast(xposIn);
     var ypos: f32 = @floatCast(yposIn);
@@ -271,7 +277,7 @@ fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callc
     }
 }
 
-fn scroll_handler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {
+fn scrollHandler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {
     _ = window;
     _ = xoffset;
     state.camera.process_mouse_scroll(@floatCast(yoffset));

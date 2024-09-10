@@ -40,6 +40,7 @@ pub fn main() !void {
     const scene = try loadScene(allocator, model_paths[8]);
 
     var parse = SceneParser.new(allocator);
+    std.debug.print("scene: {any}\n", .{scene});
     parse.parse_scene(scene);
 }
 

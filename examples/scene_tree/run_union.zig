@@ -98,19 +98,27 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     var texture_cache = std.ArrayList(*Texture).init(allocator);
 
-    var cubeboid = try shapes.createCube(allocator, .{ .width = 1.0, .height = 1.0, .depth = 2.0, },);
+    var cubeboid = try shapes.createCube(
+        allocator,
+        .{
+            .width = 1.0,
+            .height = 1.0,
+            .depth = 2.0,
+        },
+    );
     defer cubeboid.deinit();
 
     var plane = try shapes.createCube(
-    allocator,
-    .{
-        .width = 20.0,
-        .height = 2.0,
-        .depth = 20.0,
-        .num_tiles_x = 10.0,
-        .num_tiles_y = 1.0,
-        .num_tiles_z = 10.0,
-    },);
+        allocator,
+        .{
+            .width = 20.0,
+            .height = 2.0,
+            .depth = 20.0,
+            .num_tiles_x = 10.0,
+            .num_tiles_y = 1.0,
+            .num_tiles_z = 10.0,
+        },
+    );
     defer plane.deinit();
 
     var cylinder = try shapes.createCylinder(
@@ -181,6 +189,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var basic_obj = nodes_.BasicObj.init("basic");
     var cube_obj = nodes_.ShapeObj.init(&cubeboid, "cubeShape", cube_texture);
     var cylinder_obj = nodes_.ShapeObj.init(&cylinder, "cylinderShape", cube_texture);
+    var sphere_obj = nodes_.ShapeObj.init(&sphere, "SphereShape", cube_texture);
     var model_obj = nodes_.ModelObj.init(model, "Bot_Model");
 
     const root_node = try nodes_.Node.init(allocator, "root_node", .{ .basic = &basic_obj });
@@ -189,13 +198,16 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const node_model = try nodes_.Node.init(allocator, "node_model", .{ .model = &model_obj });
     try node_list.append(node_model);
 
-    //node_model.transform.translation = vec3(0.0, 0.0, 2.0);
-    node_model.transform.translation = vec3(2.0, 0.0, 2.0);
+    node_model.setTranslation(vec3(2.0, 0.0, 2.0));
     //node_model.transform.rotation = Quat.fromAxisAngle(&vec3(1.0, 0.0, 0.0), math.degreesToRadians(-90.0));
     node_model.transform.scale = vec3(1.5, 1.5, 1.5);
 
     const node_cylinder = try nodes_.Node.init(allocator, "shape_cylinder", .{ .shape = &cylinder_obj });
     try node_list.append(node_cylinder);
+
+    const node_sphere = try nodes_.Node.init(allocator, "shpere_shape", .{ .shape = &sphere_obj});
+    try node_list.append(node_sphere);
+    node_sphere.setTranslation(vec3(-3.0, 1.0, 3.0));
 
     try root_node.addChild(node_model);
     try root_node.addChild(node_cylinder);
@@ -211,27 +223,19 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     for (cube_positions) |position| {
         const cube = try nodes_.Node.init(allocator, "shape_cubeboid", .{ .shape = &cube_obj });
         try node_list.append(cube);
-        cube.transform.translation = position; // .add(&vec3(0.0, 1.0, 0.0));
+        cube.setTranslation(position);
         try root_node.addChild(cube);
+
+        const fix_cube = try nodes_.Node.init(allocator, "shape_cubeboid", .{ .shape = &cube_obj });
+        try node_list.append(fix_cube);
+        fix_cube.setTranslation(position);
     }
 
     const node_cube_spin = try nodes_.Node.init(allocator, "shape_cubeboid", .{ .shape = &cube_obj });
     try node_list.append(node_cube_spin);
 
-    node_cube_spin.transform.translation = vec3(0.0, 4.0, 0.0);
-
+    node_cube_spin.setTranslation(vec3(0.0, 6.0, 0.0));
     try node_cylinder.addChild(node_cube_spin);
-
-    const node_cube = try nodes_.Node.init(allocator, "shape_cubeboid", .{ .shape = &cube_obj });
-    try node_list.append(node_cube);
-
-    const cube_transforms = [_]Mat4{
-        Mat4.fromTranslation(&vec3(3.0, 0.5, 0.0)),
-        Mat4.fromTranslation(&vec3(1.5, 0.5, 0.0)),
-        Mat4.fromTranslation(&vec3(0.0, 0.5, 0.0)),
-        Mat4.fromTranslation(&vec3(-1.5, 0.5, 0.0)),
-        Mat4.fromTranslation(&vec3(-3.0, 0.5, 0.0)),
-    };
 
     const xz_plane_point = vec3(0.0, 0.0, 0.0);
     const xz_plane_normal = vec3(0.0, 1.0, 0.0);
@@ -247,6 +251,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             .LookAt => camera.get_lookat_view(),
             .LookTo => camera.get_lookto_view(),
         };
+
+        main.processKeys();
 
         gl.clearColor(0.1, 0.3, 0.1, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -273,8 +279,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         };
 
         basic_model_shader.use_shader();
-        basic_model_shader.set_mat4("projection", &main.state.projection);
-        basic_model_shader.set_mat4("view", &main.state.view);
+        basic_model_shader.set_mat4("matProjection", &main.state.projection);
+        basic_model_shader.set_mat4("matView", &main.state.view);
 
         basic_model_shader.set_vec3("ambient_color", &vec3(1.0, 0.6, 0.6));
         basic_model_shader.set_vec3("light_color", &vec3(0.35, 0.4, 0.5));
@@ -282,13 +288,13 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
 
-        var model_transform = Mat4.identity();
-        model_transform.translate(&vec3(-3.0, 1.0, 3.0));
-        //model_transform.scale(&vec3(1.5, 1.5, 1.5));
+        if (main.state.mouse_left_button and main.state.world_point != null) {
+            main.state.selected_position = main.state.world_point.?;
+        }
 
-        basic_model_shader.set_mat4("model", &model_transform);
-        sphere.render();
-        // node_model.render(basic_model_shader);
+        updateSpin(node_cylinder, &main.state);
+        root_node.setTranslation(main.state.selected_position);
+        root_node.updateTransforms(null);
 
         const Picked = struct {
             id: ?u32,
@@ -300,48 +306,34 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             .distance = 10000.0,
         };
 
-        for (cube_transforms, 0..) |t, id| {
-            basic_model_shader.set_mat4("model", &t);
-            const aabb = cubeboid.aabb.transform(&t);
-            const distance = aabb.ray_intersects(ray);
-            if (distance) |d| {
-                if (picked.id != null) {
-                    if (d < picked.distance) {
+        for (node_list.items, 0..) |n, id| {
+            if (n.object.getBoundingBox()) |aabb| {
+                const box = aabb.transform(&n.global_transform.get_matrix());
+                const distance = box.ray_intersects(ray);
+                if (distance) |d| {
+                    if (picked.id != null) {
+                        if (d < picked.distance) {
+                            picked.id = @intCast(id);
+                            picked.distance = d;
+                        }
+                    } else {
                         picked.id = @intCast(id);
                         picked.distance = d;
                     }
-                } else {
-                    picked.id = @intCast(id);
-                    picked.distance = d;
                 }
             }
         }
 
-        for (cube_positions, 0..) |t, i| {
-            if (picked.id != null and picked.id == @as(u32, @intCast(i))) {
+        for (node_list.items, 0..) |n, id| {
+            if (picked.id != null and picked.id == @as(u32, @intCast(id))) {
                 basic_model_shader.set_vec4("hit_color", &vec4(1.0, 0.0, 0.0, 0.0));
             }
-
-            //basic_model_shader.set_mat4("model", &t);
-            node_cube.transform.translation = t;
-            node_cube.updateTransforms(null);
-            node_cube.render(basic_model_shader);
-
+            n.render(basic_model_shader);
             basic_model_shader.set_vec4("hit_color", &vec4(0.0, 0.0, 0.0, 0.0));
         }
 
-        if (main.state.mouse_left_button and main.state.world_point != null) {
-            main.state.selected_position = main.state.world_point.?;
-        }
-
-        updateSpin(node_cylinder, &main.state);
-
-        root_node.transform.translation = main.state.selected_position;
-        root_node.updateTransforms(null);
-        root_node.render(basic_model_shader);
-
         const plane_transform = Mat4.fromTranslation(&vec3(0.0, -1.0, 0.0));
-        basic_model_shader.set_mat4("model", &plane_transform);
+        basic_model_shader.set_mat4("matModel", &plane_transform);
         basic_model_shader.bind_texture(0, "texture_diffuse", surface_texture);
         plane.render();
 

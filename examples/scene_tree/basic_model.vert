@@ -1,27 +1,24 @@
 #version 330 core
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec2 inTexCoord;
-layout(location = 3) in vec3 inTangent;
-layout(location = 4) in vec3 inBiTangent;
-layout(location = 5) in ivec4 inBoneIds;
-layout(location = 6) in vec4 inWeights;
+layout(location = 0) in vec3 vertPosition;
+layout(location = 1) in vec3 vertNormal;
+layout(location = 2) in vec2 vertTexCoord;
+layout(location = 3) in vec3 vertTangent;
+layout(location = 4) in vec3 vertBiTangent;
+layout(location = 5) in ivec4 vertBoneIds;
+layout(location = 6) in vec4 vertWeights;
 
-uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
-uniform mat4 modelRot;
+uniform mat4 matModel;
+uniform mat4 matView;
+uniform mat4 matProjection;
 
-out vec2 TexCoord;
-out vec3 normal;
+out vec2 fragTexcoord;
+out vec3 fragNormal;
 
 void main()
 {
-    TexCoord = inTexCoord;
-    gl_Position = projection * view * model * vec4(inPosition, 1.0);
+    fragTexcoord = vertTexCoord;
+    gl_Position = matProjection * matView * matModel * vec4(vertPosition, 1.0);
 
-    normal = inNormal;
-    //normal = vec3(modelRot * vec4(inNormal, 1.0));
-    //normal = normalize(projection * view * model * vec4(inNormal, 1.0)).xyz;
-    // normal = normalize(model * vec4(inNormal, 1.0)).xyz;
+    mat4 matNormal = transpose(inverse(matModel));
+    fragNormal = normalize(vec3(matNormal * vec4(vertNormal, 1.0)));
 }
