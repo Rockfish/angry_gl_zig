@@ -19,6 +19,7 @@ pub const SENSITIVITY: f32 = 0.1;
 pub const FOV: f32 = 45.0;
 pub const NEAR: f32 = 0.01;
 pub const FAR: f32 = 1000.0;
+pub const ORTHO_SCALE: f32 = 10.0;
 
 pub const CameraMovement = enum {
     // panning movement in relation to up, front, right axes at camera position
@@ -66,6 +67,7 @@ pub const Camera = struct {
     zoom: f32, // hmm
     fovy: f32,
     projection_type: ProjectionType,
+    ortho_scale: f32,
     ortho_width: f32,
     ortho_height: f32,
     aspect: f32,
@@ -94,8 +96,9 @@ pub const Camera = struct {
             .pitch = PITCH,
             .zoom = 0.0,
             .fovy = FOV,
-            .ortho_width = scr_width / 100.0,
-            .ortho_height = scr_height / 100.0,
+            .ortho_scale = ORTHO_SCALE,
+            .ortho_width = scr_width / ORTHO_SCALE,
+            .ortho_height = scr_height / ORTHO_SCALE,
             .projection_type = ProjectionType.Perspective,
             .aspect = scr_width / scr_height,
             .camera_speed = SPEED,
@@ -152,10 +155,10 @@ pub const Camera = struct {
         // const top = self.fovy / 2.0;
         // const right = top * self.aspect;
         return Mat4.orthographicRhGl(
-            -self.ortho_width / 2.0,
-            self.ortho_width / 2.0,
-            -self.ortho_height / 2.0,
-            self.ortho_height / 2.0,
+            -self.ortho_width / self.ortho_scale,
+            self.ortho_width / self.ortho_scale,
+            -self.ortho_height / self.ortho_scale,
+            self.ortho_height / self.ortho_scale,
             NEAR,
             FAR,
         );
@@ -165,18 +168,6 @@ pub const Camera = struct {
         return Mat4.perspectiveRhGl(to_rads(self.fovy), self.aspect, NEAR, FAR);
     }
 
-    // CameraMovement.Right => {
-    //     const angle = to_rads(90.0);
-    //     const turn_rotation = Quat.fromAxisAngle(&self.up, angle);
-    //     const right = turn_rotation.rotateVec(&self.front);
-    //     self.position = self.position.sub(&right.mulScalar(velocity));
-    // },
-    // CameraMovement.Left => {
-    //     const angle = to_rads(90.0);
-    //     const turn_rotation = Quat.fromAxisAngle(&self.up, angle);
-    //     const right = turn_rotation.rotateVec(&self.front);
-    //     self.position = self.position.add(&right.mulScalar(velocity));
-    // },
     // processes input received from any keyboard-like input system. Accepts input parameter
     // in the form of camera defined ENUM (to abstract it from windowing systems)
     pub fn process_keyboard(self: *Self, direction: CameraMovement, delta_time: f32) void {
@@ -236,32 +227,40 @@ pub const Camera = struct {
             },
             .OrbitRight => { // OrbitRight along latitude
                 const angle = to_rads(velocity);
-                const turn_rotation = Quat.fromAxisAngle(&self.up, angle);
+                const rotation = Quat.fromAxisAngle(&self.up, angle);
                 const radius_vec = self.position.sub(&self.target);
-                const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                const rotated_vec = rotation.rotateVec(&radius_vec);
                 self.position = self.target.add(&rotated_vec);
+
+                // revisit - maybe accumulates errors?
+                self.front = rotation.rotateVec(&self.front);
+                self.right = rotation.rotateVec(&self.right);
                 //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
             },
             .OrbitLeft => { // OrbitLeft along latitude
                 const angle = to_rads(velocity);
-                const turn_rotation = Quat.fromAxisAngle(&self.up, -angle);
+                const rotation = Quat.fromAxisAngle(&self.up, -angle);
                 const radius_vec = self.position.sub(&self.target);
-                const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                const rotated_vec = rotation.rotateVec(&radius_vec);
                 self.position = self.target.add(&rotated_vec);
+
+                // revisit - maybe accumulates errors?
+                self.front = rotation.rotateVec(&self.front);
+                self.right = rotation.rotateVec(&self.right);
                 //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
             },
             .OrbitUp => { // OrbitUp along longitude
                 const angle = to_rads(velocity);
-                const turn_rotation = Quat.fromAxisAngle(&self.right, -angle);
+                const rotation = Quat.fromAxisAngle(&self.right, -angle);
                 const radius_vec = self.position.sub(&self.target);
-                const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                const rotated_vec = rotation.rotateVec(&radius_vec);
                 self.position = self.target.add(&rotated_vec);
             },
             .OrbitDown => { // OrbitDown along longitude
                 const angle = to_rads(velocity);
-                const turn_rotation = Quat.fromAxisAngle(&self.right, angle);
+                const rotation = Quat.fromAxisAngle(&self.right, angle);
                 const radius_vec = self.position.sub(&self.target);
-                const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                const rotated_vec = rotation.rotateVec(&radius_vec);
                 self.position = self.target.add(&rotated_vec);
             },
         }

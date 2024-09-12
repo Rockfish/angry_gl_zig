@@ -9,10 +9,6 @@ const nodes_ = @import("nodes_union.zig");
 const main = @import("main.zig");
 const shapes = core.shapes;
 
-// const Cubeboid = core.shapes.Cubeboid;
-// const Cylinder = core.shapes.Cylinder;
-// const Sphere = core.shapes.Sphere;
-
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
 const vec3 = math.vec3;
@@ -66,8 +62,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     );
     defer camera.deinit();
 
-    const key_presses = EnumSet(glfw.Key).initEmpty();
-
     main.state = State{
         .viewport_width = viewport_width,
         .viewport_height = viewport_height,
@@ -81,12 +75,15 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .light_postion = vec3(1.2, 1.0, 2.0),
         .delta_time = 0.0,
         .total_time = 0.0,
-        .first_mouse = true,
-        .mouse_x = scaled_width / 2.0,
-        .mouse_y = scaled_height / 2.0,
-        .key_presses = key_presses,
         .world_point = null,
-        .selected_position = vec3(0.0, 0.0, 0.0),
+        .current_position = vec3(0.0, 0.0, 0.0),
+        .target_position = vec3(0.0, 0.0, 0.0),
+        .input = .{
+            .first_mouse = true,
+            .mouse_x = scaled_width / 2.0,
+            .mouse_y = scaled_height / 2.0,
+            .key_presses = EnumSet(glfw.Key).initEmpty(),
+        },
     };
 
     const basic_model_shader = try Shader.new(
@@ -111,12 +108,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var plane = try shapes.createCube(
         allocator,
         .{
-            .width = 20.0,
+            .width = 100.0,
             .height = 2.0,
-            .depth = 20.0,
-            .num_tiles_x = 10.0,
+            .depth = 100.0,
+            .num_tiles_x = 50.0,
             .num_tiles_y = 1.0,
-            .num_tiles_z = 10.0,
+            .num_tiles_z = 50.0,
         },
     );
     defer plane.deinit();
@@ -205,7 +202,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const node_cylinder = try nodes_.Node.init(allocator, "shape_cylinder", .{ .shape = &cylinder_obj });
     try node_list.append(node_cylinder);
 
-    const node_sphere = try nodes_.Node.init(allocator, "shpere_shape", .{ .shape = &sphere_obj});
+    const node_sphere = try nodes_.Node.init(allocator, "shpere_shape", .{ .shape = &sphere_obj });
     try node_list.append(node_sphere);
     node_sphere.setTranslation(vec3(-3.0, 1.0, 3.0));
 
@@ -240,6 +237,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const xz_plane_point = vec3(0.0, 0.0, 0.0);
     const xz_plane_normal = vec3(0.0, 1.0, 0.0);
 
+    var moving = false;
+
     // render loop
     // -----------
     while (!window.shouldClose()) {
@@ -262,8 +261,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             main.state.scaled_height,
             &main.state.projection,
             &main.state.view,
-            main.state.mouse_x,
-            main.state.mouse_y,
+            main.state.input.mouse_x,
+            main.state.input.mouse_y,
         );
 
         main.state.world_point = math.ray_plane_intersection(
@@ -288,12 +287,34 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
 
-        if (main.state.mouse_left_button and main.state.world_point != null) {
-            main.state.selected_position = main.state.world_point.?;
+        if (main.state.input.mouse_left_button and main.state.world_point != null) {
+            main.state.target_position = main.state.world_point.?;
+            moving = true;
         }
 
+        if (moving) {
+            var direction = main.state.target_position.sub(&main.state.current_position);
+            const distance = direction.length();
+
+            if (distance < 0.1) {
+                main.state.current_position = main.state.target_position;
+                moving = false;
+            } else {
+                direction = direction.normalize();
+                const moveDistance = main.state.delta_time * 20.0;
+
+                if (moveDistance > distance) {
+                    main.state.current_position = main.state.target_position;
+                    moving = false;
+                } else {
+                    main.state.current_position = main.state.current_position.add(&direction.mulScalar(moveDistance));
+                }
+            }
+        }
+
+        root_node.setTranslation(main.state.current_position);
+
         updateSpin(node_cylinder, &main.state);
-        root_node.setTranslation(main.state.selected_position);
         root_node.updateTransforms(null);
 
         const Picked = struct {
@@ -360,4 +381,43 @@ pub fn updateSpin(node: *nodes_.Node, st: *State) void {
     const angle = math.degreesToRadians(velocity);
     const turn_rotation = Quat.fromAxisAngle(&up, angle);
     node.transform.rotation = node.transform.rotation.mulQuat(&turn_rotation);
+}
+// Exponential decay function
+pub fn exponentialDecay(a: f32, b: f32, decay: f32, dt: f32) f32 {
+    return b + (a - b) * std.math.expm1(-decay * dt);
+}
+
+// Exponential decay constant
+// useful range approx. 1 to 25 from slow to fast
+// const decay: f32 = 16;
+//
+// pub fn update(delta_time: f32) void {
+// 	a = exp_decay(a, b, decay, delta_time);
+// }
+//
+pub fn moveTowards(currentPosition: Vec3, targetPosition: Vec3, speed: f32, deltaTime: f32) Vec3 {
+    // Calculate the direction vector towards the target
+    var direction = targetPosition.sub(currentPosition);
+
+    // Calculate the distance to the target
+    const distanceToTarget = direction.length();
+
+    // If the character is very close to the target, snap to the target position
+    if (distanceToTarget < 0.01) {
+        return targetPosition;
+    }
+
+    // Normalize the direction to get a constant movement vector
+    direction = direction.normalize();
+
+    // Calculate how far to move this frame (based on speed and deltaTime)
+    const moveDistance = speed * deltaTime;
+
+    // Ensure we don't overshoot the target
+    if (moveDistance > distanceToTarget) {
+        return targetPosition;
+    }
+
+    // Move the character by moveDistance in the direction of the target
+    return currentPosition.add(direction.scale(moveDistance));
 }

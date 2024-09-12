@@ -46,12 +46,23 @@ const SIZE_OF_VEC3 = @sizeOf(Vec3);
 const SIZE_OF_VEC4 = @sizeOf(Vec4);
 const SIZE_OF_QUAT = @sizeOf(Quat);
 
+pub const Input = struct {
+    first_mouse: bool = false,
+    mouse_x: f32 = 0.0,
+    mouse_y: f32 = 0.0,
+    mouse_right_button: bool = false,
+    mouse_left_button: bool = false,
+    key_presses: EnumSet(glfw.Key),
+    key_shift: bool = false,
+};
+
 pub const State = struct {
     viewport_width: f32,
     viewport_height: f32,
     scaled_width: f32,
     scaled_height: f32,
     window_scale: [2]f32,
+    input: Input,
     camera: *Camera,
     projection: Mat4 = undefined,
     projection_type: cam.ProjectionType,
@@ -60,16 +71,10 @@ pub const State = struct {
     light_postion: Vec3,
     delta_time: f32,
     total_time: f32,
-    first_mouse: bool,
-    mouse_x: f32,
-    mouse_y: f32,
-    key_presses: EnumSet(glfw.Key),
-    key_shift: bool = false,
-    mouse_right_button: bool = false,
-    mouse_left_button: bool = false,
     spin: bool = false,
     world_point: ?Vec3,
-    selected_position: Vec3,
+    current_position: Vec3,
+    target_position: Vec3,
 };
 
 pub var state: State = undefined;
@@ -125,12 +130,12 @@ fn keyHandler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.A
     _ = scancode;
 
     switch (action) {
-        .press => state.key_presses.insert(key),
-        .release => state.key_presses.remove(key),
+        .press => state.input.key_presses.insert(key),
+        .release => state.input.key_presses.remove(key),
         else => {},
     }
 
-    state.key_shift = mods.shift;
+    state.input.key_shift = mods.shift;
 
     if (key == .escape) {
         window.setShouldClose(true);
@@ -142,47 +147,47 @@ pub fn processKeys() void {
         var spin_is_set: bool = false;
     };
 
-    var iterator = state.key_presses.iterator();
+    var iterator = state.input.key_presses.iterator();
     while (iterator.next()) |k| {
         switch (k) {
             .t => std.debug.print("time: {d}\n", .{state.delta_time}),
             .w => {
-                if (state.key_shift) {
+                if (state.input.key_shift) {
                     state.camera.process_keyboard(.Forward, state.delta_time);
                 } else {
                     state.camera.process_keyboard(.MoveIn, state.delta_time);
                 }
             },
             .s => {
-                if (state.key_shift) {
+                if (state.input.key_shift) {
                     state.camera.process_keyboard(.Backward, state.delta_time);
                 } else {
                     state.camera.process_keyboard(.MoveOut, state.delta_time);
                 }
             },
             .a => {
-                if (state.key_shift) {
+                if (state.input.key_shift) {
                     state.camera.process_keyboard(.Left, state.delta_time);
                 } else {
                     state.camera.process_keyboard(.OrbitLeft, state.delta_time);
                 }
             },
             .d => {
-                if (state.key_shift) {
+                if (state.input.key_shift) {
                     state.camera.process_keyboard(.Right, state.delta_time);
                 } else {
                     state.camera.process_keyboard(.OrbitRight, state.delta_time);
                 }
             },
             .up => {
-                if (state.key_shift) {
+                if (state.input.key_shift) {
                     state.camera.process_keyboard(.Up, state.delta_time);
                 } else {
                     state.camera.process_keyboard(.OrbitUp, state.delta_time);
                 }
             },
             .down => {
-                if (state.key_shift) {
+                if (state.input.key_shift) {
                     state.camera.process_keyboard(.Down, state.delta_time);
                 } else {
                     state.camera.process_keyboard(.OrbitDown, state.delta_time);
@@ -210,7 +215,7 @@ pub fn processKeys() void {
             else => {},
         }
     }
-    toggle.spin_is_set = state.key_presses.contains(.three);
+    toggle.spin_is_set = state.input.key_presses.contains(.three);
 }
 
 fn framebufferSizeHandler(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {
@@ -248,8 +253,8 @@ fn mouseHandler(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Act
     _ = window;
     _ = mods;
 
-    state.mouse_left_button = action == .press and button == glfw.MouseButton.left;
-    state.mouse_right_button = action == .press and button == glfw.MouseButton.right;
+    state.input.mouse_left_button = action == .press and button == glfw.MouseButton.left;
+    state.input.mouse_right_button = action == .press and button == glfw.MouseButton.right;
 }
 
 fn cursorPositionHandler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
@@ -260,19 +265,19 @@ fn cursorPositionHandler(window: *glfw.Window, xposIn: f64, yposIn: f64) callcon
     xpos = if (xpos < 0) 0 else if (xpos < state.scaled_width) xpos else state.scaled_width;
     ypos = if (ypos < 0) 0 else if (ypos < state.scaled_height) ypos else state.scaled_height;
 
-    if (state.first_mouse) {
-        state.mouse_x = xpos;
-        state.mouse_y = ypos;
-        state.first_mouse = false;
+    if (state.input.first_mouse) {
+        state.input.mouse_x = xpos;
+        state.input.mouse_y = ypos;
+        state.input.first_mouse = false;
     }
 
-    const xoffset = xpos - state.mouse_x;
-    const yoffset = state.mouse_y - ypos; // reversed since y-coordinates go from bottom to top
+    const xoffset = xpos - state.input.mouse_x;
+    const yoffset = state.input.mouse_y - ypos; // reversed since y-coordinates go from bottom to top
 
-    state.mouse_x = xpos;
-    state.mouse_y = ypos;
+    state.input.mouse_x = xpos;
+    state.input.mouse_y = ypos;
 
-    if (state.key_shift) {
+    if (state.input.key_shift) {
         state.camera.process_mouse_movement(xoffset, yoffset, true);
     }
 }

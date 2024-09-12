@@ -87,7 +87,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .mouse_y = scaled_height / 2.0,
         .key_presses = key_presses,
         .world_point = null,
-        .selected_position = vec3(0.0, 0.0, 0.0),
+        .target_position = vec3(0.0, 0.0, 0.0),
     };
 
     const basic_model_shader = try Shader.new(
@@ -298,12 +298,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         }
 
         if (main.state.mouse_left_button and main.state.world_point != null) {
-            main.state.selected_position = main.state.world_point.?;
+            main.state.target_position = main.state.world_point.?;
         }
 
         updateSpin(node_cylinder, &main.state);
 
-        root_node.transform.translation = main.state.selected_position;
+        root_node.transform.translation = main.state.target_position;
         root_node.updateTransform(null);
         root_node.render(basic_model_shader);
 
