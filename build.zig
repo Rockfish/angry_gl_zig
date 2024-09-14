@@ -95,7 +95,7 @@ pub fn build(b: *std.Build) void {
         source: []const u8,
     }{
         .{ .name = "main", .exe_name = "core_main", .source = "src/main.zig" },
-        .{ .name = "game", .exe_name = "angry_monsters", .source = "game/main.zig" },
+        .{ .name = "game_angrybot", .exe_name = "angry_monsters", .source = "game_angrybot/main.zig" },
         .{ .name = "animation", .exe_name = "animation_example", .source = "examples/sample_animation/sample_animation.zig" },
         .{ .name = "assimp_report", .exe_name = "assimp_report", .source = "examples/assimp_report/assimp_report.zig" },
         .{ .name = "bullets", .exe_name = "bullets_example", .source = "examples/bullets/main.zig" },
@@ -105,6 +105,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "picker", .exe_name = "picker_example", .source = "examples/picker/main.zig" },
         .{ .name = "ray_selection", .exe_name = "ray_selection_example", .source = "examples/ray_selection/main.zig" },
         .{ .name = "scene_tree", .exe_name = "scene_tree_example", .source = "examples/scene_tree/main.zig" },
+        .{ .name = "game_level_001", .exe_name = "angry_monsters", .source = "game_level_001/main.zig" },
     }) |app| {
         const exe = b.addExecutable(.{
             .name = app.exe_name,

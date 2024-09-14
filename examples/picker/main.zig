@@ -5,10 +5,6 @@ const gl = @import("zopengl").bindings;
 const core = @import("core");
 const math = @import("math");
 
-const Cube = @import("cube.zig").Cube;
-const Cubeboid = core.shapes.Cubeboid;
-const Cylinder = core.shapes.Cylinder;
-
 const Picker = @import("picker.zig").Picker;
 const PixelInfo = @import("picker.zig").PixelInfo;
 
@@ -154,9 +150,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     builder.deinit();
     defer model.deinit();
 
-    const cube = Cube.init();
-    const cubeboid = Cubeboid.init(.{ .width = 1.0, .height = 1.0, .depth = 2.0 });
-    const cylinder = try Cylinder.init(allocator, 0.5, 4.0, 10);
+    const cube = try core.shapes.createCube(allocator, .{ .width = 1.0, .height = 1.0, .depth = 2.0 });
+    const cylinder = try core.shapes.createCylinder(allocator, 0.5, 4.0, 10);
 
     const texture_config = .{
         .texture_type = .Diffuse,
@@ -212,12 +207,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         picker.set_model_transform(&cube_transform1);
         picker.set_object_id(1);
         picker.set_mesh_id(1);
-        cube.draw(cube_texture.id);
+
+        cube.render();
 
         picker.set_model_transform(&cube_transform2);
         picker.set_object_id(2);
         picker.set_mesh_id(2);
-        cube.draw(cube_texture.id);
+
+        cube.render();
 
         picker.disable();
 
@@ -232,29 +229,32 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             );
         }
 
-        basic_shader.use_shader();
 
         gl.clearColor(0.1, 0.3, 0.1, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+        basic_shader.use_shader();
         basic_shader.set_mat4("view", &view);
+        basic_shader.bind_texture(0, "texture_diffuse", cube_texture);
 
         var selected: i32 = if (pixel_info.object_id == 1.0) @intFromFloat(pixel_info.primative_id) else 0;
+
         basic_shader.set_int("primative_id", selected);
         basic_shader.set_mat4("model", &cube_transform1);
-        cube.draw(cube_texture.id);
+        cube.render();
 
         selected = if (pixel_info.object_id == 2.0) @intFromFloat(pixel_info.primative_id) else 0;
+
         basic_shader.set_int("primative_id", selected);
         basic_shader.set_mat4("model", &cube_transform2);
-        cube.draw(cube_texture.id);
+        cube.render();
 
         basic_model_shader.use_shader();
         basic_model_shader.set_mat4("view", &view);
 
         basic_model_shader.set_mat4("model", &cubeboid_transform);
         basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
-        cubeboid.render();
+        cube.render();
 
         const cylinder_transform = Mat4.fromTranslation(&vec3(3.0, 0.0, 0.0));
         basic_model_shader.set_mat4("model", &cylinder_transform);

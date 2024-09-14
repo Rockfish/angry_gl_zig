@@ -6,9 +6,6 @@ const core = @import("core");
 const math = @import("math");
 const tests = @import("tests.zig");
 
-const Cubeboid = core.shapes.Cubeboid;
-const Cylinder = core.shapes.Cylinder;
-
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
 const vec3 = math.vec3;
@@ -174,8 +171,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     var texture_cache = std.ArrayList(*Texture).init(allocator);
 
-    const cubeboid = Cubeboid.init(.{ .width = 1.0, .height = 1.0, .depth = 2.0 });
-    const plane = Cubeboid.init(.{
+    const cubeboid = try core.shapes.createCube(allocator, .{ .width = 1.0, .height = 1.0, .depth = 2.0 });
+    const plane = try core.shapes.createCube(allocator, .{
         .width = 20.0,
         .height = 2.0,
         .depth = 20.0,
@@ -183,7 +180,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .num_tiles_y = 1.0,
         .num_tiles_z = 10.0,
     });
-    const cylinder = try Cylinder.init(
+    const cylinder = try core.shapes.createCylinder(
         allocator,
         1.0,
         4.0,
