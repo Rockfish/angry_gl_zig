@@ -33,11 +33,12 @@ pub fn main() !void {
         "/Users/john/Dev/Assets/glTF-Sample-Models/1.0/RiggedFigure/glTF/RiggedFigure.gltf",
         "/Users/john/Dev/Repos/irrlicht/media/faerie.md2", // skipModelTextures
         "/Users/john/Downloads/Robot2.fbx",
+        "/Users/john/Dev/Assets/modular_characters/Individual Characters/FBX/Spacesuit.fbx",
     };
 
     // const model_path = "examples/sample_animation/colorful_cube/scene.gltf";
 
-    const scene = try loadScene(allocator, model_paths[8]);
+    const scene = try loadScene(allocator, model_paths[9]);
 
     var parse = SceneParser.new(allocator);
     std.debug.print("scene: {any}\n", .{scene});

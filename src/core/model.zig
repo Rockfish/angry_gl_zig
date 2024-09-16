@@ -74,15 +74,13 @@ pub const Model = struct {
 
     pub fn set_shader_bones_for_mesh(self: *Self, shader: *const Shader, mesh: *ModelMesh) !void {
         var buf: [256:0]u8 = undefined;
-        const final_bones = self.animator.final_bone_matrices.borrow();
-        const final_nodes = self.animator.final_node_matrices.borrow();
 
         for (0..MAX_BONES) |i| {
-            const bone_transform = final_bones[i];
+            const bone_transform = self.animator.final_bone_matrices[i];
             const uniform = try std.fmt.bufPrintZ(&buf, "finalBonesMatrices[{d}]", .{i});
             shader.set_mat4(uniform, &bone_transform);
         }
-        shader.set_mat4("nodeTransform", &final_nodes[@intCast(mesh.id)]);
+        shader.set_mat4("nodeTransform", &self.animator.final_node_matrices[@intCast(mesh.id)]);
     }
 
     pub fn update_animation(self: *Self, delta_time: f32) !void {

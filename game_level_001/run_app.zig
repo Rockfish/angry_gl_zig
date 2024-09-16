@@ -104,10 +104,15 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const basic_model_shader = try Shader.new(
         allocator,
-        "examples/scene_tree/basic_model.vert",
-        "examples/scene_tree/basic_model.frag",
+        "game_level_001/shaders/basic_model.vert",
+        "game_level_001/shaders/basic_model.frag",
     );
     defer basic_model_shader.deinit();
+
+    const model_shader = try Shader.new(allocator, 
+        "game_level_001/shaders/player_shader.vert", 
+        "game_level_001/shaders/player_shader.frag",
+    );
 
     var cubeboid = try shapes.createCube(
         allocator,
@@ -176,14 +181,15 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         "/Users/john/Dev/Assets/glTF-Sample-Models/1.0/RiggedFigure/glTF/RiggedFigure.gltf",
         "/Users/john/Dev/Repos/irrlicht/media/faerie.md2", // use skipModelTextures
         "/Users/john/Downloads/Robot2.fbx",
+        "/Users/john/Dev/Assets/modular_characters/Individual Characters/FBX/Spacesuit.fbx",
         // these are not loading
         "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/RiggedFigure/glTF-Binary/RiggedFigure.glb",
         "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/RiggedFigure/glTF/RiggedFigure.gltf",
         "/Users/john/Dev/Repos/Egregoria/assets/models/pedestrian.glb",
     };
 
-    var builder = try ModelBuilder.init(allocator, &texture_cache, "alien", model_paths[6]);
-    try builder.addTexture("Robot2", texture_diffuse, "/Users/john/Dev/Zig/Dev/angry_gl_zig/assets/textures/IMGP5487_seamless.jpg");
+    var builder = try ModelBuilder.init(allocator, &texture_cache, "alien", model_paths[7]);
+    //try builder.addTexture("Robot2", texture_diffuse, "/Users/john/Dev/Zig/Dev/angry_gl_zig/assets/textures/IMGP5487_seamless.jpg");
     var model = try builder.build();
 
     builder.deinit();
@@ -197,17 +203,18 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var model_obj = nodes.ModelObj.init(model, "Bot_Model");
 
     const root_node = try node_manager.create("root_node", .{ .basic = &basic_obj });
-    const node_model = try node_manager.create("node_model", .{ .model = &model_obj });
+    const model_node = try node_manager.create("node_model", .{ .model = &model_obj });
 
-    node_model.setTranslation(vec3(2.0, 0.0, 2.0));
-    node_model.transform.scale = vec3(1.5, 1.5, 1.5);
+    model_node.setTranslation(vec3(2.0, 0.0, 2.0));
+    model_node.setRotation(Quat.fromAxisAngle(&vec3(1.0, 0.0, 0.0), math.degreesToRadians(-90.0)));
+    model_node.transform.scale = vec3(1.5, 1.5, 1.5);
 
     const node_cylinder = try node_manager.create("shape_cylinder", .{ .shape = &cylinder_obj });
     const node_sphere = try node_manager.create("shpere_shape", .{ .shape = &sphere_obj });
 
     node_sphere.setTranslation(vec3(-3.0, 1.0, 3.0));
 
-    try root_node.addChild(node_model);
+    //try root_node.addChild(node_model);
     try root_node.addChild(node_cylinder);
 
     const cube_positions = [_]Vec3{
@@ -311,6 +318,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
                 }
             }
         }
+
+        _ = model_shader;
+        try model_obj.model.update_animation(state.delta_time);
 
         root_node.setTranslation(state.current_position);
 
