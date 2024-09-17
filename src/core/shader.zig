@@ -285,7 +285,7 @@ pub const Shader = struct {
 };
 
 fn check_compile_errors(id: u32, check_type: []const u8) void {
-    var infoLog: [1024]u8 = undefined;
+    var infoLog: [2024]u8 = undefined;
     var successful: c_int = undefined;
 
     if (!std.mem.eql(u8, check_type, "PROGRAM")) {
@@ -293,7 +293,7 @@ fn check_compile_errors(id: u32, check_type: []const u8) void {
         if (successful != gl.TRUE) {
             var len: c_int = 0;
             gl.getShaderiv(id, gl.INFO_LOG_LENGTH, &len);
-            gl.getShaderInfoLog(id, 1024, null, &infoLog);
+            gl.getShaderInfoLog(id, 2024, null, &infoLog);
             std.debug.panic("shader compile error: {s}", .{infoLog[0..@intCast(len)]});
         }
     } else {
@@ -301,7 +301,7 @@ fn check_compile_errors(id: u32, check_type: []const u8) void {
         if (successful != gl.TRUE) {
             var len: c_int = 0;
             gl.getProgramiv(id, gl.INFO_LOG_LENGTH, &len);
-            gl.getProgramInfoLog(id, 1024, null, &infoLog);
+            gl.getProgramInfoLog(id, 2024, null, &infoLog);
             std.debug.panic("shader link error: {s}", .{infoLog[0..@intCast(len)]});
         }
     }

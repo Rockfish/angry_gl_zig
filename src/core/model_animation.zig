@@ -111,6 +111,7 @@ pub const ModelAnimation = struct {
 
         // only handling the first animation
         const animation = aiScene.*.mAnimations[0..num_animations][0];
+        model_animation.*.animation_name.deinit();
         model_animation.*.animation_name = try String.from_aiString(animation.*.mName);
         model_animation.*.duration = @as(f32, @floatCast(animation.*.mDuration));
         model_animation.*.ticks_per_second = @as(f32, @floatCast(animation.*.mTicksPerSecond));

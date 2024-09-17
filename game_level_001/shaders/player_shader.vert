@@ -1,12 +1,12 @@
 #version 330 core
 
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec2 inTexCoord;
-layout(location = 3) in vec3 inTangent;
-layout(location = 4) in vec3 inBiTangent;
-layout(location = 5) in ivec4 inBoneIds;
-layout(location = 6) in vec4 inWeights;
+layout(location = 0) in vec3 vertPosition;
+layout(location = 1) in vec3 vertNormal;
+layout(location = 2) in vec2 vertTexCoord;
+layout(location = 3) in vec3 vertTangent;
+layout(location = 4) in vec3 vertBiTangent;
+layout(location = 5) in ivec4 vertBoneIds;
+layout(location = 6) in vec4 vertWeights;
 
 const int MAX_BONES = 100;
 const int MAX_BONE_INFLUENCE = 4;
@@ -14,50 +14,50 @@ const int MAX_BONE_INFLUENCE = 4;
 uniform mat4 finalBonesMatrices[MAX_BONES];
 uniform mat4 nodeTransform;
 
-uniform mat4 projection;
-uniform mat4 view;
-uniform mat4 model;
+uniform mat4 matProjection;
+uniform mat4 matView;
+uniform mat4 matModel;
+uniform mat4 matLightSpace;
 
-out vec2 TexCoord;
-out vec3 Norm;
-out vec4 FragPosLightSpace;
-out vec3 FragWorldPos;
+out vec2 fragTexCoord;
+out vec3 fragNormal;
+out vec4 fragPosLightSpace;
+out vec3 fragWorldPos;
 
-// player Transformation matrices
-uniform mat4 aimRot;
-uniform mat4 lightSpaceMatrix;
+//uniform mat4 aimRot;
 
 void main() {
     vec4 totalPosition = vec4(0.0f);
 
     for (int i = 0; i < MAX_BONE_INFLUENCE; i++)
     {
-        if (inBoneIds[i] == -1) {
+        if (vertBoneIds[i] == -1) {
             continue;
         }
 
-        if (inBoneIds[i] >= MAX_BONES) {
-            totalPosition = vec4(inPosition, 1.0f);
+        if (vertBoneIds[i] >= MAX_BONES) {
+            totalPosition = vec4(vertPosition, 1.0f);
             break;
         }
 
-        vec4 localPosition = finalBonesMatrices[inBoneIds[i]] * vec4(inPosition, 1.0f);
-        totalPosition += localPosition * inWeights[i];
+        vec4 localPosition = finalBonesMatrices[vertBoneIds[i]] * vec4(vertPosition, 1.0f);
+        totalPosition += localPosition * vertWeights[i];
 
-        vec3 localNormal = mat3(finalBonesMatrices[inBoneIds[i]]) * inNormal;
+        vec3 localNormal = mat3(finalBonesMatrices[vertBoneIds[i]]) * vertNormal;
     }
 
     if (totalPosition == vec4(0.0f)) {
-        totalPosition = nodeTransform * vec4(inPosition, 1.0f);
+        totalPosition = nodeTransform * vec4(vertPosition, 1.0f);
     }
 
-    gl_Position = projection * view * model * totalPosition;
+    gl_Position = matProjection * matView * matModel * totalPosition;
 
-    TexCoord = inTexCoord;
+    fragTexCoord = vertTexCoord;
 
-    Norm = vec3(aimRot * vec4(inNormal, 1.0));
+    //fragNormal = vec3(aimRot * vec4(vertNormal, 1.0));
+    mat4 matNormal = transpose(inverse(matModel));
 
-    FragWorldPos = vec3(model * vec4(inPosition, 1.0));
-
-    FragPosLightSpace = lightSpaceMatrix * vec4(FragWorldPos, 1.0);
+    fragNormal = normalize(vec3(matNormal * vec4(vertNormal, 1.0)));
+    fragWorldPos = vec3(matModel * vec4(vertPosition, 1.0));
+    fragPosLightSpace = matLightSpace * vec4(fragWorldPos, 1.0);
 }

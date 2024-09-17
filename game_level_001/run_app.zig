@@ -113,6 +113,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         "game_level_001/shaders/player_shader.vert", 
         "game_level_001/shaders/player_shader.frag",
     );
+    defer model_shader.deinit();
 
     var cubeboid = try shapes.createCube(
         allocator,
@@ -191,8 +192,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var builder = try ModelBuilder.init(allocator, &texture_cache, "alien", model_paths[7]);
     //try builder.addTexture("Robot2", texture_diffuse, "/Users/john/Dev/Zig/Dev/angry_gl_zig/assets/textures/IMGP5487_seamless.jpg");
     var model = try builder.build();
-
     builder.deinit();
+
     defer model.deinit();
 
     var basic_obj = nodes.BasicObj.init("basic");
@@ -319,7 +320,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             }
         }
 
-        _ = model_shader;
         try model_obj.model.update_animation(state.delta_time);
 
         root_node.setTranslation(state.current_position);
