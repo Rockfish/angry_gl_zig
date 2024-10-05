@@ -2,7 +2,7 @@ const std = @import("std");
 const math = @import("math");
 const Assimp = @import("assimp.zig").Assimp;
 const Transform = @import("transform.zig").Transform;
-const ModelNodeAnimation = @import("model_node_animation.zig").ModelNodeAnimation;
+const NodeAnimation = @import("model_node_animation.zig").NodeAnimation;
 const String = @import("string.zig").String;
 
 const Allocator = std.mem.Allocator;
@@ -33,7 +33,7 @@ pub const ModelNode = struct {
 
     pub fn init(allocator: Allocator, name: *String) !*ModelNode {
         const node = try allocator.create(ModelNode);
-        node.* = ModelNode {
+        node.* = ModelNode{
             .node_name = name,
             .transform = Transform.default(),
             .childern = try allocator.create(ArrayList(*ModelNode)),
@@ -61,7 +61,7 @@ pub const ModelBone = struct {
 
     pub fn init(allocator: Allocator, name: []const u8, id: i32, offset: Mat4) !*ModelBone {
         const bone = try allocator.create(ModelBone);
-        bone.* = ModelBone {
+        bone.* = ModelBone{
             .bone_name = String.new(name),
             .bone_index = id,
             .offset_transform = Transform.from_matrix(offset),
@@ -76,7 +76,7 @@ pub const ModelAnimation = struct {
     animation_name: *String,
     duration: f32,
     ticks_per_second: f32,
-    node_animations: *ArrayList(*ModelNodeAnimation),
+    node_animations: *ArrayList(*NodeAnimation),
     allocator: Allocator,
 
     const Self = @This();
@@ -91,38 +91,45 @@ pub const ModelAnimation = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, aiScene: [*c]const Assimp.aiScene) !*Self {
-        const node_animations = try allocator.create(ArrayList(*ModelNodeAnimation));
-        node_animations.* = ArrayList(*ModelNodeAnimation).init(allocator);
+    pub fn init(allocator: Allocator, name: Assimp.aiString) !*Self {
+        const node_animations = try allocator.create(ArrayList(*NodeAnimation));
+        node_animations.* = ArrayList(*NodeAnimation).init(allocator);
 
-        const model_animation = try allocator.create(ModelAnimation);
-        model_animation.* = .{
-            .animation_name = try String.new(""),
+        const animation = try allocator.create(ModelAnimation);
+        animation.* = .{
+            .animation_name = try String.from_aiString(name),
             .duration = 0.0,
             .ticks_per_second = 0.0,
             .node_animations = node_animations,
             .allocator = allocator,
         };
-
-        const num_animations = aiScene.*.mNumAnimations;
-        if (num_animations == 0) {
-            return model_animation;
-        }
-
-        // only handling the first animation
-        const animation = aiScene.*.mAnimations[0..num_animations][0];
-        model_animation.*.animation_name.deinit();
-        model_animation.*.animation_name = try String.from_aiString(animation.*.mName);
-        model_animation.*.duration = @as(f32, @floatCast(animation.*.mDuration));
-        model_animation.*.ticks_per_second = @as(f32, @floatCast(animation.*.mTicksPerSecond));
-
-        const num_channels = animation.*.mNumChannels;
-
-        for (animation.*.mChannels[0..num_channels]) |channel| {
-            const node_animation = try ModelNodeAnimation.new(allocator, channel.*.mNodeName, channel);
-            try model_animation.node_animations.append(node_animation);
-        }
-
-        return model_animation;
+        return animation;
     }
 };
+
+pub fn getAnimations(allocator: Allocator, aiScene: [*c]const Assimp.aiScene) !*ArrayList(*ModelAnimation) {
+    const animations = try allocator.create(ArrayList(*ModelAnimation));
+    animations.* = ArrayList(*ModelAnimation).init(allocator);
+
+    const num_animations = aiScene.*.mNumAnimations;
+
+    for (aiScene.*.mAnimations[0..num_animations]) |ai_animation| {
+        const animation = try ModelAnimation.init(allocator, ai_animation.*.mName);
+        animation.*.duration = @as(f32, @floatCast(ai_animation.*.mDuration));
+        animation.*.ticks_per_second = @as(f32, @floatCast(ai_animation.*.mTicksPerSecond));
+
+        const num_channels = ai_animation.*.mNumChannels;
+
+        for (ai_animation.*.mChannels[0..num_channels]) |channel| {
+            const node_animation = try NodeAnimation.init(allocator, channel.*.mNodeName, channel);
+            try animation.node_animations.append(node_animation);
+        }
+
+        std.debug.print("Loaded animation:\n", .{});
+        std.debug.print("   name    : {s}\n", .{animation.animation_name.str});
+        std.debug.print("   duration: {d}\n", .{animation.duration});
+        std.debug.print("   node_animations length: {d}\n", .{animation.node_animations.items.len});
+    }
+
+    return animations;
+}

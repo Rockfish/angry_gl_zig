@@ -3,8 +3,9 @@ const math = @import("math");
 const assimp = @import("assimp.zig");
 const ModelBone = @import("model_animation.zig").ModelBone;
 const ModelNode = @import("model_animation.zig").ModelNode;
-const ModelNodeAnimation = @import("model_node_animation.zig").ModelNodeAnimation;
+const ModelNodeAnimation = @import("model_node_animation.zig").NodeAnimation;
 const ModelAnimation = @import("model_animation.zig").ModelAnimation;
+const getAnimations = @import("model_animation.zig").getAnimations;
 const Transform = @import("transform.zig").Transform;
 const utils = @import("utils/main.zig");
 const String = @import("string.zig").String;
@@ -181,7 +182,9 @@ pub const Animator = struct {
         const transform = assimp.mat4FromAiMatrix(&root.*.mTransformation);
         const global_inverse_transform = Mat4.getInverse(&transform);
 
-        const model_animation = try ModelAnimation.init(allocator, aiScene);
+        const animations = try getAnimations(allocator, aiScene); 
+        //const model_animation = try ModelAnimation.init(allocator, aiScene);
+        const model_animation = animations.items[0];
 
         const animation_clip = AnimationClip{
             .start_tick = 0.0,

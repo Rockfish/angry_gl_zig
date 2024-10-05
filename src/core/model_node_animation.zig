@@ -33,7 +33,7 @@ pub const KeyScale = struct {
     time_stamp: f32,
 };
 
-pub const ModelNodeAnimation = struct {
+pub const NodeAnimation = struct {
     node_name: *String,
     positions: *ArrayList(KeyPosition),
     rotations: *ArrayList(KeyRotation),
@@ -42,7 +42,7 @@ pub const ModelNodeAnimation = struct {
 
     const Self = @This();
 
-    pub fn new(allocator: Allocator, name: Assimp.aiString, aiNodeAnim: [*c]Assimp.aiNodeAnim) !*ModelNodeAnimation {
+    pub fn init(allocator: Allocator, name: Assimp.aiString, aiNodeAnim: [*c]Assimp.aiNodeAnim) !*NodeAnimation {
         const name_string = try String.from_aiString(name);
         const positions = try allocator.create(ArrayList(KeyPosition));
         const rotations = try allocator.create(ArrayList(KeyRotation));
@@ -83,8 +83,8 @@ pub const ModelNodeAnimation = struct {
             try scales.append(key);
         }
 
-        const node_animation = try allocator.create(ModelNodeAnimation);
-        node_animation.* = ModelNodeAnimation{
+        const node_animation = try allocator.create(NodeAnimation);
+        node_animation.* = NodeAnimation{
             .node_name = name_string,
             .positions = positions,
             .rotations = rotations,
