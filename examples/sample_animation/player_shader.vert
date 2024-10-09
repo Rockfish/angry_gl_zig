@@ -18,10 +18,10 @@ uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
 
-out vec2 TexCoord;
-out vec3 Norm;
-out vec4 FragPosLightSpace;
-out vec3 FragWorldPos;
+out vec2 fragTexCoord;
+out vec3 fragNormal;
+out vec4 fragPosLightSpace;
+out vec3 fragWorldPos;
 
 // player Transformation matrices
 uniform mat4 aimRot;
@@ -53,11 +53,11 @@ void main() {
 
     gl_Position = projection * view * model * totalPosition;
 
-    TexCoord = inTexCoord;
+    fragTexCoord = inTexCoord;
 
-    Norm = vec3(aimRot * vec4(inNormal, 1.0));
+    fragNormal = vec3(aimRot * vec4(inNormal, 1.0));
 
-    FragWorldPos = vec3(model * vec4(inPosition, 1.0));
+    fragWorldPos = vec3(model * vec4(inPosition, 1.0));
 
-    FragPosLightSpace = lightSpaceMatrix * vec4(FragWorldPos, 1.0);
+    fragPosLightSpace = lightSpaceMatrix * vec4(fragWorldPos, 1.0);
 }

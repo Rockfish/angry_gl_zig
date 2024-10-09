@@ -78,6 +78,9 @@ pub const ModelObj = struct {
     // pub fn getBoundingBox(self: *ModelObj) AABB {
     //     return self.model.aabb;
     // }
+    fn updateAnimation(self: *ModelObj, delta_time: f32) void {
+        self.model.update_animation(delta_time) catch {};
+    }
 
     pub fn render(self: *ModelObj, shader: *Shader) void {
         self.model.render(shader);
@@ -253,9 +256,9 @@ pub const Node = struct {
 
     pub fn updateAnimation(self: *Node, delta_time: f32) void {
         self.object.updateAnimation(delta_time);
-        for (self.children.items) |child| {
-            child.updateAnimation(delta_time);
-        }
+        //for (self.children.items) |child| {
+            //child.updateAnimation(delta_time);
+        //}
     }
 
     // example of how to get the type from a union(enum)

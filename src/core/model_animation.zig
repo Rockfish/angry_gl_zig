@@ -113,7 +113,7 @@ pub fn getAnimations(allocator: Allocator, aiScene: [*c]const Assimp.aiScene) !*
 
     const num_animations = aiScene.*.mNumAnimations;
 
-    for (aiScene.*.mAnimations[0..num_animations]) |ai_animation| {
+    for (aiScene.*.mAnimations[0..num_animations], 0..) |ai_animation, id| {
         const animation = try ModelAnimation.init(allocator, ai_animation.*.mName);
         animation.*.duration = @as(f32, @floatCast(ai_animation.*.mDuration));
         animation.*.ticks_per_second = @as(f32, @floatCast(ai_animation.*.mTicksPerSecond));
@@ -125,7 +125,9 @@ pub fn getAnimations(allocator: Allocator, aiScene: [*c]const Assimp.aiScene) !*
             try animation.node_animations.append(node_animation);
         }
 
-        std.debug.print("Loaded animation:\n", .{});
+        try animations.append(animation);
+
+        std.debug.print("Loaded animation id: {d}\n", .{id});
         std.debug.print("   name    : {s}\n", .{animation.animation_name.str});
         std.debug.print("   duration: {d}\n", .{animation.duration});
         std.debug.print("   node_animations length: {d}\n", .{animation.node_animations.items.len});

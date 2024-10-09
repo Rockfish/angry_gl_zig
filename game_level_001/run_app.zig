@@ -30,6 +30,8 @@ const TextureFilter = core.texture.TextureFilter;
 const TextureWrap = core.texture.TextureWrap;
 const Transform = core.Transform;
 
+const AnimationClip = core.animation.AnimationClip;
+
 const cam = @import("camera.zig");
 const Camera = cam.Camera;
 
@@ -102,16 +104,17 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         texture_cache.deinit();
     }
 
-    const basic_model_shader = try Shader.new(
+    const basic_shader = try Shader.new(
         allocator,
         "game_level_001/shaders/basic_model.vert",
         "game_level_001/shaders/basic_model.frag",
     );
-    defer basic_model_shader.deinit();
+    defer basic_shader.deinit();
 
     const model_shader = try Shader.new(allocator, 
         "game_level_001/shaders/player_shader.vert", 
-        "game_level_001/shaders/player_shader.frag",
+        //"game_level_001/shaders/player_shader.frag",
+        "game_level_001/shaders/basic_model.frag",
     );
     defer model_shader.deinit();
 
@@ -204,11 +207,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var model_obj = nodes.ModelObj.init(model, "Bot_Model");
 
     const root_node = try node_manager.create("root_node", .{ .basic = &basic_obj });
-    const model_node = try node_manager.create("node_model", .{ .model = &model_obj });
+    const model_node = try nodes.Node.init(allocator, "robot", .{ .model = &model_obj });
 
-    model_node.setTranslation(vec3(2.0, 0.0, 2.0));
+    model_node.setTranslation(vec3(0.0, 0.0, 0.0));
     model_node.setRotation(Quat.fromAxisAngle(&vec3(1.0, 0.0, 0.0), math.degreesToRadians(-90.0)));
-    model_node.transform.scale = vec3(1.5, 1.5, 1.5);
+    model_node.setScale(vec3(3.5, 3.5, 3.5));
+    model_node.updateTransforms(null);
 
     const node_cylinder = try node_manager.create("shape_cylinder", .{ .shape = &cylinder_obj });
     const node_sphere = try node_manager.create("shpere_shape", .{ .shape = &sphere_obj });
@@ -244,6 +248,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const xz_plane_normal = vec3(0.0, 1.0, 0.0);
 
     var moving = false;
+
+    const clip = AnimationClip.new(0.0, 32.0, core.animation.AnimationRepeat.Forever);
+    try model_obj.model.playClip(clip);
 
     gl.enable(gl.DEPTH_TEST);
 
@@ -285,15 +292,21 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             .direction = world_ray,
         };
 
-        basic_model_shader.use_shader();
-        basic_model_shader.set_mat4("matProjection", &state.projection);
-        basic_model_shader.set_mat4("matView", &state.view);
 
-        basic_model_shader.set_vec3("ambient_color", &vec3(1.0, 0.6, 0.6));
-        basic_model_shader.set_vec3("light_color", &vec3(0.35, 0.4, 0.5));
-        basic_model_shader.set_vec3("light_dir", &vec3(3.0, 3.0, 3.0));
+        basic_shader.use_shader();
+        basic_shader.set_mat4("matProjection", &state.projection);
+        basic_shader.set_mat4("matView", &state.view);
+        basic_shader.set_vec3("ambient_color", &vec3(1.0, 0.6, 0.6));
+        basic_shader.set_vec3("light_color", &vec3(0.35, 0.4, 0.5));
+        basic_shader.set_vec3("light_dir", &vec3(3.0, 3.0, 3.0));
+        basic_shader.bind_texture(0, "texture_diffuse", cube_texture);
 
-        basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
+        model_shader.use_shader();
+        model_shader.set_mat4("matProjection", &state.projection);
+        model_shader.set_mat4("matView", &state.view);
+        model_shader.set_vec3("ambient_color", &vec3(1.0, 0.6, 0.6));
+        model_shader.set_vec3("light_color", &vec3(0.35, 0.4, 0.5));
+        model_shader.set_vec3("light_dir", &vec3(3.0, 3.0, 3.0));
 
         if (state.input.mouse_left_button and state.world_point != null) {
             state.target_position = state.world_point.?;
@@ -320,7 +333,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             }
         }
 
-        try model_obj.model.update_animation(state.delta_time);
+        //model_shader.use_shader();
+        //model_node.updateAnimation(state.delta_time);
+        model_node.render(model_shader);
+        //model_node.render(basic_shader);
 
         root_node.setTranslation(state.current_position);
 
@@ -357,15 +373,17 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         for (node_manager.node_list.items, 0..) |n, id| {
             if (picked.id != null and picked.id == @as(u32, @intCast(id))) {
-                basic_model_shader.set_vec4("hit_color", &vec4(1.0, 0.0, 0.0, 0.0));
+                basic_shader.set_vec4("hit_color", &vec4(1.0, 0.0, 0.0, 0.0));
             }
-            n.render(basic_model_shader);
-            basic_model_shader.set_vec4("hit_color", &vec4(0.0, 0.0, 0.0, 0.0));
+            _ = n;
+            //n.render(basic_shader);
+            basic_shader.set_vec4("hit_color", &vec4(0.0, 0.0, 0.0, 0.0));
         }
 
         const plane_transform = Mat4.fromTranslation(&vec3(0.0, -1.0, 0.0));
-        basic_model_shader.set_mat4("matModel", &plane_transform);
-        basic_model_shader.bind_texture(0, "texture_diffuse", surface_texture);
+        basic_shader.use_shader();
+        basic_shader.set_mat4("matModel", &plane_transform);
+        basic_shader.bind_texture(0, "texture_diffuse", surface_texture);
         plane.render();
 
         if (state.spin) {

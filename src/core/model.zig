@@ -57,6 +57,7 @@ pub const Model = struct {
     }
 
     pub fn render(self: *Self, shader: *const Shader) void {
+        shader.use_shader();
         var buf: [256:0]u8 = undefined;
 
         for (0..MAX_BONES) |i| {

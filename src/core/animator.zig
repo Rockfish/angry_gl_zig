@@ -130,6 +130,7 @@ pub const Animator = struct {
     allocator: Allocator,
 
     root_node: *ModelNode,
+    animations: *ArrayList(*ModelAnimation),
     model_animation: *ModelAnimation,
     bone_map: *StringHashMap(*ModelBone),
 
@@ -155,7 +156,13 @@ pub const Animator = struct {
 
         self.root_node.deinit();
 
-        self.model_animation.deinit();
+        for (self.animations.items) |animation| {
+            animation.deinit();
+        }
+        self.animations.deinit();
+        self.allocator.destroy(self.animations);
+
+        //self.model_animation.deinit();
 
         self.allocator.destroy(self.current_animation);
 
@@ -206,6 +213,7 @@ pub const Animator = struct {
             .root_node = root_node,
             .global_inverse_transform = global_inverse_transform,
             .bone_map = model_bone_map,
+            .animations = animations,
             .model_animation = model_animation,
             .current_animation = current_animation,
             .transitions = try allocator.create(ArrayList(?*AnimationTransition)),
