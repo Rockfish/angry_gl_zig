@@ -32,7 +32,7 @@ const Texture = core.texture.Texture;
 const TextureType = core.texture.TextureType;
 const Animator = animation.Animator;
 const AnimationClip = animation.AnimationClip;
-const AnimationRepeat = animation.AnimationRepeat;
+const AnimationRepeat = animation.AnimationRepeatMode;
 
 const Window = glfw.Window;
 
@@ -225,7 +225,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         glfw.pollEvents();
 
-        shader.use_shader();
+        //shader.use_shader();
 
         try model.update_animation(state.delta_time);
 

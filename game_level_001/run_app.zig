@@ -208,6 +208,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const root_node = try node_manager.create("root_node", .{ .basic = &basic_obj });
     const model_node = try nodes.Node.init(allocator, "robot", .{ .model = &model_obj });
+    defer model_node.deinit();
 
     model_node.setTranslation(vec3(0.0, 0.0, 0.0));
     model_node.setRotation(Quat.fromAxisAngle(&vec3(1.0, 0.0, 0.0), math.degreesToRadians(-90.0)));
@@ -249,7 +250,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     var moving = false;
 
-    const clip = AnimationClip.new(0.0, 32.0, core.animation.AnimationRepeat.Forever);
+    const clip = AnimationClip.new(0.0, 32.0, core.animation.AnimationRepeatMode.Forever);
     try model_obj.model.playClip(clip);
 
     gl.enable(gl.DEPTH_TEST);
@@ -293,7 +294,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         };
 
 
-        basic_shader.use_shader();
         basic_shader.set_mat4("matProjection", &state.projection);
         basic_shader.set_mat4("matView", &state.view);
         basic_shader.set_vec3("ambient_color", &vec3(1.0, 0.6, 0.6));
@@ -301,7 +301,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         basic_shader.set_vec3("light_dir", &vec3(3.0, 3.0, 3.0));
         basic_shader.bind_texture(0, "texture_diffuse", cube_texture);
 
-        model_shader.use_shader();
         model_shader.set_mat4("matProjection", &state.projection);
         model_shader.set_mat4("matView", &state.view);
         model_shader.set_vec3("ambient_color", &vec3(1.0, 0.6, 0.6));
@@ -333,8 +332,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             }
         }
 
-        //model_shader.use_shader();
-        //model_node.updateAnimation(state.delta_time);
+        model_node.updateAnimation(state.delta_time);
         model_node.render(model_shader);
         //model_node.render(basic_shader);
 
@@ -381,7 +379,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         }
 
         const plane_transform = Mat4.fromTranslation(&vec3(0.0, -1.0, 0.0));
-        basic_shader.use_shader();
+
         basic_shader.set_mat4("matModel", &plane_transform);
         basic_shader.bind_texture(0, "texture_diffuse", surface_texture);
         plane.render();

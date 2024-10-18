@@ -32,7 +32,7 @@ const Texture = core.texture.Texture;
 const TextureType = core.texture.TextureType;
 const Animator = animation.Animator;
 const AnimationClip = animation.AnimationClip;
-const AnimationRepeat = animation.AnimationRepeat;
+const AnimationRepeat = animation.AnimationRepeatMode;
 const Transform = core.Transform;
 
 const print = std.debug.print;

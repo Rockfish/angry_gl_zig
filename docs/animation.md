@@ -1,6 +1,7 @@
 
 ## Animations
 
+### Key frames
  - A series of key frames with times. Three arrays with list of the following objects.
 ```
   pub const KeyPosition = struct {
@@ -28,9 +29,15 @@
       scale: Vec3
   };
 ```
-### ModelNode
- - ModelNode is the object that is used to build the parent / child relationship of the nodes and contains each
-   node's transform and the mesh, if any, it applies to. The child's transform is relative to its parent.
+### Nodes
+ - The model's animation is described with a hierarchical tree structure composed of nodes in a parent-child relationship.
+ - Each node has a name.
+ - Each node has its own local transform.
+ - A node can have a list of mesh ids. 
+ - A node's global transform is calculated by walking the tree from the root passing the parent's transform to the child and multiplying the parent's transform by the child's transform to get the node's global transform.
+ - The node's calculated global transform is stored in a node_map<name, transform>.
+
+ - ModelNode is the structure that is used to build the parent / child relationship of the nodes and contains each node's transform and the mesh, if any, it applies to. The child's transform is relative to its parent.
 ```
   ModelNode = struct {
       node_name: *String,
@@ -39,14 +46,33 @@
       meshes: *ArrayList(u32),
   };
 ```
-### ModelBone
- - ModelBone holds the bone's id, name, and offset transform. A bone transform affects only the vertices attached
-   to that bone through the vertices bone_id array.
+
+### Bones
+ - A bone is an object that represents a deformation to the mesh.
+ - A skeleton is a hierarchy of bones.
+ - Bones have transforms that are offsets from nodes with the same name.
+ - ModelBone is the structure for the bone's id, name, and offset transform.
+ - A bone transform affects only the vertices attached to that bone through the vertices bone_id array.
+ - Each vertex in the mesh has an array of bone ids and an array of bone weights. 
+ - These arrays are used to calculate a weighted transform to the vertex's position based on the bone transforms. Apply these bone transforms to the vertex occurs in the shader.
 ```
   ModelBone = struct {
       name: *String,
       bone_index: i32,
       offset_transform: Transform,
+  };
+```
+### Vertex
+ - Each vertex in the mesh has a ModelVertex with the position, normal, uv, tangent, bi_tangent, bone_ids, and bone_weights of a vertex.
+```
+  ModelVertex = extern struct {
+      position: Vec3,
+      normal: Vec3,
+      uv: Vec2,
+      tangent: Vec3,
+      bi_tangent: Vec3,
+      bone_ids: [MAX_BONE_INFLUENCE]i32,
+      bone_weights: [MAX_BONE_INFLUENCE]f32,
   };
 ```
 
@@ -72,8 +98,7 @@
   };
 ```
 ### Animator
- - The Animator holds all the animation data and drives the animation by walking the data and building a map
-   of all the node and bone transforms for the current animation time. 
+ - The Animator holds all the animation data and drives the animation by walking the data and building a map of all the node and bone transforms for the current animation time. 
 ```
   Animator = struct {
       root_node: *ModelNode,
@@ -91,8 +116,7 @@
   };
 ```
 ### Model
- - The Model object connects the model's mesh with the model's animation and provides an interface for 
-   animating and rendering the model
+ - The Model object connects the model's mesh with the model's animation and provides an interface for animating and rendering the model
 ```
   Model = struct {
       allocator: Allocator,
@@ -102,9 +126,22 @@
   };
 ```
 
+## Animation
+To set a model's animation:
+  - 
+To update the model's animation:
+  - Advance the tick count
+  - Walk the node tree from the root passing the inverse of the root node's transform as the first parent transform.
+  - At each node:
+    - using the node's name, check the list of NodeKeyframes for the current animation for one with the same name. 
+    - If found, calculate the node's animation transform for the current tick. Then the node's global transform is the parent's transform multiplied by the calculated animation transform.
+    - Else, the node's global transform is the parent's transform multiple by the node's transform.
+    - Store the node's global transform in the node transform map.
+
+
+
  - Definitions
-   - Animation tick is an index into the Key arrays. Each animation clip has a starting tick and end tick marking the 
-     keys that make up a particular animation sequence.
+   - Animation tick is an index into the Key arrays. Each animation clip has a starting tick and end tick marking the keys that make up a particular animation sequence.
    - An animation sequence has a time line that is divided into keys. Each key has a time_stamp indicating its position 
      along the time line. 
    - The keys are the transforms that should be reached by their time_stamps.

@@ -3,7 +3,7 @@ const math = @import("math");
 const assimp = @import("assimp.zig");
 const ModelBone = @import("model_animation.zig").ModelBone;
 const ModelNode = @import("model_animation.zig").ModelNode;
-const ModelNodeAnimation = @import("model_node_animation.zig").NodeAnimation;
+const NodeKeyframes = @import("model_node_keyframes.zig").NodeKeyframes;
 const ModelAnimation = @import("model_animation.zig").ModelAnimation;
 const getAnimations = @import("model_animation.zig").getAnimations;
 const Transform = @import("transform.zig").Transform;
@@ -33,7 +33,7 @@ pub const MAX_NODES: usize = 50;
 //     Forever: void,
 // };
 
-pub const AnimationRepeat = enum {
+pub const AnimationRepeatMode = enum {
     Once,
     Count,
     Forever,
@@ -42,13 +42,13 @@ pub const AnimationRepeat = enum {
 pub const AnimationClip = struct {
     start_tick: f32,
     end_tick: f32,
-    repeat: AnimationRepeat,
+    repeat_mode: AnimationRepeatMode,
 
-    pub fn new(start_tick: f32, end_tick: f32, repeat: AnimationRepeat) AnimationClip {
+    pub fn new(start_tick: f32, end_tick: f32, repeat: AnimationRepeatMode) AnimationClip {
         return .{
             .start_tick = start_tick,
             .end_tick = end_tick,
-            .repeat = repeat,
+            .repeat_mode = repeat,
         };
     }
 };
@@ -88,26 +88,28 @@ pub const WeightedAnimation = struct {
 };
 
 pub const PlayingAnimation = struct {
-    animation_clip: AnimationClip,
+    start_tick: f32,
+    end_tick: f32,
     current_tick: f32,
     ticks_per_second: f32,
+    repeat_mode: AnimationRepeatMode,
     repeat_completions: u32,
 
     pub fn update(self: *PlayingAnimation, delta_time: f32) void {
         if (self.current_tick < 0.0) {
-            self.current_tick = self.animation_clip.start_tick;
+            self.current_tick = self.start_tick;
         }
 
         self.current_tick += self.ticks_per_second * delta_time;
 
-        if (self.current_tick > self.animation_clip.end_tick) {
-            switch (self.animation_clip.repeat) {
-                AnimationRepeat.Once => {
-                    self.current_tick = self.animation_clip.end_tick;
+        if (self.current_tick > self.end_tick) {
+            switch (self.repeat_mode) {
+                .Once => {
+                    self.current_tick = self.end_tick;
                 },
-                AnimationRepeat.Count => |_| {},
-                AnimationRepeat.Forever => {
-                    self.current_tick = self.animation_clip.start_tick;
+                .Count => |_| {},
+                .Forever => {
+                    self.current_tick = self.start_tick;
                 },
             }
         }
@@ -130,16 +132,17 @@ pub const Animator = struct {
     allocator: Allocator,
 
     root_node: *ModelNode,
-    animations: *ArrayList(*ModelAnimation),
-    model_animation: *ModelAnimation,
-    bone_map: *StringHashMap(*ModelBone),
+    global_inverse_transform: Transform,
 
-    node_transform_map: *StringHashMap(*NodeTransform),
+    animations: *ArrayList(*ModelAnimation),
+    current_animation: *ModelAnimation,
 
     transitions: *ArrayList(?*AnimationTransition),
-    current_animation: *PlayingAnimation,
+    animation_state: *PlayingAnimation,
 
-    global_inverse_transform: Mat4,
+    bone_map: *StringHashMap(*ModelBone),
+    node_transform_map: *StringHashMap(*NodeTransform),
+
     final_bone_matrices: [MAX_BONES]Mat4,
     final_node_matrices: [MAX_NODES]Mat4,
 
@@ -164,7 +167,7 @@ pub const Animator = struct {
 
         //self.model_animation.deinit();
 
-        self.allocator.destroy(self.current_animation);
+        self.allocator.destroy(self.animation_state);
 
         for (self.transitions.items) |transition| {
             transition.?.deinit();
@@ -187,23 +190,19 @@ pub const Animator = struct {
         const root_node = try createModelNodeTree(allocator, root);
 
         const transform = assimp.mat4FromAiMatrix(&root.*.mTransformation);
-        const global_inverse_transform = Mat4.getInverse(&transform);
+        const global_inverse_transform = Transform.from_matrix(&Mat4.getInverse(&transform));
 
         const animations = try getAnimations(allocator, aiScene); 
         //const model_animation = try ModelAnimation.init(allocator, aiScene);
-        const model_animation = animations.items[0];
+        const current_animation = animations.items[0];
 
-        const animation_clip = AnimationClip{
+        const animation_state = try allocator.create(PlayingAnimation);
+        animation_state.* = .{
             .start_tick = 0.0,
-            .end_tick = model_animation.duration,
-            .repeat = .Forever,
-        };
-
-        const current_animation = try allocator.create(PlayingAnimation);
-        current_animation.* = .{
-            .animation_clip = animation_clip,
+            .end_tick = current_animation.duration,
             .current_tick = -1.0,
-            .ticks_per_second = model_animation.ticks_per_second,
+            .ticks_per_second = current_animation.ticks_per_second,
+            .repeat_mode = .Forever,
             .repeat_completions = 0,
         };
 
@@ -214,8 +213,8 @@ pub const Animator = struct {
             .global_inverse_transform = global_inverse_transform,
             .bone_map = model_bone_map,
             .animations = animations,
-            .model_animation = model_animation,
             .current_animation = current_animation,
+            .animation_state = animation_state,
             .transitions = try allocator.create(ArrayList(?*AnimationTransition)),
             .node_transform_map = try allocator.create(StringHashMap(*NodeTransform)),
             .final_bone_matrices = [_]Mat4{Mat4.identity()} ** MAX_BONES,
@@ -229,25 +228,29 @@ pub const Animator = struct {
     }
 
     pub fn playClip(self: *Self, clip: AnimationClip) !void {
-        self.allocator.destroy(self.current_animation);
+        self.allocator.destroy(self.animation_state);
 
-        self.current_animation = try self.allocator.create(PlayingAnimation);
-        self.current_animation.* = .{
-            .animation_clip = clip,
+        self.animation_state = try self.allocator.create(PlayingAnimation);
+        self.animation_state.* = .{
+            .start_tick = clip.start_tick,
+            .end_tick = clip.end_tick,
+            .repeat_mode = clip.repeat_mode,
             .current_tick = -1.0,
-            .ticks_per_second = self.model_animation.ticks_per_second,
+            .ticks_per_second = self.current_animation.ticks_per_second,
             .repeat_completions = 0,
         };
     }
 
     pub fn play_clip_with_transition(self: *Self, clip: AnimationClip, transition_duration: f32) !void {
-        const animation = self.current_animation;
+        const animation = self.animation_state;
 
-        self.current_animation = try self.allocator.create(PlayingAnimation);
-        self.current_animation.* = .{
-            .animation_clip = clip,
+        self.animation_state = try self.allocator.create(PlayingAnimation);
+        self.animation_state.* = .{
+            .start_tick = clip.start_tick,
+            .end_tick = clip.end_tick,
+            .repeat_mode = clip.repeat_mode,
             .current_tick = -1.0,
-            .ticks_per_second = self.model_animation.ticks_per_second,
+            .ticks_per_second = self.current_animation.ticks_per_second,
             .repeat_completions = 0,
         };
 
@@ -270,8 +273,6 @@ pub const Animator = struct {
         }
         self.node_transform_map.clearAndFree();
 
-        const inverse_transform = Transform.from_matrix(&self.global_inverse_transform);
-
         for (weighted_animation) |weighted| {
             if (weighted.weight == 0.0) {
                 continue;
@@ -280,9 +281,9 @@ pub const Animator = struct {
             const tick_range = weighted.end_tick - weighted.start_tick;
 
             var target_anim_ticks = if (weighted.optional_start > 0.0) blk1: {
-                const tick = (frame_time - weighted.optional_start) * self.model_animation.ticks_per_second + weighted.offset;
+                const tick = (frame_time - weighted.optional_start) * self.current_animation.ticks_per_second + weighted.offset;
                 break :blk1 @min(tick, tick_range);
-            } else @mod((frame_time * self.model_animation.ticks_per_second + weighted.offset), tick_range);
+            } else @mod((frame_time * self.current_animation.ticks_per_second + weighted.offset), tick_range);
 
             target_anim_ticks += weighted.start_tick;
 
@@ -292,9 +293,9 @@ pub const Animator = struct {
 
             try self.calculate_transform_maps(
                 self.root_node,
-                self.model_animation.node_animations,
+                self.current_animation.node_keyframes,
                 self.node_transform_map,
-                inverse_transform,
+                self.globabl_inverse_transform,
                 target_anim_ticks,
                 weighted.weight,
             );
@@ -304,9 +305,9 @@ pub const Animator = struct {
     }
 
     pub fn update_animation(self: *Self, delta_time: f32) !void {
-        self.current_animation.update(delta_time);
+        self.animation_state.update(delta_time);
         try self.update_transitions(delta_time);
-        try self.update_node_map(delta_time);
+        try self.update_node_transformations(delta_time);
         try self.update_final_transforms();
     }
 
@@ -325,9 +326,10 @@ pub const Animator = struct {
         try utils.retain(*AnimationTransition, HasCurrentWeightFilter, self.transitions, filter);
     }
 
-    fn update_node_map(self: *Self, delta_time: f32) !void {
+    fn update_node_transformations(self: *Self, delta_time: f32) !void {
         // std.debug.print("Animator: start update_node_map\n", .{});
 
+        // TODO: probably can replace all node transforms with the identity instead of destory the objects.
         var iterator = self.node_transform_map.valueIterator();
         while (iterator.next()) |node_transform| {
             self.allocator.destroy(node_transform.*);
@@ -335,15 +337,13 @@ pub const Animator = struct {
 
         self.node_transform_map.clearAndFree();
 
-        const inverse_transform = Transform.from_matrix(&self.global_inverse_transform);
-
         // First for current animation at weight 1.0
         try self.calculate_transform_maps(
             self.root_node,
-            self.model_animation.node_animations,
+            self.current_animation.node_keyframes,
             self.node_transform_map,
-            inverse_transform,
-            self.current_animation.current_tick,
+            self.global_inverse_transform,
+            self.animation_state.current_tick,
             1.0,
         );
 
@@ -352,9 +352,9 @@ pub const Animator = struct {
             // std.debug.print("transition = {any}\n", .{transition});
             try self.calculate_transform_maps(
                 self.root_node,
-                self.model_animation.node_animations,
+                self.current_animation.node_keyframes,
                 self.node_transform_map,
-                inverse_transform,
+                self.global_inverse_transform,
                 transition.?.animation.current_tick,
                 transition.?.current_weight,
             );
@@ -387,7 +387,7 @@ pub const Animator = struct {
     pub fn calculate_transform_maps(
         self: *Self,
         node_data: *ModelNode,
-        node_animations: *ArrayList(*ModelNodeAnimation),
+        node_animations: *ArrayList(*NodeKeyframes),
         node_map: *StringHashMap(*NodeTransform),
         parent_transform: Transform,
         current_tick: f32,
@@ -404,7 +404,7 @@ pub const Animator = struct {
     fn calculate_transform(
         self: *Self,
         node_data: *ModelNode,
-        node_animations: *ArrayList(*ModelNodeAnimation),
+        node_animations: *ArrayList(*NodeKeyframes),
         node_map: *StringHashMap(*NodeTransform),
         parent_transform: Transform,
         current_tick: f32,
@@ -412,10 +412,10 @@ pub const Animator = struct {
     ) !Transform {
         var global_transform: Transform = undefined;
 
-        const node_animation = getNodeAnimation(node_animations, node_data.node_name);
+        const node_keyframes = getNodeKeyframes(node_animations, node_data.node_name);
 
-        if (node_animation) |animation| {
-            const node_transform = animation.get_animation_transform(current_tick);
+        if (node_keyframes) |keyframes| {
+            const node_transform = keyframes.get_animation_transform(current_tick);
             global_transform = parent_transform.mul_transform(node_transform);
         } else {
             global_transform = parent_transform.mul_transform(node_data.transform);
@@ -436,10 +436,10 @@ pub const Animator = struct {
     }
 };
 
-fn getNodeAnimation(node_animations: *ArrayList(*ModelNodeAnimation), node_name: *String) ?*ModelNodeAnimation {
-    for (node_animations.items) |node_anim| {
-        if (node_anim.node_name.equals(node_name)) {
-            return node_anim;
+fn getNodeKeyframes(node_keyframes: *ArrayList(*NodeKeyframes), node_name: *String) ?*NodeKeyframes {
+    for (node_keyframes.items) |keyframe| {
+        if (keyframe.node_name.equals(node_name)) {
+            return keyframe;
         }
     }
     return null;

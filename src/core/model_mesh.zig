@@ -20,7 +20,7 @@ pub const ModelVertex = extern struct {
     uv: Vec2,
     tangent: Vec3,
     bi_tangent: Vec3,
-    bone_ids: [MAX_BONE_INFLUENCE]i32, //  align(1),
+    bone_ids: [MAX_BONE_INFLUENCE]i32,
     bone_weights: [MAX_BONE_INFLUENCE]f32,
 
     const Self = @This();
