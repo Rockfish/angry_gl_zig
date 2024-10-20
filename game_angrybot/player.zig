@@ -24,7 +24,7 @@ const Texture = core.texture.Texture;
 const TextureType = core.texture.TextureType;
 const Animator = animation.Animator;
 const AnimationClip = animation.AnimationClip;
-const AnimationRepeat = animation.AnimationRepeat;
+const AnimationRepeatMode = animation.AnimationRepeatMode;
 const WeightedAnimation = animation.WeightedAnimation;
 
 pub const AnimationName = enum {
@@ -48,12 +48,12 @@ pub const PlayerAnimations = struct {
 
     pub fn new() Self {
         return .{
-            .idle = AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever),
-            .right = AnimationClip.new(184.0, 204.0, AnimationRepeat.Forever),
-            .forward = AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever),
-            .back = AnimationClip.new(159.0, 179.0, AnimationRepeat.Forever),
-            .left = AnimationClip.new(209.0, 229.0, AnimationRepeat.Forever),
-            .dead = AnimationClip.new(234.0, 293.0, AnimationRepeat.Once),
+            .idle = AnimationClip.new(55.0, 130.0, AnimationRepeatMode.Forever),
+            .right = AnimationClip.new(184.0, 204.0, AnimationRepeatMode.Forever),
+            .forward = AnimationClip.new(134.0, 154.0, AnimationRepeatMode.Forever),
+            .back = AnimationClip.new(159.0, 179.0, AnimationRepeatMode.Forever),
+            .left = AnimationClip.new(209.0, 229.0, AnimationRepeatMode.Forever),
+            .dead = AnimationClip.new(234.0, 293.0, AnimationRepeatMode.Once),
         };
     }
 
@@ -141,12 +141,12 @@ pub const Player = struct {
         std.debug.print("player model built\n", .{});
 
         var anim_hash = HashMap(AnimationName, AnimationClip).init(allocator);
-        try anim_hash.put(.idle, AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever));
-        try anim_hash.put(.forward, AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever));
-        try anim_hash.put(.back, AnimationClip.new(159.0, 179.0, AnimationRepeat.Forever));
-        try anim_hash.put(.right, AnimationClip.new(184.0, 204.0, AnimationRepeat.Forever));
-        try anim_hash.put(.left, AnimationClip.new(209.0, 229.0, AnimationRepeat.Forever));
-        try anim_hash.put(.dead, AnimationClip.new(234.0, 293.0, AnimationRepeat.Once));
+        try anim_hash.put(.idle, AnimationClip.new(55.0, 130.0, AnimationRepeatMode.Forever));
+        try anim_hash.put(.forward, AnimationClip.new(134.0, 154.0, AnimationRepeatMode.Forever));
+        try anim_hash.put(.back, AnimationClip.new(159.0, 179.0, AnimationRepeatMode.Forever));
+        try anim_hash.put(.right, AnimationClip.new(184.0, 204.0, AnimationRepeatMode.Forever));
+        try anim_hash.put(.left, AnimationClip.new(209.0, 229.0, AnimationRepeatMode.Forever));
+        try anim_hash.put(.dead, AnimationClip.new(234.0, 293.0, AnimationRepeatMode.Once));
 
         const player = try allocator.create(Player);
         player.* = Player{

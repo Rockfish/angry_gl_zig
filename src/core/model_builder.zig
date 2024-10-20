@@ -2,10 +2,13 @@ const std = @import("std");
 const gl = @import("zopengl").bindings;
 const panic = @import("std").debug.panic;
 const ModelVertex = @import("model_mesh.zig").ModelVertex;
+const ModelAnimation = @import("model_animation.zig").ModelAnimation;
+const ModelNode = @import("model_animation.zig").ModelNode;
+const NodeKeyframes = @import("model_node_keyframes.zig").NodeKeyframes;
+const ModelBone = @import("model_animation.zig").ModelBone;
 const Model = @import("model.zig").Model;
 const Animator = @import("animator.zig").Animator;
 const assimp = @import("assimp.zig");
-const ModelBone = @import("model_animation.zig").ModelBone;
 const Transform = @import("transform.zig").Transform;
 const String = @import("string.zig").String;
 const Model_Mesh = @import("model_mesh.zig");
@@ -148,7 +151,12 @@ pub const ModelBuilder = struct {
         try self.load_model(aiScene);
         try self.add_textures();
 
-        const animator = try Animator.init(self.allocator, aiScene, self.model_bone_map);
+        const root = aiScene[0].mRootNode;
+        const root_node = try createModelNodeTree(self.allocator, root);
+        const transform = assimp.mat4FromAiMatrix(&root.*.mTransformation);
+        const animations = try loadAnimations(self.allocator, aiScene);
+
+        const animator = try Animator.init(self.allocator, transform, root_node, animations, self.model_bone_map);
 
         const model = try self.allocator.create(Model);
         model.* = Model{
@@ -464,10 +472,63 @@ inline fn GetMaterialProperty(
     return null;
 }
 
-// var ai_name: Assimp.aiString = undefined;
-// _ = Assimp.aiGetMaterialString(&material,Assimp.AI_MATKEY_NAME,0, 0, &ai_name);
-// const material_name = ai_name.data[0..ai_name.length];
-// std.debug.print("\nmaterial name: {s}\n", .{material_name});
+pub fn loadAnimations(allocator: Allocator, aiScene: [*c]const Assimp.aiScene) !*ArrayList(*ModelAnimation) {
+    const animations = try allocator.create(ArrayList(*ModelAnimation));
+    animations.* = ArrayList(*ModelAnimation).init(allocator);
+
+    const num_animations = aiScene.*.mNumAnimations;
+
+    if (num_animations == 0) {
+        return animations;
+    }
+
+    for (aiScene.*.mAnimations[0..num_animations], 0..) |ai_animation, id| {
+        const animation = try ModelAnimation.init(allocator, ai_animation.*.mName);
+        animation.*.duration = @as(f32, @floatCast(ai_animation.*.mDuration));
+        animation.*.ticks_per_second = @as(f32, @floatCast(ai_animation.*.mTicksPerSecond));
+
+        const num_channels = ai_animation.*.mNumChannels;
+
+        for (ai_animation.*.mChannels[0..num_channels]) |channel| {
+            const node_animation = try NodeKeyframes.init(allocator, channel.*.mNodeName, channel);
+            try animation.node_keyframes.append(node_animation);
+        }
+
+        try animations.append(animation);
+
+        std.debug.print("Loaded animation id: {d}\n", .{id});
+        std.debug.print("   name    : {s}\n", .{animation.animation_name.str});
+        std.debug.print("   duration: {d}\n", .{animation.duration});
+        std.debug.print("   node_animations length: {d}\n", .{animation.node_keyframes.items.len});
+    }
+
+    return animations;
+}
+
+/// Converts scene Node tree to local NodeData tree. Converting all the transforms to column major form.
+fn createModelNodeTree(allocator: Allocator, source: [*c]Assimp.aiNode) !*ModelNode {
+    const name = try String.from_aiString(source.*.mName);
+    var model_node = try ModelNode.init(allocator, name);
+
+    const aiTransform = source.*.mTransformation;
+    const transformMatrix = assimp.mat4FromAiMatrix(&aiTransform);
+    const transform = Transform.from_matrix(&transformMatrix);
+    model_node.*.transform = transform;
+
+    if (source.*.mNumMeshes > 0) {
+        for (source.*.mMeshes[0..source.*.mNumMeshes]) |mesh_id| {
+            try model_node.*.meshes.append(mesh_id);
+        }
+    }
+
+    if (source.*.mNumChildren > 0) {
+        for (source.*.mChildren[0..source.*.mNumChildren]) |child| {
+            const node = try createModelNodeTree(allocator, child);
+            try model_node.childern.append(node);
+        }
+    }
+    return model_node;
+}
 
 fn printSceneInfo(aiScene: Assimp.aiScene) void {
     std.debug.print("number of meshes: {d}\n", .{aiScene.mNumMeshes});
@@ -478,3 +539,5 @@ fn printSceneInfo(aiScene: Assimp.aiScene) void {
     std.debug.print("number of mNumCameras: {d}\n", .{aiScene.mNumCameras});
     std.debug.print("number of mNumSkeletons: {d}\n", .{aiScene.mNumSkeletons});
 }
+
+

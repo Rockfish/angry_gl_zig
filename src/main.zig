@@ -7,10 +7,8 @@ const math = @import("math");
 
 const gl = zopengl.bindings;
 
-const Assimp = core.Assimp;
 const Model = core.Model;
 const ModelBuilder = core.ModelBuilder;
-const animation = core.animation;
 const Camera = core.Camera;
 const Shader = core.Shader;
 const String = core.string.String;
@@ -26,9 +24,9 @@ const Mat4 = math.Mat4;
 
 const Texture = core.texture.Texture;
 const TextureType = core.texture.TextureType;
-const Animator = animation.Animator;
-const AnimationClip = animation.AnimationClip;
-const AnimationRepeat = animation.AnimationRepeat;
+const Animator = core.animation.Animator;
+const AnimationClip = core.animation.AnimationClip;
+const AnimationRepeatMode = core.animation.AnimationRepeatMode;
 
 const Window = glfw.Window;
 
@@ -163,7 +161,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var model = try builder.build();
     builder.deinit();
 
-    const idle = AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever);
+    const idle = AnimationClip.new(55.0, 130.0, AnimationRepeatMode.Forever);
     // const forward = AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever);
     // const backwards = AnimationClip.new(159.0, 179.0, AnimationRepeat.Forever);
     // const right = AnimationClip.new(184.0, 204.0, AnimationRepeat.Forever);

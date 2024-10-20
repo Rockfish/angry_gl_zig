@@ -36,6 +36,12 @@ pub const Transform = struct {
         return from_matrix(&Mat4.identity());
     }
 
+    pub fn clear(self: *Self) void {
+        self.translation = Vec3.zero();
+        self.rotation = Quat.identity();
+        self.scale = Vec3.one();
+    }
+
     pub fn mul_transform_weighted(self: *const Self, transform: Transform, weight: f32) Self {
         const translation = self.translation.lerp( &transform.translation, weight);
         const rotation = self.rotation.slerp(&transform.rotation, weight);

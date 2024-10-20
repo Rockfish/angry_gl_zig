@@ -107,31 +107,4 @@ pub const ModelAnimation = struct {
     }
 };
 
-pub fn getAnimations(allocator: Allocator, aiScene: [*c]const Assimp.aiScene) !*ArrayList(*ModelAnimation) {
-    const animations = try allocator.create(ArrayList(*ModelAnimation));
-    animations.* = ArrayList(*ModelAnimation).init(allocator);
 
-    const num_animations = aiScene.*.mNumAnimations;
-
-    for (aiScene.*.mAnimations[0..num_animations], 0..) |ai_animation, id| {
-        const animation = try ModelAnimation.init(allocator, ai_animation.*.mName);
-        animation.*.duration = @as(f32, @floatCast(ai_animation.*.mDuration));
-        animation.*.ticks_per_second = @as(f32, @floatCast(ai_animation.*.mTicksPerSecond));
-
-        const num_channels = ai_animation.*.mNumChannels;
-
-        for (ai_animation.*.mChannels[0..num_channels]) |channel| {
-            const node_animation = try NodeKeyframes.init(allocator, channel.*.mNodeName, channel);
-            try animation.node_keyframes.append(node_animation);
-        }
-
-        try animations.append(animation);
-
-        std.debug.print("Loaded animation id: {d}\n", .{id});
-        std.debug.print("   name    : {s}\n", .{animation.animation_name.str});
-        std.debug.print("   duration: {d}\n", .{animation.duration});
-        std.debug.print("   node_animations length: {d}\n", .{animation.node_keyframes.items.len});
-    }
-
-    return animations;
-}

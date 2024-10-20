@@ -5,7 +5,6 @@ const ModelBone = @import("model_animation.zig").ModelBone;
 const ModelNode = @import("model_animation.zig").ModelNode;
 const NodeKeyframes = @import("model_node_keyframes.zig").NodeKeyframes;
 const ModelAnimation = @import("model_animation.zig").ModelAnimation;
-const getAnimations = @import("model_animation.zig").getAnimations;
 const Transform = @import("transform.zig").Transform;
 const utils = @import("utils/main.zig");
 const String = @import("string.zig").String;
@@ -61,10 +60,10 @@ pub const AnimationTransition = struct {
     // How much to decrease `current_weight` per second
     weight_decline_per_sec: f32,
     // The animation that is being faded out
-    animation: *PlayingAnimation,
+    animation_state: *AnimationState,
 
     pub fn deinit(self: *AnimationTransition) void {
-        self.allocator.destroy(self.animation);
+        self.allocator.destroy(self.animation_state);
         self.allocator.destroy(self);
     }
 };
@@ -87,7 +86,7 @@ pub const WeightedAnimation = struct {
     }
 };
 
-pub const PlayingAnimation = struct {
+pub const AnimationState = struct {
     start_tick: f32,
     end_tick: f32,
     current_tick: f32,
@@ -95,7 +94,7 @@ pub const PlayingAnimation = struct {
     repeat_mode: AnimationRepeatMode,
     repeat_completions: u32,
 
-    pub fn update(self: *PlayingAnimation, delta_time: f32) void {
+    pub fn update(self: *AnimationState, delta_time: f32) void {
         if (self.current_tick < 0.0) {
             self.current_tick = self.start_tick;
         }
@@ -135,10 +134,10 @@ pub const Animator = struct {
     global_inverse_transform: Transform,
 
     animations: *ArrayList(*ModelAnimation),
-    current_animation: *ModelAnimation,
+    current_animation: ?*ModelAnimation,
 
     transitions: *ArrayList(?*AnimationTransition),
-    animation_state: *PlayingAnimation,
+    animation_state: *AnimationState,
 
     bone_map: *StringHashMap(*ModelBone),
     node_transform_map: *StringHashMap(*NodeTransform),
@@ -185,23 +184,31 @@ pub const Animator = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, aiScene: [*c]const Assimp.aiScene, model_bone_map: *StringHashMap(*ModelBone)) !*Self {
-        const root = aiScene[0].mRootNode;
-        const root_node = try createModelNodeTree(allocator, root);
+    pub fn init(
+        allocator: Allocator,
+        root_transform: Mat4,
+        root_node: *ModelNode,
+        animations: *ArrayList(*ModelAnimation),
+        model_bone_map: *StringHashMap(*ModelBone),
+    ) !*Self {
+        const global_inverse_transform = Transform.from_matrix(&Mat4.getInverse(&root_transform));
 
-        const transform = assimp.mat4FromAiMatrix(&root.*.mTransformation);
-        const global_inverse_transform = Transform.from_matrix(&Mat4.getInverse(&transform));
+        var current_animation: ?*ModelAnimation = null;
+        var duration: f32 = 0.0;
+        var ticks_per_second: f32 = 1.0;
 
-        const animations = try getAnimations(allocator, aiScene); 
-        //const model_animation = try ModelAnimation.init(allocator, aiScene);
-        const current_animation = animations.items[0];
+        if (animations.items.len > 0) {
+            current_animation = animations.items[0];
+            duration = current_animation.?.duration;
+            ticks_per_second = current_animation.?.ticks_per_second;
+        }
 
-        const animation_state = try allocator.create(PlayingAnimation);
+        const animation_state = try allocator.create(AnimationState);
         animation_state.* = .{
             .start_tick = 0.0,
-            .end_tick = current_animation.duration,
+            .end_tick = duration,
             .current_tick = -1.0,
-            .ticks_per_second = current_animation.ticks_per_second,
+            .ticks_per_second = ticks_per_second,
             .repeat_mode = .Forever,
             .repeat_completions = 0,
         };
@@ -230,13 +237,13 @@ pub const Animator = struct {
     pub fn playClip(self: *Self, clip: AnimationClip) !void {
         self.allocator.destroy(self.animation_state);
 
-        self.animation_state = try self.allocator.create(PlayingAnimation);
+        self.animation_state = try self.allocator.create(AnimationState);
         self.animation_state.* = .{
             .start_tick = clip.start_tick,
             .end_tick = clip.end_tick,
             .repeat_mode = clip.repeat_mode,
             .current_tick = -1.0,
-            .ticks_per_second = self.current_animation.ticks_per_second,
+            .ticks_per_second = self.current_animation.?.ticks_per_second,
             .repeat_completions = 0,
         };
     }
@@ -244,13 +251,13 @@ pub const Animator = struct {
     pub fn play_clip_with_transition(self: *Self, clip: AnimationClip, transition_duration: f32) !void {
         const animation = self.animation_state;
 
-        self.animation_state = try self.allocator.create(PlayingAnimation);
+        self.animation_state = try self.allocator.create(AnimationState);
         self.animation_state.* = .{
             .start_tick = clip.start_tick,
             .end_tick = clip.end_tick,
             .repeat_mode = clip.repeat_mode,
             .current_tick = -1.0,
-            .ticks_per_second = self.current_animation.ticks_per_second,
+            .ticks_per_second = self.current_animation.?.ticks_per_second,
             .repeat_completions = 0,
         };
 
@@ -259,7 +266,7 @@ pub const Animator = struct {
             .allocator = self.allocator,
             .current_weight = 1.0,
             .weight_decline_per_sec = 1.0 / transition_duration,
-            .animation = animation,
+            .animation_state = animation,
         };
 
         try self.transitions.append(transition);
@@ -267,11 +274,12 @@ pub const Animator = struct {
 
     pub fn play_weight_animations(self: *Self, weighted_animation: []const WeightedAnimation, frame_time: f32) !void {
         // reset node transforms
-        var iterator = self.node_transform_map.valueIterator();
-        while (iterator.next()) |node_transform| {
-            self.allocator.destroy(node_transform.*);
-        }
-        self.node_transform_map.clearAndFree();
+        // TODO: use clear()
+        // var iterator = self.node_transform_map.valueIterator();
+        // while (iterator.next()) |node_transform| {
+        //     self.allocator.destroy(node_transform.*);
+        // }
+        // self.node_transform_map.clearAndFree();
 
         for (weighted_animation) |weighted| {
             if (weighted.weight == 0.0) {
@@ -281,9 +289,9 @@ pub const Animator = struct {
             const tick_range = weighted.end_tick - weighted.start_tick;
 
             var target_anim_ticks = if (weighted.optional_start > 0.0) blk1: {
-                const tick = (frame_time - weighted.optional_start) * self.current_animation.ticks_per_second + weighted.offset;
+                const tick = (frame_time - weighted.optional_start) * self.current_animation.?.ticks_per_second + weighted.offset;
                 break :blk1 @min(tick, tick_range);
-            } else @mod((frame_time * self.current_animation.ticks_per_second + weighted.offset), tick_range);
+            } else @mod((frame_time * self.current_animation.?.ticks_per_second + weighted.offset), tick_range);
 
             target_anim_ticks += weighted.start_tick;
 
@@ -293,9 +301,9 @@ pub const Animator = struct {
 
             try self.calculate_transform_maps(
                 self.root_node,
-                self.current_animation.node_keyframes,
+                self.current_animation.?.node_keyframes,
                 self.node_transform_map,
-                self.globabl_inverse_transform,
+                self.global_inverse_transform,
                 target_anim_ticks,
                 weighted.weight,
             );
@@ -330,17 +338,16 @@ pub const Animator = struct {
         // std.debug.print("Animator: start update_node_map\n", .{});
 
         // TODO: probably can replace all node transforms with the identity instead of destory the objects.
-        var iterator = self.node_transform_map.valueIterator();
-        while (iterator.next()) |node_transform| {
-            self.allocator.destroy(node_transform.*);
-        }
-
-        self.node_transform_map.clearAndFree();
+        // var iterator = self.node_transform_map.valueIterator();
+        // while (iterator.next()) |node_transform| {
+        //     node_transform.*.transform.clear();
+        // }
+        //
 
         // First for current animation at weight 1.0
         try self.calculate_transform_maps(
             self.root_node,
-            self.current_animation.node_keyframes,
+            self.current_animation.?.node_keyframes,
             self.node_transform_map,
             self.global_inverse_transform,
             self.animation_state.current_tick,
@@ -348,39 +355,16 @@ pub const Animator = struct {
         );
 
         for (self.transitions.items) |transition| {
-            transition.?.animation.update(delta_time);
+            transition.?.animation_state.update(delta_time);
             // std.debug.print("transition = {any}\n", .{transition});
             try self.calculate_transform_maps(
                 self.root_node,
-                self.current_animation.node_keyframes,
+                self.current_animation.?.node_keyframes,
                 self.node_transform_map,
                 self.global_inverse_transform,
-                transition.?.animation.current_tick,
+                transition.?.animation_state.current_tick,
                 transition.?.current_weight,
             );
-        }
-
-        // std.debug.print("node_map updated.\n", .{});
-    }
-
-    fn update_final_transforms(self: *Self) !void {
-        var iterator = self.node_transform_map.iterator();
-        while (iterator.next()) |entry| { // |node_name, node_transform| {
-            const node_name = entry.key_ptr.*;
-            const node_transform = entry.value_ptr.*;
-
-            if (self.bone_map.get(node_name)) |bone| {
-                // multiple the node's transform with the bone's transform
-                const transform = node_transform.transform.mul_transform(bone.offset_transform);
-                const transform_matrix = transform.get_matrix();
-
-                const index = bone.bone_index;
-                self.final_bone_matrices[@intCast(index)] = transform_matrix;
-            }
-
-            for (node_transform.meshes.items) |mesh_index| {
-                self.final_node_matrices[mesh_index] = node_transform.transform.get_matrix();
-            }
         }
     }
 
@@ -393,11 +377,25 @@ pub const Animator = struct {
         current_tick: f32,
         weight: f32,
     ) !void {
-        const global_transformation = try self.calculate_transform(node_data, node_animations, node_map, parent_transform, current_tick, weight);
+        const global_transformation = try self.calculate_transform(
+            node_data,
+            node_animations,
+            node_map,
+            parent_transform,
+            current_tick,
+            weight,
+        );
         // std.debug.print("calculate_transform_maps  node_data.name = {s}  parent_transform = {any}  global_transform = {any}\n", .{node_data.name.str, parent_transform, global_transformation});
 
         for (node_data.childern.items) |child_node| {
-            try self.calculate_transform_maps(child_node, node_animations, node_map, global_transformation, current_tick, weight);
+            try self.calculate_transform_maps(
+                child_node,
+                node_animations,
+                node_map,
+                global_transformation,
+                current_tick,
+                weight,
+            );
         }
     }
 
@@ -424,15 +422,38 @@ pub const Animator = struct {
         const result = try node_map.getOrPut(node_data.node_name.str);
 
         if (result.found_existing) {
+            //std.debug.print("old transform: {any}\n", .{result.value_ptr.*.transform});
             result.value_ptr.*.transform = result.value_ptr.*.transform.mul_transform_weighted(global_transform, weight);
+            //std.debug.print("new transform: {any}\n\n", .{result.value_ptr.*.transform});
         } else {
             const node_transform_ptr = try self.allocator.create(NodeTransform);
             node_transform_ptr.* = NodeTransform.new(global_transform, node_data.meshes);
-            // std.debug.print("calculate_transform: node_data.name = {s}  global_transform = {any}\n", .{node_data.name.str, global_transform});
             result.value_ptr.* = node_transform_ptr;
+            //std.debug.print("first transform: {any}\n\n", .{node_transform_ptr});
         }
 
         return global_transform;
+    }
+
+    fn update_final_transforms(self: *Self) !void {
+        var iterator = self.node_transform_map.iterator();
+        while (iterator.next()) |entry| { // |node_name, node_transform| {
+            const node_name = entry.key_ptr.*;
+            const node_transform = entry.value_ptr.*;
+
+            if (self.bone_map.get(node_name)) |bone| {
+                // multiple the node's transform with the bone's transform
+                const transform = node_transform.transform.mul_transform(bone.offset_transform);
+                const transform_matrix = transform.get_matrix();
+
+                const index = bone.bone_index;
+                self.final_bone_matrices[@intCast(index)] = transform_matrix;
+            }
+
+            for (node_transform.meshes.items) |mesh_index| {
+                self.final_node_matrices[mesh_index] = node_transform.transform.get_matrix();
+            }
+        }
     }
 };
 
@@ -443,29 +464,4 @@ fn getNodeKeyframes(node_keyframes: *ArrayList(*NodeKeyframes), node_name: *Stri
         }
     }
     return null;
-}
-
-/// Converts scene Node tree to local NodeData tree. Converting all the transforms to column major form.
-fn createModelNodeTree(allocator: Allocator, source: [*c]Assimp.aiNode) !*ModelNode {
-    const name = try String.from_aiString(source.*.mName);
-    var model_node = try ModelNode.init(allocator, name);
-
-    const aiTransform = source.*.mTransformation;
-    const transformMatrix = assimp.mat4FromAiMatrix(&aiTransform);
-    const transform = Transform.from_matrix(&transformMatrix);
-    model_node.*.transform = transform;
-
-    if (source.*.mNumMeshes > 0) {
-        for (source.*.mMeshes[0..source.*.mNumMeshes]) |mesh_id| {
-            try model_node.*.meshes.append(mesh_id);
-        }
-    }
-
-    if (source.*.mNumChildren > 0) {
-        for (source.*.mChildren[0..source.*.mNumChildren]) |child| {
-            const node = try createModelNodeTree(allocator, child);
-            try model_node.childern.append(node);
-        }
-    }
-    return model_node;
 }
