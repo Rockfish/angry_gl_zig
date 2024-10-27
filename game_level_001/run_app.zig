@@ -192,6 +192,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         "/Users/john/Dev/Repos/Egregoria/assets/models/pedestrian.glb",
     };
 
+    std.debug.print("Loading model: {s}\n", .{model_paths[7]});
     var builder = try ModelBuilder.init(allocator, &texture_cache, "alien", model_paths[7]);
     //try builder.addTexture("Robot2", texture_diffuse, "/Users/john/Dev/Zig/Dev/angry_gl_zig/assets/textures/IMGP5487_seamless.jpg");
     var model = try builder.build();
@@ -332,7 +333,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             }
         }
 
-        model_node.updateAnimation(state.delta_time);
+        // model_node.updateAnimation(state.delta_time);
         model_node.render(model_shader);
         //model_node.render(basic_shader);
 

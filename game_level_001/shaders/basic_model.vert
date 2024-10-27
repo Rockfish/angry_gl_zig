@@ -11,12 +11,12 @@ uniform mat4 matModel;
 uniform mat4 matView;
 uniform mat4 matProjection;
 
-out vec2 fragTexcoord;
+out vec2 fragTexCoord;
 out vec3 fragNormal;
 
 void main()
 {
-    fragTexcoord = vertTexCoord;
+    fragTexCoord = vertTexCoord;
     gl_Position = matProjection * matView * matModel * vec4(vertPosition, 1.0);
 
     mat4 matNormal = transpose(inverse(matModel));

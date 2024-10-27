@@ -24,6 +24,9 @@ uniform sampler2D texture_diffuse;
 uniform sampler2D texture_specular;
 uniform sampler2D texture_normals;
 
+uniform int has_color;
+uniform vec4 diffuse_color;
+
 uniform sampler2D shadow_map;
 
 uniform bool useLight;
@@ -41,7 +44,13 @@ float ShadowCalculation(float bias, vec4 fragPosLightSpace) {
 }
 
 void main() {
-    vec4 color = texture(texture_diffuse, fragTexCoord);
+    vec4 color = vec4(1.0);
+
+    if (has_color == 1) {
+        color = diffuse_color;
+    } else {
+        color = texture(texture_diffuse, fragTexCoord);
+    }
 
     if (useLight) {
         vec3 normal = normalize(fragNormal);

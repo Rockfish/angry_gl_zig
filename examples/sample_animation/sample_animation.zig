@@ -5,10 +5,6 @@ const zstbi = @import("zstbi");
 const core = @import("core");
 const math = @import("math");
 
-const math_test = @import("math_testing.zig");
-
-const cglm = math.cglm;
-
 const gl = zopengl.bindings;
 
 const Assimp = core.assimp.Assimp;

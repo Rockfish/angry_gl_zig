@@ -167,7 +167,7 @@ pub fn build(b: *std.Build) void {
     // See https://kristoff.it/blog/improving-your-zls-experience/
     const exe_check = b.addExecutable(.{
         .name = "angry_monsters",
-        .root_source_file = b.path("game/main.zig"),
+        .root_source_file = b.path("game_level_001/main.zig"),
         .target = target,
         .optimize = optimize,
     });

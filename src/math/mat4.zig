@@ -102,6 +102,48 @@ pub const Mat4 = extern struct {
         return Mat4{ .data = result };
     }
 
+    pub fn fromAxisAngle(axis: *const Vec3, angleRadians: f32) Mat4 {
+        var result: [4][4]f32 = undefined;
+        cglm.glmc_rotate_make(&result, angleRadians, @as([*c]f32, @ptrCast(@constCast(axis))));
+        return Mat4{ .data = result };
+    }
+
+    pub fn translate(self: *Self, translationVec3: *const Vec3) void {
+        cglm.glmc_translate(@constCast(&self.data), @as([*c]f32, @ptrCast(@constCast(translationVec3))));
+    }
+
+    pub fn scale(self: *Self, scaleVec3: *const Vec3) void {
+        cglm.glmc_scale(@constCast(&self.data), @as([*c]f32, @ptrCast(@constCast(scaleVec3))));
+    }
+
+    pub fn rotateByDegrees(self: *Self, axis: *const Vec3, angleDegrees: f32) void {
+        cglm.glmc_rotated(@constCast(&self.data), std.math.degreesToRadians(angleDegrees), @ptrCast(@constCast(axis)));
+    }
+
+    pub fn mulMat4(self: *const Self, other: *const Mat4) Self {
+        var result: [4][4]f32 = undefined;
+        cglm.glmc_mat4_mul(@constCast(&self.data), @constCast(&other.data), &result);
+        return Mat4{ .data = result };
+    }
+
+    pub fn mulByMat4(self: *Self, other: *const Mat4) void {
+        var result: [4][4]f32 = undefined;
+        cglm.glmc_mat4_mul(@constCast(&self.data), @constCast(&other.data), &result);
+        self.data = result;
+    }
+
+    pub fn mulVec4(self: *const Self, vec: *const Vec4) Vec4 {
+        var result: [4]f32 = undefined;
+        cglm.glmc_mat4_mulv(@constCast(&self.data), @as([*c]f32, @ptrCast(@constCast(vec))), &result);
+        return @as(*Vec4, @ptrCast(&result)).*;
+    }
+
+    pub fn toQuat(self: *const Self) Quat {
+        var result: [4]f32 = undefined;
+        cglm.glmc_mat4_quat(@constCast(&self.data), &result);
+        return Quat{ .data = result };
+    }
+
     pub fn perspectiveRhGl(fov: f32, aspect: f32, near: f32, far: f32) Self {
         var projection: [4][4]f32 = undefined;
         cglm.glmc_perspective_rh_no(fov, aspect, near, far, &projection);
@@ -136,37 +178,6 @@ pub const Mat4 = extern struct {
         return Mat4{ .data = view };
     }
 
-    pub fn translate(self: *Self, translationVec3: *const Vec3) void {
-        cglm.glmc_translate(@constCast(&self.data), @as([*c]f32, @ptrCast(@constCast(translationVec3))));
-    }
-
-    pub fn scale(self: *Self, scaleVec3: *const Vec3) void {
-        cglm.glmc_scale(@constCast(&self.data), @as([*c]f32, @ptrCast(@constCast(scaleVec3))));
-    }
-
-    pub fn mulMat4(self: *const Self, other: *const Mat4) Self {
-        var result: [4][4]f32 = undefined;
-        cglm.glmc_mat4_mul(@constCast(&self.data), @constCast(&other.data), &result);
-        return Mat4{ .data = result };
-    }
-
-    pub fn mulByMat4(self: *Self, other: *const Mat4) void {
-        var result: [4][4]f32 = undefined;
-        cglm.glmc_mat4_mul(@constCast(&self.data), @constCast(&other.data), &result);
-        self.data = result;
-    }
-
-    pub fn mulVec4(self: *const Self, vec: *const Vec4) Vec4 {
-        var result: [4]f32 = undefined;
-        cglm.glmc_mat4_mulv(@constCast(&self.data), @as([*c]f32, @ptrCast(@constCast(vec))), &result);
-        return @as(*Vec4, @ptrCast(&result)).*;
-    }
-
-    pub fn toQuat(self: *const Self) Quat {
-        var result: [4]f32 = undefined;
-        cglm.glmc_mat4_quat(@constCast(&self.data), &result);
-        return Quat{ .data = result };
-    }
 
     pub fn removeTranslation(self: *const Self) Mat4 {
         return Mat4{ .data = .{
@@ -175,19 +186,6 @@ pub const Mat4 = extern struct {
             .{ self.data[2][0], self.data[2][1], self.data[2][2], 0.0 },
             .{ 0.0, 0.0, 0.0, 0.0 },
         } };
-    }
-
-    // @brief creates NEW rotation matrix by angle and axis
-    //
-    // axis will be normalized so you don't need to normalize it
-    //
-    // @param[out] m     affine transform
-    // @param[in]  angle angle (radians)
-    // @param[in]  axis  axis
-    pub fn fromAxisAngle(axis: *const Vec3, angleRadians: f32) Mat4 {
-        var result: [4][4]f32 = undefined;
-        cglm.glmc_rotate_make(&result, angleRadians, @as([*c]f32, @ptrCast(@constCast(axis))));
-        return Mat4{ .data = result };
     }
 
     pub const TrnRotScl = struct {

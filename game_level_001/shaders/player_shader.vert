@@ -19,7 +19,7 @@ uniform mat4 matView;
 uniform mat4 matModel;
 uniform mat4 matLightSpace;
 
-out vec2 fragTexcoord;
+out vec2 fragTexCoord;
 out vec3 fragNormal;
 out vec4 fragPosLightSpace;
 out vec3 fragWorldPos;
@@ -52,7 +52,7 @@ void main() {
 
     gl_Position = matProjection * matView * matModel * totalPosition;
 
-    fragTexcoord = vertTexCoord;
+    fragTexCoord = vertTexCoord;
 
     //fragNormal = vec3(aimRot * vec4(vertNormal, 1.0));
     mat4 matNormal = transpose(inverse(matModel));

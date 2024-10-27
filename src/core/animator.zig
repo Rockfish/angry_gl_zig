@@ -273,13 +273,7 @@ pub const Animator = struct {
     }
 
     pub fn play_weight_animations(self: *Self, weighted_animation: []const WeightedAnimation, frame_time: f32) !void {
-        // reset node transforms
-        // TODO: use clear()
-        // var iterator = self.node_transform_map.valueIterator();
-        // while (iterator.next()) |node_transform| {
-        //     self.allocator.destroy(node_transform.*);
-        // }
-        // self.node_transform_map.clearAndFree();
+        self.clear_node_transform_map();
 
         for (weighted_animation) |weighted| {
             if (weighted.weight == 0.0) {
@@ -335,14 +329,8 @@ pub const Animator = struct {
     }
 
     fn update_node_transformations(self: *Self, delta_time: f32) !void {
-        // std.debug.print("Animator: start update_node_map\n", .{});
 
-        // TODO: probably can replace all node transforms with the identity instead of destory the objects.
-        // var iterator = self.node_transform_map.valueIterator();
-        // while (iterator.next()) |node_transform| {
-        //     node_transform.*.transform.clear();
-        // }
-        //
+        self.clear_node_transform_map(); 
 
         // First for current animation at weight 1.0
         try self.calculate_transform_maps(
@@ -453,6 +441,13 @@ pub const Animator = struct {
             for (node_transform.meshes.items) |mesh_index| {
                 self.final_node_matrices[mesh_index] = node_transform.transform.get_matrix();
             }
+        }
+    }
+
+    fn clear_node_transform_map(self: *Self) void {
+        var iterator = self.node_transform_map.valueIterator();
+        while (iterator.next()) |node_transform| {
+            node_transform.*.transform.clear();
         }
     }
 };

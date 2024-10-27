@@ -136,6 +136,7 @@ pub const ModelMesh = struct {
 
             const uniform = texture.texture_type.toString();
             shader.set_int(uniform, @as(i32, @intCast(texture_unit)));
+            // std.debug.print("texture id: {d}  name: {s}\n", .{i, texture.texture_path});
         }
 
         const has_color = self.*.colors.items.len > 0;
@@ -143,6 +144,7 @@ pub const ModelMesh = struct {
 
         for (self.*.colors.items) |mesh_color| {
             shader.set_vec4(mesh_color.uniform, &mesh_color.color);
+            // std.debug.print("rendering color: {any}\n", .{mesh_color.color});
         }
 
         gl.bindVertexArray(self.vao);

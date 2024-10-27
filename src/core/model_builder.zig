@@ -313,7 +313,7 @@ pub const ModelBuilder = struct {
 
                 if (ai_return == Assimp.AI_SUCCESS) {
                     const texture = try self.loadTexture(TextureConfig.new(texture_type), path.data[0..path.length]);
-                    //std.debug.print("texture: {any}\n", .{texture});
+                    std.debug.print("texture: {any}\n", .{texture});
                     try material_textures.append(texture);
                 }
             }
@@ -359,6 +359,7 @@ pub const ModelBuilder = struct {
         const texture = try Texture.new(self.allocator, filename, texture_config);
         try self.texture_cache.append(texture);
 
+        std.debug.print("texture: {any}\n", .{texture});
         // std.debug.print("Builder: created a new texture: {s}\n", .{texture.texture_path});
         return texture;
     }
