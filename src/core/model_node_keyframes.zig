@@ -103,31 +103,31 @@ pub const NodeKeyframes = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn get_animation_transform(self: *Self, animation_tick: f32) Transform {
-        // const translation = self.interpolate_position(animation_tick);
-        // const rotation = self.interpolate_rotation(animation_tick);
-        // const scale = self.interpolate_scaling(animation_tick);
+    pub fn get_animation_transform(self: *Self, current_tick: f32) Transform {
+        // const translation = self.interpolate_position(current_tick);
+        // const rotation = self.interpolate_rotation(current_tick);
+        // const scale = self.interpolate_scaling(current_tick);
         // std.debug.print("looking for nan, translation = {any}  rotation = {any}  scale = {any}\n", .{translation, rotation, scale});
 
         return Transform{
-            .translation = self.interpolate_position(animation_tick),
-            .rotation = self.interpolate_rotation(animation_tick),
-            .scale = self.interpolate_scaling(animation_tick),
+            .translation = self.interpolate_position(current_tick),
+            .rotation = self.interpolate_rotation(current_tick),
+            .scale = self.interpolate_scaling(current_tick),
         };
     }
 
-    fn interpolate_position(self: *Self, animation_tick: f32) Vec3 {
+    fn interpolate_position(self: *Self, current_tick: f32) Vec3 {
         if (self.positions.items.len == 1) {
             return self.positions.items[0].position;
         }
 
-        const p0_index = self.get_position_index(animation_tick);
+        const p0_index = self.get_position_index(current_tick);
         const p1_index = p0_index + 1;
 
         const scale_factor = self.get_scale_factor(
             self.positions.items[p0_index].tick,
             self.positions.items[p1_index].tick,
-            animation_tick,
+            current_tick,
         );
 
         // final_position
@@ -138,20 +138,20 @@ pub const NodeKeyframes = struct {
         );
     }
 
-    fn interpolate_rotation(self: *Self, animation_tick: f32) Quat {
+    fn interpolate_rotation(self: *Self, current_tick: f32) Quat {
         if (self.rotations.items.len == 1) {
             var rotation = self.rotations.items[0].orientation.clone();
             rotation.normalize();
             return rotation;
         }
 
-        const p0_index = self.get_rotation_index(animation_tick);
+        const p0_index = self.get_rotation_index(current_tick);
         const p1_index = p0_index + 1;
 
         const scale_factor = self.get_scale_factor(
             self.rotations.items[p0_index].tick,
             self.rotations.items[p1_index].tick,
-            animation_tick,
+            current_tick,
         );
 
         // final_rotation
@@ -163,18 +163,18 @@ pub const NodeKeyframes = struct {
         return final_rotation;
     }
 
-    fn interpolate_scaling(self: *Self, animation_tick: f32) Vec3 {
+    fn interpolate_scaling(self: *Self, current_tick: f32) Vec3 {
         if (self.scales.items.len == 1) {
             return self.scales.items[0].scale;
         }
 
-        const p0_index = self.get_scale_index(animation_tick);
+        const p0_index = self.get_scale_index(current_tick);
         const p1_index = p0_index + 1;
 
         const scale_factor = self.get_scale_factor(
             self.scales.items[p0_index].tick,
             self.scales.items[p1_index].tick,
-            animation_tick,
+            current_tick,
         );
 
         // final_scale
@@ -185,37 +185,37 @@ pub const NodeKeyframes = struct {
         );
     }
 
-    fn get_position_index(self: *Self, animation_tick: f32) usize {
+    fn get_position_index(self: *Self, current_tick: f32) usize {
         for (0..self.positions.items.len - 1) |index| {
-            if (animation_tick < self.positions.items[index + 1].tick) {
+            if (current_tick < self.positions.items[index + 1].tick) {
                 return index;
             }
         }
         @panic("animation tick out of bounds");
     }
 
-    fn get_rotation_index(self: *Self, animation_tick: f32) usize {
+    fn get_rotation_index(self: *Self, current_tick: f32) usize {
         for (0..self.rotations.items.len - 1) |index| {
-            if (animation_tick < self.rotations.items[index + 1].tick) {
+            if (current_tick < self.rotations.items[index + 1].tick) {
                 return index;
             }
         }
         @panic("animation tick out of bounds");
     }
 
-    fn get_scale_index(self: *Self, animation_tick: f32) usize {
+    fn get_scale_index(self: *Self, current_tick: f32) usize {
         for (0..self.scales.items.len - 1) |index| {
-            if (animation_tick < self.scales.items[index + 1].tick) {
+            if (current_tick < self.scales.items[index + 1].tick) {
                 return index;
             }
         }
         @panic("animation tick out of bounds");
     }
 
-    fn get_scale_factor(self: *Self, previous_timestamp: f32, next_timestamp: f32, current_time: f32) f32 {
+    fn get_scale_factor(self: *Self, previous_tick: f32, next_tick: f32, current_tick: f32) f32 {
         _ = self;
-        const mid_way_length = current_time - previous_timestamp;
-        const frames_diff = next_timestamp - previous_timestamp;
+        const mid_way_length = current_tick - previous_tick;
+        const frames_diff = next_tick - previous_tick;
         return mid_way_length / frames_diff;
     }
 };

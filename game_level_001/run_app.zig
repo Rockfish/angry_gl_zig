@@ -393,7 +393,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         glfw.pollEvents();
     }
 
-    glfw.terminate();
+    //glfw.terminate();
 }
 
 // updatefn

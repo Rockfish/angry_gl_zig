@@ -83,5 +83,6 @@ void main() {
             color += spec * 0.1 * vec4(1.0, 1.0, 1.0, 1.0);
         }
     }
+
     finalColor = color;
 }

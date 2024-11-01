@@ -97,9 +97,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const shader = try Shader.new(
         allocator,
-        "examples/spacesuit_animation/player_shader.vert",
-        //"examples/spacesuit_animation/player_shader.frag",
-        "examples/spacesuit_animation/basic_model.frag",
+        "game_level_001/shaders/player_shader.vert", 
+        //"game_level_001/shaders/player_shader.frag",
+        "game_level_001/shaders/basic_model.frag",
     );
 
     std.debug.print("Shader id: {d}\n", .{shader.id});
@@ -128,6 +128,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         state.delta_time = current_time - state.total_time;
         state.total_time = current_time;
 
+        state_.processKeys();
+
         frame_counter.update();
 
         glfw.pollEvents();
@@ -139,9 +141,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         //const projection = Mat4.perspectiveRhGl(toRadians(camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
         const projection = state.projection;
-        const view = state.camera.get_lookto_view();
-        shader.set_mat4("projection", &projection);
-        shader.set_mat4("view", &view);
+        const view = state.camera.get_lookat_view();
+        shader.set_mat4("matProjection", &projection);
+        shader.set_mat4("matView", &view);
     
         var model_transform = Mat4.identity();
         // model_transform.translate(&vec3(0.0, -10.4, -400.0));
@@ -149,7 +151,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         //model_transform.translation(&vec3(0.0, 0.0, 0.0));
         model_transform.rotateByDegrees(&vec3(1.0, 0.0, 0.0), -90.0);
         model_transform.scale(&vec3(2.0, 2.0, 2.0));
-        shader.set_mat4("model", &model_transform);
+        shader.set_mat4("matModel", &model_transform);
 
         shader.set_bool("useLight", true);
         shader.set_vec3("ambient", &ambientColor);
@@ -161,7 +163,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         shader.set_mat4("aimRot", &identity);
         shader.set_mat4("lightSpaceMatrix", &identity);
 
-        try model.update_animation(state.delta_time);
+        //try model.update_animation(state.delta_time);
         model.render(shader);
 
         // const bulletTransform = Mat4.fromScale(&vec3(2.0, 2.0, 2.0));

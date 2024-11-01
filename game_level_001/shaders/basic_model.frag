@@ -36,5 +36,5 @@ void main()
     vec3 ambient = 0.25 * ambient_color;
     vec3 diffuse = max(dot(fragNormal, light_dir), 0.0) * light_color;
 
-    finalColor = color * vec4((ambient + diffuse), 1.0f);
+    finalColor = color; // * vec4((ambient + diffuse), 1.0f);
 }

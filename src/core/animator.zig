@@ -303,14 +303,14 @@ pub const Animator = struct {
             );
         }
 
-        try self.update_final_transforms();
+        try self.update_shader_matrices();
     }
 
     pub fn update_animation(self: *Self, delta_time: f32) !void {
         self.animation_state.update(delta_time);
         try self.update_transitions(delta_time);
         try self.update_node_transformations(delta_time);
-        try self.update_final_transforms();
+        try self.update_shader_matrices();
     }
 
     const HasCurrentWeightFilter = struct {
@@ -321,8 +321,8 @@ pub const Animator = struct {
     };
 
     fn update_transitions(self: *Self, delta_time: f32) !void {
-        for (self.transitions.items) |animation| {
-            animation.?.current_weight -= animation.?.weight_decline_per_sec * delta_time;
+        for (self.transitions.items) |transition| {
+            transition.?.current_weight -= transition.?.weight_decline_per_sec * delta_time;
         }
         const filter = HasCurrentWeightFilter{};
         try utils.retain(*AnimationTransition, HasCurrentWeightFilter, self.transitions, filter);
@@ -423,7 +423,7 @@ pub const Animator = struct {
         return global_transform;
     }
 
-    fn update_final_transforms(self: *Self) !void {
+    fn update_shader_matrices(self: *Self) !void {
         var iterator = self.node_transform_map.iterator();
         while (iterator.next()) |entry| { // |node_name, node_transform| {
             const node_name = entry.key_ptr.*;
