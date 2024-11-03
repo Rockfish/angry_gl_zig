@@ -87,6 +87,7 @@ pub const WeightedAnimation = struct {
 };
 
 pub const AnimationState = struct {
+    animation_id: usize,
     start_tick: f32,
     end_tick: f32,
     current_tick: f32,
@@ -134,10 +135,10 @@ pub const Animator = struct {
     global_inverse_transform: Transform,
 
     animations: *ArrayList(*ModelAnimation),
+    animation_state: *AnimationState,
     current_animation: ?*ModelAnimation,
 
     transitions: *ArrayList(?*AnimationTransition),
-    animation_state: *AnimationState,
 
     bone_map: *StringHashMap(*ModelBone),
     node_transform_map: *StringHashMap(*NodeTransform),
@@ -205,6 +206,7 @@ pub const Animator = struct {
 
         const animation_state = try allocator.create(AnimationState);
         animation_state.* = .{
+            .animation_id = 0,
             .start_tick = 0.0,
             .end_tick = duration,
             .current_tick = -1.0,
@@ -239,6 +241,7 @@ pub const Animator = struct {
 
         self.animation_state = try self.allocator.create(AnimationState);
         self.animation_state.* = .{
+            .animation_id = 0,
             .start_tick = clip.start_tick,
             .end_tick = clip.end_tick,
             .repeat_mode = clip.repeat_mode,
@@ -282,10 +285,14 @@ pub const Animator = struct {
 
             const tick_range = weighted.end_tick - weighted.start_tick;
 
-            var target_anim_ticks = if (weighted.optional_start > 0.0) blk1: {
+            var target_anim_ticks: f32 = 0.0;
+
+            if (weighted.optional_start > 0.0) {
                 const tick = (frame_time - weighted.optional_start) * self.current_animation.?.ticks_per_second + weighted.offset;
-                break :blk1 @min(tick, tick_range);
-            } else @mod((frame_time * self.current_animation.?.ticks_per_second + weighted.offset), tick_range);
+                target_anim_ticks = @min(tick, tick_range);
+            } else {
+                target_anim_ticks = @mod((frame_time * self.current_animation.?.ticks_per_second + weighted.offset), tick_range);
+            }
 
             target_anim_ticks += weighted.start_tick;
 
@@ -303,6 +310,18 @@ pub const Animator = struct {
             );
         }
 
+        try self.update_shader_matrices();
+    }
+
+    pub fn playTick(self: *Self, tick: f32) !void {
+        if (tick < self.animation_state.start_tick or tick > self.animation_state.end_tick) {
+            std.debug.print("tick out of range. start_tick: {d}  end_tick: {d}  tick: {d}\n", 
+                .{self.animation_state.start_tick, self.animation_state.end_tick, tick},);
+            return;
+            //@panic("tick out of range");
+        }
+        self.animation_state.current_tick = tick;
+        try self.update_node_transformations(0.0);
         try self.update_shader_matrices();
     }
 
@@ -425,17 +444,13 @@ pub const Animator = struct {
 
     fn update_shader_matrices(self: *Self) !void {
         var iterator = self.node_transform_map.iterator();
-        while (iterator.next()) |entry| { // |node_name, node_transform| {
+        while (iterator.next()) |entry| {
             const node_name = entry.key_ptr.*;
             const node_transform = entry.value_ptr.*;
 
             if (self.bone_map.get(node_name)) |bone| {
-                // multiple the node's transform with the bone's transform
                 const transform = node_transform.transform.mul_transform(bone.offset_transform);
-                const transform_matrix = transform.get_matrix();
-
-                const index = bone.bone_index;
-                self.final_bone_matrices[@intCast(index)] = transform_matrix;
+                self.final_bone_matrices[bone.bone_index] = transform.get_matrix();
             }
 
             for (node_transform.meshes.items) |mesh_index| {

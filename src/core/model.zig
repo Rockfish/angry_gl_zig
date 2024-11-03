@@ -48,6 +48,10 @@ pub const Model = struct {
         try self.animator.playClip(clip);
     }
 
+    pub fn playTick(self: *Self, tick: f32) !void {
+        try self.animator.playTick(tick);
+    }
+
     pub fn play_clip_with_transition(self: *Self, clip: AnimationClip, transition_duration: f32) !void {
         try self.animator.play_clip_with_transition(clip, transition_duration);
     }
@@ -88,3 +92,25 @@ pub const Model = struct {
         try self.animator.update_animation(delta_time);
     }
 };
+
+pub fn dumpModelNodes(model: *Model) !void {
+    std.debug.print("\n--- Dumping nodes ---\n", .{});
+    var buf: [1024:0]u8 = undefined;
+
+    var node_iterator = model.animator.node_transform_map.iterator();
+    while (node_iterator.next()) |entry| { // |node_name, node_transform| {
+        const name = entry.key_ptr.*;
+        const transform = entry.value_ptr.*;
+        const str = try transform.transform.asString(&buf);
+        std.debug.print("node_name: {s} : {s}\n", .{name, str});
+    }
+    std.debug.print("\n", .{});
+
+    var bone_iterator = model.animator.bone_map.iterator();
+    while (bone_iterator.next()) |entry| { // |node_name, node_transform| {
+        const name = entry.key_ptr.*;
+        const transform = entry.value_ptr.*;
+        const str = try transform.offset_transform.asString(&buf);
+        std.debug.print("bone_name: {s} : {s}\n", .{name, str});
+    }
+}

@@ -48,7 +48,7 @@ pub const ModelNode = struct {
 
 pub const ModelBone = struct {
     bone_name: *String,
-    bone_index: i32,
+    bone_index: u32,
     offset_transform: Transform,
     allocator: Allocator,
 
@@ -59,7 +59,7 @@ pub const ModelBone = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, name: []const u8, id: i32, offset: Mat4) !*ModelBone {
+    pub fn init(allocator: Allocator, name: []const u8, id: u32, offset: Mat4) !*ModelBone {
         const bone = try allocator.create(ModelBone);
         bone.* = ModelBone{
             .bone_name = String.new(name),

@@ -51,7 +51,7 @@ pub const ModelBuilder = struct {
     texture_cache: *ArrayList(*Texture),
     added_textures: ArrayList(AddedTexture),
     model_bone_map: *StringHashMap(*ModelBone),
-    bone_count: i32,
+    bone_count: u32,
     filepath: [:0]const u8,
     directory: []const u8,
     gamma_correction: bool,
@@ -359,7 +359,7 @@ pub const ModelBuilder = struct {
         const texture = try Texture.new(self.allocator, filename, texture_config);
         try self.texture_cache.append(texture);
 
-        std.debug.print("texture: {any}\n", .{texture});
+        //std.debug.print("texture: {any}\n", .{texture});
         // std.debug.print("Builder: created a new texture: {s}\n", .{texture.texture_path});
         return texture;
     }
@@ -370,7 +370,7 @@ pub const ModelBuilder = struct {
         }
 
         for (aiMesh.mBones[0..aiMesh.mNumBones]) |bone| {
-            var bone_id: i32 = undefined;
+            var bone_id: u32 = undefined;
             const bone_name = bone.*.mName.data[0..bone.*.mName.length];
 
             const result = self.model_bone_map.get(bone_name);

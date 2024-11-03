@@ -37,11 +37,11 @@ pub const ModelVertex = extern struct {
         };
     }
 
-    pub fn set_bone_data(self: *Self, bone_id: i32, weight: f32) void {
+    pub fn set_bone_data(self: *Self, bone_id: u32, weight: f32) void {
         //set first available free spot if there is any
         for (0..MAX_BONE_INFLUENCE) |i| {
             if (self.bone_ids[i] < 0) {
-                self.bone_ids[i] = bone_id;
+                self.bone_ids[i] = @intCast(bone_id);
                 self.bone_weights[i] = weight;
                 break;
             }

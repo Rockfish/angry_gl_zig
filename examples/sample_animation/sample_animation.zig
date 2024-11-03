@@ -192,7 +192,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     defer bullet_model.deinit();
 
     // const idle = AnimationClip.new(55.0, 130.0, AnimationRepeat.Forever);
-    const forward = AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever);
+    // const forward = AnimationClip.new(134.0, 154.0, AnimationRepeat.Forever);
     // const backwards = AnimationClip.new(159.0, 179.0, AnimationRepeat.Forever);
     // const right = AnimationClip.new(184.0, 204.0, AnimationRepeat.Forever);
     // const left = AnimationClip.new(209.0, 229.0, AnimationRepeat.Forever);
@@ -201,7 +201,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     std.debug.print("Main: playClip\n", .{});
     // try model.playClip(idle);
     // try model.play_clip_with_transition(forward, 6);
-    try model.playClip(forward);
+    // try model.playClip(forward);
+    std.debug.print("animation state: {any}\n", .{model.animator.animation_state});
 
     // --- event loop
     state.last_frame = @floatCast(glfw.getTime());
@@ -220,10 +221,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         frame_counter.update();
 
         glfw.pollEvents();
-
-        //shader.use_shader();
-
-        try model.update_animation(state.delta_time);
 
         gl.clearColor(0.05, 0.1, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -250,7 +247,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         shader.set_mat4("lightSpaceMatrix", &identity);
 
         // std.debug.print("Main: render\n", .{});
+        //try model.update_animation(state.delta_time);
+        try model.playTick(140.0);
         model.render(shader);
+        try core.dumpModelNodes(model);
 
         const bulletTransform = Mat4.fromScale(&vec3(2.0, 2.0, 2.0));
 
@@ -258,6 +258,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         bullet_model.render(shader);
 
         window.swapBuffers();
+
+        break;
     }
 
     std.debug.print("\nRun completed.\n\n", .{});

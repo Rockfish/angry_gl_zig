@@ -20,3 +20,5 @@ pub const SoundEngine = @import("sound_engine.zig").SoundEngine;
 
 pub const AABB = @import("aabb.zig").AABB;
 pub const Ray = @import("aabb.zig").Ray;
+
+pub const dumpModelNodes = @import("model.zig").dumpModelNodes;

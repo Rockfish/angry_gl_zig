@@ -71,8 +71,16 @@ pub const Transform = struct {
         return _point;
     }
 
-    pub fn get_matrix(self: Self) Mat4 {
+    pub fn get_matrix(self: *const Self) Mat4 {
         return  Mat4.from_scale_rotation_translation(&self.scale, &self.rotation, &self.translation);
+    }
+
+    pub fn asString(self: *Self, buf: []u8) std.fmt.BufPrintError![:0]u8 {
+        return std.fmt.bufPrintZ(buf, "{{.translation={{{d}, {d}, {d}}} .rotation={{{d}, {d}, {d}, {d}}} .scale={{{d}, {d}, {d}}}}}",
+            .{self.translation.x, self.translation.y, self.translation.z,
+              self.rotation.data[0], self.rotation.data[1], self.rotation.data[2], self.rotation.data[3],
+              self.scale.x, self.scale.y, self.scale.z},
+        );
     }
 };
 

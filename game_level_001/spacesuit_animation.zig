@@ -114,8 +114,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var model = try builder.build();
     builder.deinit();
 
-    const clip = AnimationClip.new(1.0, 2.0, AnimationRepeat.Forever);
-    try model.playClip(clip);
+    // const clip = AnimationClip.new(1.0, 2.0, AnimationRepeat.Forever);
+    // try model.playClip(clip);
+
+    // try core.dumpModelNodes(model);
 
     // --- event loop
     state.total_time = @floatCast(glfw.getTime());
@@ -139,12 +141,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // const debug_camera = try Camera.camera_vec3(allocator, vec3(0.0, 40.0, 120.0));
         // defer debug_camera.deinit();
 
-        //const projection = Mat4.perspectiveRhGl(toRadians(camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
-        const projection = state.projection;
-        const view = state.camera.get_lookat_view();
-        shader.set_mat4("matProjection", &projection);
-        shader.set_mat4("matView", &view);
-    
+        shader.set_mat4("matProjection", &state.projection);
+        shader.set_mat4("matView", &state.camera.get_lookat_view());
+  
         var model_transform = Mat4.identity();
         // model_transform.translate(&vec3(0.0, -10.4, -400.0));
         //model_transform.scale(&vec3(1.0, 1.0, 1.0));
@@ -164,13 +163,13 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         shader.set_mat4("lightSpaceMatrix", &identity);
 
         //try model.update_animation(state.delta_time);
+        try model.playTick(0.0);
         model.render(shader);
-
-        // const bulletTransform = Mat4.fromScale(&vec3(2.0, 2.0, 2.0));
-        // shader.set_mat4("model", &bulletTransform);
-        // bullet_model.render(shader);
+        try core.dumpModelNodes(model);
 
         window.swapBuffers();
+
+        break;
     }
 
     std.debug.print("\nRun completed.\n\n", .{});
@@ -184,75 +183,4 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     texture_cache.deinit();
 }
 
-inline fn toRadians(degrees: f32) f32 {
-    return degrees * (std.math.pi / 180.0);
-}
 
-// fn keyHandler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
-//     _ = scancode;
-//     _ = mods;
-//     switch (key) {
-//         .escape => {
-//             window.setShouldClose(true);
-//         },
-//         .t => {
-//             if (action == glfw.Action.press) {
-//                 std.debug.print("time: {d}\n", .{state.delta_time});
-//             }
-//         },
-//         .w => {
-//             state.camera.process_keyboard(.Forward, state.delta_time);
-//         },
-//         .s => {
-//             state.camera.process_keyboard(.Backward, state.delta_time);
-//         },
-//         .a => {
-//             state.camera.process_keyboard(.Left, state.delta_time);
-//         },
-//         .d => {
-//             state.camera.process_keyboard(.Right, state.delta_time);
-//         },
-//         else => {},
-//     }
-// }
-//
-// fn framebufferSizeHandler(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {
-//     _ = window;
-//     gl.viewport(0, 0, width, height);
-// }
-//
-// fn mouseHandler(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
-//     _ = window;
-//     _ = button;
-//     _ = action;
-//     _ = mods;
-// }
-//
-// fn cursorPositionHandler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
-//     _ = window;
-//     var xpos: i32 = @intFromFloat(xposIn);
-//     var ypos: i32 = @intFromFloat(yposIn);
-//
-//     xpos = if (xpos < 0) 0 else if (xpos < state.scr_width) xpos else state.scr_width;
-//     ypos = if (ypos < 0) 0 else if (ypos < state.scr_height) ypos else state.scr_height;
-//
-//     if (state.first_mouse) {
-//         state.last_x = xpos;
-//         state.last_y = ypos;
-//         state.first_mouse = false;
-//     }
-//
-//     const xoffset = xpos - state.last_x;
-//     const yoffset = state.last_y - ypos; // reversed since y-coordinates go from bottom to top
-//
-//     state.last_x = xpos;
-//     state.last_y = ypos;
-//
-//     state.camera.process_mouse_movement(xoffset, yoffset, true);
-// }
-//
-// fn scrollHandler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {
-//     _ = window;
-//     _ = xoffset;
-//     state.camera.process_mouse_scroll(@floatCast(yoffset));
-// }
