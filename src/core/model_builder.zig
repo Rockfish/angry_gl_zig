@@ -156,7 +156,7 @@ pub const ModelBuilder = struct {
         const transform = assimp.mat4FromAiMatrix(&root.*.mTransformation);
         const animations = try loadAnimations(self.allocator, aiScene);
 
-        const animator = try Animator.init(self.allocator, transform, root_node, animations, self.model_bone_map);
+        const animator = try Animator.init(self.allocator, transform, root_node, animations, self.model_bone_map,);
 
         const model = try self.allocator.create(Model);
         model.* = Model{
@@ -370,13 +370,13 @@ pub const ModelBuilder = struct {
         }
 
         for (aiMesh.mBones[0..aiMesh.mNumBones]) |bone| {
+            // Get bone_id and if needed add new bone to the bone_map.
             var bone_id: u32 = undefined;
             const bone_name = bone.*.mName.data[0..bone.*.mName.length];
+            const bone_entry = self.model_bone_map.get(bone_name);
 
-            const result = self.model_bone_map.get(bone_name);
-
-            if (result != null) {
-                bone_id = result.?.bone_index;
+            if (bone_entry != null) {
+                bone_id = bone_entry.?.bone_index;
             } else {
                 const model_bone = try self.allocator.create(ModelBone);
                 model_bone.* = ModelBone{
@@ -392,6 +392,7 @@ pub const ModelBuilder = struct {
                 self.bone_count += 1;
             }
 
+            // Set the per vertex bone ids and weights
             for (bone.*.mWeights[0..bone.*.mNumWeights]) |bone_weight| {
                 const vertex_id: u32 = bone_weight.mVertexId;
                 const weight: f32 = bone_weight.mWeight;
@@ -498,7 +499,7 @@ pub fn loadAnimations(allocator: Allocator, aiScene: [*c]const Assimp.aiScene) !
         try animations.append(animation);
 
         std.debug.print("Loaded animation id: {d}\n", .{id});
-        std.debug.print("   name    : {s}\n", .{animation.animation_name.str});
+        std.debug.print("   name    : {s}\n", .{animation.name.str});
         std.debug.print("   duration: {d}\n", .{animation.duration});
         std.debug.print("   node_animations length: {d}\n", .{animation.node_keyframes.items.len});
     }

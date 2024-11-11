@@ -283,7 +283,7 @@ pub const ModelMesh = struct {
     }
 };
 
-pub fn print_model_mesh(mesh: *ModelMesh) void {
+pub fn printModelMesh(mesh: *ModelMesh) void {
     // _ = mesh;
 
     std.debug.print("OFFSET_OF_POSITION: {any}\n", .{OFFSET_OF_POSITION});

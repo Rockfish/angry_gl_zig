@@ -9,6 +9,7 @@ const StringHashMap = std.StringHashMap;
 
 const cglm = math.cglm;
 const Assimp = core.assimp.Assimp;
+const Transform = core.Transform;
 
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
@@ -18,12 +19,14 @@ const vec3 = math.vec3;
 const Mat4 = math.Mat4;
 const Quat = math.Quat;
 
+var buffer: [2024]u8 = undefined;
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const model_paths = [_][]const u8 {
+    const model_paths = [_][]const u8{
         "examples/sample_animation/animated_cube/AnimatedCube.gltf",
         "/Users/john/Dev/Dev_Rust/small_gl_core/examples/sample_animation/source/cube_capoeira_martelo_cruzando.fbx",
         "/Users/john/Dev_Rust/Repos/ogldev/Content/box.obj",
@@ -38,7 +41,7 @@ pub fn main() !void {
 
     // const model_path = "examples/sample_animation/colorful_cube/scene.gltf";
 
-    const scene = try loadScene(allocator, model_paths[9]);
+    const scene = try loadScene(allocator, model_paths[4]);
 
     var parse = SceneParser.new(allocator);
     std.debug.print("scene: {any}\n", .{scene});
@@ -133,13 +136,13 @@ const SceneParser = struct {
     }
 
     fn parse_scene(self: *Self, scene: [*]const Assimp.aiScene) void {
-        self.parse_meshes(scene);
+        Self.parse_meshes(scene);
         self.validate_bones();
         self.parse_hierarchy(scene);
         self.parse_animations(scene);
     }
 
-    fn parse_meshes(self: *Self, scene: [*]const Assimp.aiScene) void {
+    fn parse_meshes(scene: [*]const Assimp.aiScene) void {
         std.debug.print("---------------------------------------------", .{});
         std.debug.print("Parsing {} meshes\n\n", .{scene[0].mNumMeshes});
 
@@ -156,7 +159,7 @@ const SceneParser = struct {
             const num_bones = mesh.mNumBones;
 
             std.debug.print(
-                "  Mesh {d} '{s}': vertices {d} indices {d} bones {d}\n",
+                "  Mesh {d} '{s}': num vertices {d} num indices {d} num bones {d}\n",
                 .{
                     i,
                     mesh_name,
@@ -171,11 +174,11 @@ const SceneParser = struct {
             total_bones += num_bones;
             // self.vertex_to_bones.push(total_vertices)
 
-            self.parse_single_mesh(i, mesh);
+            Self.parse_single_mesh(mesh);
         }
     }
 
-    fn parse_single_mesh(self: *Self, mesh_index: usize, aiMesh: Assimp.aiMesh) void {
+    fn parse_single_mesh(aiMesh: Assimp.aiMesh) void {
         std.debug.print("Vertex positions\n", .{});
 
         for (0..aiMesh.mNumVertices) |i| {
@@ -198,33 +201,32 @@ const SceneParser = struct {
         }
 
         std.debug.print("\nBones number: {d}\n", .{aiMesh.mNumBones});
-        self.parse_mesh_bones(mesh_index, aiMesh);
+
+        Self.parse_mesh_bones(aiMesh);
 
         std.debug.print("\n", .{});
     }
 
-    fn parse_mesh_bones(self: *Self, mesh_index: usize, aiMesh: Assimp.aiMesh) void {
+    fn parse_mesh_bones(aiMesh: Assimp.aiMesh) void {
         for (0..aiMesh.mNumBones) |i| {
             const bone = aiMesh.mBones[i];
-            self.parse_bone(mesh_index, bone);
+            Self.parse_bone(bone);
         }
     }
 
-    fn parse_bone(self: *Self, mesh_index: usize, bone: *Assimp.aiBone) void {
-        _ = mesh_index;
-
+    fn parse_bone(bone: *Assimp.aiBone) void {
         std.debug.print(
-            "      Bone '{s}': num vertices affected by this bone: {any}\n",
+            //"Bone '{s}': address: {*} num vertices affected by this bone: {any} {s}\n",
+            "Bone '{s:<15.15}': num vertices affected by this bone: {any:5} {s}\n",
             .{
                 bone.mName.data[0..bone.mName.length],
+                // bone,
                 bone.mNumWeights,
+                transformAsString(&buffer, &bone.mOffsetMatrix),
             },
         );
 
         // const bone_id = self.get_bone_id(bone);
-
-        self.print_assimp_matrix(bone.mOffsetMatrix);
-
         // for (i, weight) in bone.weights.iter().enumerate() {
         //     print!("     {} : vertex id {} ", i, weight.vertex_id);
         //
@@ -233,8 +235,6 @@ const SceneParser = struct {
         //     // assert(global_vertex_id < vertex_to_bones.size());
         //     // vertex_to_bones[global_vertex_id].AddBoneData(bone_id, vw.mWeight);
         // }
-
-        std.debug.print("\n", .{});
     }
 
     fn get_bone_id(self: *Self, bone: *Assimp.aiBone) u32 {
@@ -260,7 +260,16 @@ const SceneParser = struct {
 
     fn parse_node(self: *Self, node: *Assimp.aiNode) void {
         self.print_space();
-        std.debug.print("Node: '{s}'  num children: {d} num meshes: {d}\n", .{ node.mName.data[0..node.mName.length], node.mNumChildren, node.mNumMeshes });
+        std.debug.print(
+            "{s:<20.20} - num children: {d} num meshes: {d} transfrom: {s}\n",
+            .{
+                node.mName.data[0..node.mName.length],
+                node.mNumChildren, 
+                node.mNumMeshes,
+                transformAsString(&buffer, &node.mTransformation),
+            },
+        );
+
         //std.debug.print("Node name: '{}' num children {} num meshes {} transform: {:?}", node.name, node.children.borrow().len(), node.meshes.len(), &node.transformation);
         // self.print_space();
         // std.debug.print("Node transformation:");
@@ -272,7 +281,6 @@ const SceneParser = struct {
             // std.debug.print("\n", .{});
             // self.print_space();
             // std.debug.print("--- {} ---\n", i);
-            std.debug.print("\n", .{});
             self.parse_node(node.mChildren[i]);
         }
 
@@ -356,28 +364,33 @@ const SceneParser = struct {
         self.print_space();
         std.debug.print("{d}, {d}, {d}, {d}\n", .{ m.d1, m.d2, m.d3, m.d4 });
     }
-
-    fn print_assimp_matrix(self: *const Self, m: Assimp.aiMatrix4x4) void {
-        self.print_space();
-        std.debug.print(
-            "{d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}\n",
-            .{ m.a1, m.a2, m.a3, m.a4, m.b1, m.b2, m.b3, m.b4, m.c1, m.c2, m.c3, m.c4, m.d1, m.d2, m.d3, m.d4 },
-        );
-    }
-
-    fn print_aiVectorKey(self: *const Self, v: Assimp.aiVectorKey) void {
-        self.print_space();
-        std.debug.print(
-            "time: {d}  value: {d}, {d}, {d}\n",
-            .{ v.mTime, v.mValue.x, v.mValue.y, v.mValue.z },
-        );
-    }
-
-    fn print_aiQuatKey(self: *const Self, v: Assimp.aiQuatKey) void {
-        self.print_space();
-        std.debug.print(
-            "time: {d}  value: {d}, {d}, {d}, {d}\n",
-            .{ v.mTime, v.mValue.x, v.mValue.y, v.mValue.z, v.mValue.w },
-        );
-    }
 };
+
+fn aiMatrixAsString(buf: []u8, m: Assimp.aiMatrix4x4) [:0]u8 {
+    return std.fmt.bufPrintZ(
+        buf,
+        "aiMatrix4x4: {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}",
+        .{ m.a1, m.a2, m.a3, m.a4, m.b1, m.b2, m.b3, m.b4, m.c1, m.c2, m.c3, m.c4, m.d1, m.d2, m.d3, m.d4 },
+    ) catch @panic("bufPrintZ error.");
+}
+
+fn aiVectorAsString(buf: []u8, v: Assimp.aiVectorKey) [:0]u8 {
+    return std.fmt.bufPrintZ(
+        buf,
+        "aiVectorKey: time: {d}  value: {d}, {d}, {d}",
+        .{ v.mTime, v.mValue.x, v.mValue.y, v.mValue.z },
+    ) catch @panic("bufPrintZ error.");
+}
+
+fn aiQuatKeyAsString(buf: []u8, v: Assimp.aiQuatKey) [:0]u8 {
+    return std.fmt.bufPrintZ(
+        buf,
+        "aiQuatKey: time: {d}  value: {d}, {d}, {d}, {d}",
+        .{ v.mTime, v.mValue.x, v.mValue.y, v.mValue.z, v.mValue.w },
+    ) catch @panic("bufPrintZ error.");
+}
+
+fn transformAsString(buf: []u8, matrix: *Assimp.aiMatrix4x4) [:0]u8 {
+    const transform = Transform.from_matrix(&core.assimp.mat4FromAiMatrix(matrix));
+    return transform.asString(buf) catch @panic("bufPrintZ error.");
+}

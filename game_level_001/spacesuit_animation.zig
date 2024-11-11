@@ -114,8 +114,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var model = try builder.build();
     builder.deinit();
 
+    const clip = AnimationClip {
+        .id = 7,
+        .start_tick = 1.0,
+        .end_tick = 10.0,
+        .repeat_mode = .Forever
+    };
     // const clip = AnimationClip.new(1.0, 2.0, AnimationRepeat.Forever);
-    // try model.playClip(clip);
+    try model.playClip(clip);
 
     // try core.dumpModelNodes(model);
 
@@ -162,15 +168,16 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         shader.set_mat4("aimRot", &identity);
         shader.set_mat4("lightSpaceMatrix", &identity);
 
-        //try model.update_animation(state.delta_time);
-        try model.playTick(0.0);
+        try model.update_animation(state.delta_time);
+        //try model.playTick(1.0);
         model.render(shader);
-        try core.dumpModelNodes(model);
 
+        //try core.dumpModelNodes(model);
         window.swapBuffers();
 
-        break;
+        //break;
     }
+    try core.dumpModelNodes(model);
 
     std.debug.print("\nRun completed.\n\n", .{});
 

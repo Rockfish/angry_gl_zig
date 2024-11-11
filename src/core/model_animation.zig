@@ -73,7 +73,7 @@ pub const ModelBone = struct {
 };
 
 pub const ModelAnimation = struct {
-    animation_name: *String,
+    name: *String,
     duration: f32,
     ticks_per_second: f32,
     node_keyframes: *ArrayList(*NodeKeyframes),
@@ -82,7 +82,7 @@ pub const ModelAnimation = struct {
     const Self = @This();
 
     pub fn deinit(self: *Self) void {
-        self.animation_name.deinit();
+        self.name.deinit();
         for (self.node_keyframes.items) |node_animation| {
             node_animation.deinit();
         }
@@ -97,7 +97,7 @@ pub const ModelAnimation = struct {
 
         const animation = try allocator.create(ModelAnimation);
         animation.* = .{
-            .animation_name = try String.from_aiString(name),
+            .name = try String.from_aiString(name),
             .duration = 0.0,
             .ticks_per_second = 0.0,
             .node_keyframes = node_keyframes,
