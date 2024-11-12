@@ -36,7 +36,22 @@ pub fn build(b: *std.Build) !void {
         .{ .ASSIMP_DOUBLE_PRECISION = use_double_precision },
     );
 
+    const revision_h = b.addConfigHeader(
+        .{
+            .style = .{ .cmake = assimp.path("include/assimp/revision.h.in") },
+            .include_path = "assimp/revision.h",
+        },
+        .{ 
+            .GIT_COMMIT_HASH = "122080",
+            .ASSIMP_VERSION_MAJOR = 5,
+            .ASSIMP_VERSION_MINOR = 4,
+            .ASSIMP_VERSION_PATCH = 3,
+        },
+    );
+
     lib.addConfigHeader(config_h);
+    lib.addConfigHeader(revision_h);
+
     lib.addIncludePath(assimp.path("include"));
     lib.addIncludePath(b.path("include"));
 
@@ -192,6 +207,7 @@ pub fn build(b: *std.Build) !void {
 
 const unsupported_formats = [_][]const u8{
     "C4D", // fails to build, MSVC only
+    "USD",
 };
 
 const sources = struct {

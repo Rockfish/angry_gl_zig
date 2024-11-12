@@ -70,14 +70,10 @@ pub fn build(b: *std.Build) void {
     lib.addIncludePath(assimp.path("include"));
     b.installArtifact(lib);
 
-    const math = b.createModule(.{
-        .root_source_file = b.path("src/math/main.zig"),
-    });
+    const math = b.createModule(.{ .root_source_file = b.path("src/math/main.zig") });
     math.addIncludePath(b.path("src/include"));
 
-    const core = b.createModule(.{
-        .root_source_file = b.path("src/core/main.zig"),
-    });
+    const core = b.createModule(.{ .root_source_file = b.path("src/core/main.zig") });
 
     core.addImport("math", math);
     core.addImport("zopengl", zopengl.module("root"));

@@ -1,6 +1,6 @@
 .{
     .name = "zig-assimp",
-    .version = "5.3.1",
+    .version = "5.4.3",
     .paths = .{
         "build.zig",
         "build.zig.zon",
@@ -11,8 +11,8 @@
     },
     .dependencies = .{
         .assimp = .{
-            .url = "https://github.com/assimp/assimp/archive/refs/tags/v5.4.0.tar.gz",
-            .hash = "122047e4e065286321bd1f57940a44cf1198d3b2bc6429fb4e51fd33d7551c4005de",
+            .url = "https://github.com/assimp/assimp/archive/refs/tags/v5.4.3.tar.gz",
+            .hash = "122080ee4a32b9747dbe1c51d67cf7e28d7a32110da8f76adc97f2cdcc35eded9b2c",
         },
     },
 }
