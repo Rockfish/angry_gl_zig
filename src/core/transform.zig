@@ -75,12 +75,25 @@ pub const Transform = struct {
         return  Mat4.from_scale_rotation_translation(&self.scale, &self.rotation, &self.translation);
     }
 
-    pub fn asString(self: *const Self, buf: []u8) std.fmt.BufPrintError![:0]u8 {
+    pub fn asString(self: *const Self, buf: []u8) [:0]u8 {
         return std.fmt.bufPrintZ(buf, "{{.translation={{{d}, {d}, {d}}} .rotation={{{d}, {d}, {d}, {d}}} .scale={{{d}, {d}, {d}}}}}",
             .{self.translation.x, self.translation.y, self.translation.z,
               self.rotation.data[0], self.rotation.data[1], self.rotation.data[2], self.rotation.data[3],
               self.scale.x, self.scale.y, self.scale.z},
-        );
+        ) catch @panic("bufPrintZ error.");
+    }
+
+    pub fn equal(self: *const Self, other: Transform) bool {
+        return self.translation.x == other.translation.x
+            and self.translation.y == other.translation.y
+            and self.translation.z == other.translation.z
+            and self.rotation.data[0] == other.rotation.data[0]
+            and self.rotation.data[1] == other.rotation.data[1]
+            and self.rotation.data[2] == other.rotation.data[2]
+            and self.rotation.data[3] == other.rotation.data[3]
+            and self.scale.x == self.scale.x
+            and self.scale.y == self.scale.y
+            and self.scale.z == self.scale.z;
     }
 };
 

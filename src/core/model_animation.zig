@@ -70,6 +70,16 @@ pub const ModelBone = struct {
 
         return bone;
     }
+
+    pub fn asString(self: *const Self, buf: []u8) [:0]u8 {
+        var buffer: [256]u8 = undefined;
+        const transform_str = self.offset_transform.asString(&buffer);
+        return std.fmt.bufPrintZ(
+            buf,
+            "bone_name: {s}  index: {d}  offset_transform: {s}",
+            .{self.bone_name.str, self.bone_index, transform_str},
+        ) catch @panic("bufPrintZ error.");
+    }
 };
 
 pub const ModelAnimation = struct {

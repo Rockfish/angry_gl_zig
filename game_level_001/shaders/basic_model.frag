@@ -37,4 +37,6 @@ void main()
     vec3 diffuse = max(dot(fragNormal, light_dir), 0.0) * light_color;
 
     finalColor = color; // * vec4((ambient + diffuse), 1.0f);
+    // finalColor = texture(texture_diffuse, fragTexCoord) + hit_color;
+    finalColor = color + texture(texture_diffuse, fragTexCoord) + hit_color;
 }

@@ -50,6 +50,8 @@ pub const State = struct {
     world_point: ?Vec3,
     current_position: Vec3,
     target_position: Vec3,
+    single_mesh_id: i32 = -1,
+    animation_id: i32 = -1,
 
     const Self = @This();
 };
@@ -83,6 +85,9 @@ pub fn keyHandler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: gl
         window.setShouldClose(true);
     }
 }
+
+var last_time: f32 = 0;
+const delay_time: f32 = 0.2;
 
 pub fn processKeys() void {
     const toggle = struct {
@@ -153,6 +158,29 @@ pub fn processKeys() void {
             .five => {
                 state.projection_type = .Orthographic;
                 state.projection = state.camera.get_ortho_projection();
+            },
+            .zero => { 
+                if (last_time + delay_time < state.total_time) {
+                    last_time = state.total_time;
+                    // state.single_mesh_id = -1;
+                    state.animation_id = 0;
+                }
+            },
+            .equal => {
+                if (last_time + delay_time < state.total_time) {
+                    last_time = state.total_time;
+                    //state.single_mesh_id += 1;
+                    state.animation_id += 1;
+                }
+            },
+            .minus => {
+                if (last_time + delay_time < state.total_time) {
+                    last_time = state.total_time;
+                    state.animation_id -= 1;
+                    if (state.animation_id < 0) {
+                        state.animation_id = 0;
+                    }
+                }
             },
             else => {},
         }

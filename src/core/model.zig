@@ -18,6 +18,7 @@ pub const Model = struct {
     name: []const u8,
     meshes: *ArrayList(*ModelMesh),
     animator: *Animator,
+    single_mesh_select: i32 = -1,
 
     const Self = @This();
 
@@ -70,7 +71,11 @@ pub const Model = struct {
             shader.set_mat4(uniform, &bone_transform);
         }
 
-        for (self.meshes.items) |mesh| {
+        for (self.meshes.items, 0..) |mesh,n| {
+            if (self.single_mesh_select != -1 and @as(usize, @intCast(self.single_mesh_select)) != n) {
+                continue;
+            }
+
             shader.set_int("mesh_id", mesh.id);
             shader.set_mat4("nodeTransform", &self.animator.final_node_matrices[@intCast(mesh.id)]);
             mesh.render(shader);
@@ -101,7 +106,7 @@ pub fn dumpModelNodes(model: *Model) !void {
     while (node_iterator.next()) |entry| { // |node_name, node_transform| {
         const name = entry.key_ptr.*;
         const transform = entry.value_ptr.*;
-        const str = try transform.transform.asString(&buf);
+        const str = transform.transform.asString(&buf);
         std.debug.print("node_name: {s} : {s}\n", .{name, str});
     }
     std.debug.print("\n", .{});
@@ -110,7 +115,7 @@ pub fn dumpModelNodes(model: *Model) !void {
     while (bone_iterator.next()) |entry| { // |node_name, node_transform| {
         const name = entry.key_ptr.*;
         const transform = entry.value_ptr.*;
-        const str = try transform.offset_transform.asString(&buf);
+        const str = transform.offset_transform.asString(&buf);
         std.debug.print("bone_name: {s} : {s}\n", .{name, str});
     }
 }

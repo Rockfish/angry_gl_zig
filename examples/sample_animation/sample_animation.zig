@@ -259,7 +259,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         window.swapBuffers();
 
-        break;
+        //break;
     }
 
     std.debug.print("\nRun completed.\n\n", .{});

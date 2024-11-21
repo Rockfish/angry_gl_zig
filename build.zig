@@ -58,7 +58,7 @@ pub fn build(b: *std.Build) void {
     // glTF, glTF2, HMP, IFC, Irr, IrrMesh, IQM, LWO, LWS, M3D, MD2, MD3, MD5, MDC, MDL, MMD, MS3D, NDO,
     // NFF, Obj, OFF, Ogre, OpenGEX, Ply, Q3BSP, Q3D, Raw, SIB, SMD, Step, STEPParser, STL, Terragen, 3D, X, X3D, XGL
 
-    const formats: []const u8 = "Obj,Collada,FBX,glTF,MD2"; // B3D";
+    const formats: []const u8 = "Obj,Collada,FBX,glTF,glTF2,MD2,Blend"; // B3D";
 
     const assimp = b.dependency("assimp", .{
         .target = target,

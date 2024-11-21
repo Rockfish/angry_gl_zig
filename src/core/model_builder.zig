@@ -79,12 +79,6 @@ pub const ModelBuilder = struct {
         mesh_name: []const u8,
         texture_config: TextureConfig,
         texture_filename: []const u8,
-        // allocator: Allocator,
-        //
-        // pub fn deinit(self: *AddedTexture) void {
-        //     self.allocator.free(self.mesh_name);
-        //     self.allocator.free(self.texture_filename);
-        // }
     };
 
     pub fn init(allocator: Allocator, texture_cache: *ArrayList(*Texture), name: []const u8, path: []const u8) !*Self {
@@ -145,6 +139,20 @@ pub const ModelBuilder = struct {
         );
 
         if (aiScene == null) {
+            const errorMessage = Assimp.aiGetErrorString();
+            std.debug.print("aiImportFile error: {s}\n", .{errorMessage});
+            std.debug.print("-----------------------------------\n", .{});
+
+            const count = Assimp.aiGetImportFormatCount();
+            for (0..count) |i| {
+                const desc = Assimp.aiGetImportFormatDescription(i);
+                if (desc != null) {
+                    std.debug.print("Importer: {s}\n", .{desc[0].mName});
+                    std.debug.print("Description: {s}\n", .{desc[0].mComments});
+                    std.debug.print("File extensions: {s}\n", .{desc[0].mFileExtensions});
+                    std.debug.print("-----------------------------------\n", .{});
+                }
+            }
             std.debug.panic("aiImportFile failed. aiScene is null. file: {s}", .{self.filepath});
         }
 
@@ -156,7 +164,13 @@ pub const ModelBuilder = struct {
         const transform = assimp.mat4FromAiMatrix(&root.*.mTransformation);
         const animations = try loadAnimations(self.allocator, aiScene);
 
-        const animator = try Animator.init(self.allocator, transform, root_node, animations, self.model_bone_map,);
+        const animator = try Animator.init(
+            self.allocator,
+            transform,
+            root_node,
+            animations,
+            self.model_bone_map,
+        );
 
         const model = try self.allocator.create(Model);
         model.* = Model{
@@ -176,14 +190,6 @@ pub const ModelBuilder = struct {
     }
 
     fn processNode(self: *Self, node: *const Assimp.aiNode, aiScene: [*c]const Assimp.aiScene) !void {
-        // std.debug.print("Builder: processing node: {any}\n", .{node});
-        // if (node.mName.length < 1024) {
-        //     const name = node.mName.data[0..@min(1024, node.mName.length)];
-        //     std.debug.print("Builder: node name: '{s}'  num children: {d}\n", .{ name, node.mNumChildren });
-        // } else {
-        //     std.debug.print("Builder: node error\n", .{});
-        // }
-
         const num_mesh: u32 = node.mNumMeshes;
         for (0..num_mesh) |i| {
             const aiMesh = aiScene[0].mMeshes[node.mMeshes[i]][0];
@@ -312,8 +318,9 @@ pub const ModelBuilder = struct {
                 const ai_return = GetMaterialTexture(material, texture_type, @intCast(i), path);
 
                 if (ai_return == Assimp.AI_SUCCESS) {
-                    const texture = try self.loadTexture(TextureConfig.new(texture_type), path.data[0..path.length]);
-                    std.debug.print("texture: {any}\n", .{texture});
+                    const texture_config = TextureConfig.init(texture_type, self.flip_v);
+                    const texture = try self.loadTexture(texture_config, path.data[0..path.length]);
+                    //std.debug.print("texture: {any}\n", .{texture});
                     try material_textures.append(texture);
                 }
             }
@@ -392,11 +399,21 @@ pub const ModelBuilder = struct {
                 self.bone_count += 1;
             }
 
+            // const mesh_name = aiMesh.mName.data[0..aiMesh.mName.length];
+
             // Set the per vertex bone ids and weights
             for (bone.*.mWeights[0..bone.*.mNumWeights]) |bone_weight| {
                 const vertex_id: u32 = bone_weight.mVertexId;
                 const weight: f32 = bone_weight.mWeight;
-                vertices.items[vertex_id].set_bone_data(bone_id, weight);
+
+                if (weight != 0.0) {
+                    vertices.items[vertex_id].set_bone_data(bone_id, weight);
+                }
+                // if (std.mem.eql(u8, mesh_name, "Figure_2_geometry-2")) {
+                //     if (weight == 0.0) {
+                //         std.debug.print("bone_name: {s} bone_id: {d} bone_weight: {any}\n", .{bone_name, bone_id, bone_weight});
+                //     }
+                // }
             }
         }
     }
@@ -434,10 +451,7 @@ inline fn GetMaterialTexture(
     );
 }
 
-inline fn GetMaterialColor(
-    material: *Assimp.aiMaterial,
-    material_key: MaterialKey,
-) ?Vec4 {
+inline fn GetMaterialColor(material: *Assimp.aiMaterial, material_key: MaterialKey) ?Vec4 {
     var ai_color: Assimp.aiColor4D = undefined;
     if (Assimp.AI_SUCCESS == Assimp.aiGetMaterialColor(material, material_key.ai_key, 0, 0, &ai_color)) {
         const c = vec4FromColor4D(ai_color);
@@ -449,9 +463,7 @@ inline fn GetMaterialColor(
     return null;
 }
 
-inline fn GetMaterialName(
-    material: *Assimp.aiMaterial,
-) ?[]u8 {
+inline fn GetMaterialName(material: *Assimp.aiMaterial) ?[]u8 {
     const property = GetMaterialProperty(material, MATKEY_NAME);
     if (property) |p| {
         const mat_name: []u8 = p.*.mData[4 .. p.*.mDataLength - 1];
@@ -460,10 +472,7 @@ inline fn GetMaterialName(
     return null;
 }
 
-inline fn GetMaterialProperty(
-    material: *Assimp.aiMaterial,
-    material_key: MaterialKey,
-) ?*Assimp.aiMaterialProperty {
+inline fn GetMaterialProperty(material: *Assimp.aiMaterial, material_key: MaterialKey) ?*Assimp.aiMaterialProperty {
     for (0..material.mNumProperties) |i| {
         const property = material.mProperties[i];
         const key_name = property.*.mKey.data[0..property.*.mKey.length];
@@ -501,7 +510,7 @@ pub fn loadAnimations(allocator: Allocator, aiScene: [*c]const Assimp.aiScene) !
         std.debug.print("Loaded animation id: {d}\n", .{id});
         std.debug.print("   name    : {s}\n", .{animation.name.str});
         std.debug.print("   duration: {d}\n", .{animation.duration});
-        std.debug.print("   node_animations length: {d}\n", .{animation.node_keyframes.items.len});
+        std.debug.print("   num frames: {d}\n", .{animation.node_keyframes.items.len});
     }
 
     return animations;
@@ -541,5 +550,3 @@ fn printSceneInfo(aiScene: Assimp.aiScene) void {
     std.debug.print("number of mNumCameras: {d}\n", .{aiScene.mNumCameras});
     std.debug.print("number of mNumSkeletons: {d}\n", .{aiScene.mNumSkeletons});
 }
-
-

@@ -91,12 +91,12 @@ pub const TextureConfig = struct {
         };
     }
 
-    pub fn new(texture_type: TextureType) TextureConfig {
+    pub fn init(texture_type: TextureType, flip_v: bool) TextureConfig {
         return .{
             .texture_type = texture_type,
             .filter = .Linear,
             .wrap = .Clamp,
-            .flip_v = true,
+            .flip_v = flip_v,
             .gamma_correction = false,
         };
     }

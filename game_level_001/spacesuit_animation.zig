@@ -90,6 +90,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             .mouse_y = scaled_height / 2.0,
             .key_presses = std.EnumSet(glfw.Key).initEmpty(),
         },
+        .animation_id = 10,
     };
 
     const state = &state_.state;
@@ -107,21 +108,40 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const ambientColor: Vec3 = vec3(NON_BLUE * 0.7, NON_BLUE * 0.7, 0.7);
     var texture_cache = std.ArrayList(*Texture).init(allocator);
 
-    const model_path = "/Users/john/Dev/Assets/modular_characters/Individual Characters/FBX/Spacesuit.fbx";
+    //const model_path = "/Users/john/Dev/Assets/modular_characters/Individual Characters/FBX/Spacesuit.fbx";
+    // const model_path = "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Spacesuit.gltf";
+    const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/CesiumMan/glTF/CesiumMan.gltf";
+    // const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/BrainStem/glTF/BrainStem.gltf";
+    // const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/StainedGlassLamp/glTF/StainedGlassLamp.gltf";
+    // const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/1.0/WalkingLady/glTF/WalkingLady.gltf";
+    // const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/CesiumMan/glTF-Binary/CesiumMan.glb"; // trouble with embedded texture
+    //const model_path =  "/Users/john/spacesuit_blender_export.glb";
     std.debug.print("Main: loading model: {s}\n", .{model_path});
 
     var builder = try ModelBuilder.init(allocator, &texture_cache, "Spacesuit", model_path);
+
+    // const texture_diffuse = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
+    // try builder.addTexture("Cesium_Man", texture_diffuse, "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/CesiumMan/glTF/CesiumMan_debug.jpg");
+
     var model = try builder.build();
     builder.deinit();
 
-    const clip = AnimationClip {
-        .id = 7,
-        .start_tick = 1.0,
-        .end_tick = 10.0,
-        .repeat_mode = .Forever
-    };
-    // const clip = AnimationClip.new(1.0, 2.0, AnimationRepeat.Forever);
-    try model.playClip(clip);
+    // const clip = AnimationClip {
+    //     .id = 16,
+    //     .start_tick = 0.0,
+    //     .end_tick = 60.0,
+    //     .repeat_mode = .Forever
+    // };
+    // CesiumMan
+    // const clip = AnimationClip {
+    //     .id = 0,
+    //     .start_tick = 1.0,
+    //     .end_tick = 2000.0,
+    //     .repeat_mode = .Forever
+    // };
+    // // const clip = AnimationClip.new(1.0, 2.0, AnimationRepeat.Forever);
+    // try model.playClip(clip);
+    try model.animator.playAnimationById(10);
 
     // try core.dumpModelNodes(model);
 
@@ -130,6 +150,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var frame_counter = FrameCount.new();
 
     gl.enable(gl.DEPTH_TEST);
+
+    // state.single_mesh_id = 2;
+    var last_animation: i32 = 0;
 
     while (!window.shouldClose()) {
         const current_time: f32 = @floatCast(glfw.getTime());
@@ -141,7 +164,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         frame_counter.update();
 
         glfw.pollEvents();
-        gl.clearColor(0.05, 0.1, 0.05, 1.0);
+        gl.clearColor(0.05, 0.5, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         // const debug_camera = try Camera.camera_vec3(allocator, vec3(0.0, 40.0, 120.0));
@@ -154,7 +177,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // model_transform.translate(&vec3(0.0, -10.4, -400.0));
         //model_transform.scale(&vec3(1.0, 1.0, 1.0));
         //model_transform.translation(&vec3(0.0, 0.0, 0.0));
-        model_transform.rotateByDegrees(&vec3(1.0, 0.0, 0.0), -90.0);
+        // model_transform.rotateByDegrees(&vec3(1.0, 0.0, 0.0), -90.0);
         model_transform.scale(&vec3(2.0, 2.0, 2.0));
         shader.set_mat4("matModel", &model_transform);
 
@@ -170,6 +193,11 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         try model.update_animation(state.delta_time);
         //try model.playTick(1.0);
+        //model.single_mesh_select = state.single_mesh_id;
+        if (last_animation != state.animation_id) {
+            try model.animator.playAnimationById(@intCast(state.animation_id));
+            last_animation = state.animation_id;
+        }
         model.render(shader);
 
         //try core.dumpModelNodes(model);
@@ -177,7 +205,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         //break;
     }
-    try core.dumpModelNodes(model);
+
+    // try core.dumpModelNodes(model);
+    // model.meshes.items[2].printMeshVertices(); 
 
     std.debug.print("\nRun completed.\n\n", .{});
 

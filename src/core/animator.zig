@@ -24,7 +24,7 @@ const vec4 = math.vec4;
 const Mat4 = math.Mat4;
 
 pub const MAX_BONES: usize = 100;
-pub const MAX_NODES: usize = 50;
+pub const MAX_NODES: usize = 100;
 
 // pub const AnimationRepeat = union {
 //     Once: void,
@@ -246,9 +246,36 @@ pub const Animator = struct {
             .animation_id = clip.id,
             .animation = self.animations.items[clip.id],
             .ticks_per_second = self.animations.items[clip.id].ticks_per_second,
-            .start_tick = clip.start_tick,
-            .end_tick = clip.end_tick,
+            .start_tick = 0.0, // clip.start_tick,
+            //.end_tick = clip.end_tick,
+            .end_tick = self.animations.items[clip.id].duration,
             .repeat_mode = clip.repeat_mode,
+            .current_tick = -1.0,
+            .repeat_completions = 0,
+        };
+    }
+
+    pub fn playAnimationById(self: *Self, id: usize) !void {
+        if (id < 0 or id >= self.animations.items.len) {
+            std.debug.print("Invalid clip id: {d}  num animations: {d}", .{id, self.animations.items.len});
+            return;
+        }
+
+        if (self.animation_state) |animation_state| {
+            self.allocator.destroy(animation_state);
+        }
+
+        std.debug.print("playClip name: {s}\n", .{self.animations.items[id].name.str});
+
+        self.animation_state = try self.allocator.create(AnimationState);
+        self.animation_state.?.* = .{
+            .animation_id = id,
+            .animation = self.animations.items[id],
+            .ticks_per_second = self.animations.items[id].ticks_per_second,
+            .start_tick = 0.0, // clip.start_tick,
+            //.end_tick = clip.end_tick,
+            .end_tick = self.animations.items[id].duration,
+            .repeat_mode = .Forever,
             .current_tick = -1.0,
             .repeat_completions = 0,
         };
@@ -470,6 +497,9 @@ pub const Animator = struct {
             if (self.bone_map.get(node_name)) |bone| {
                 const transform = node_transform.transform.mul_transform(bone.offset_transform);
                 self.final_bone_matrices[bone.bone_index] = transform.get_matrix();
+                // TODO: temp override of bone offset
+                // self.final_bone_matrices[bone.bone_index] = node_transform.transform.get_matrix();
+                //self.final_bone_matrices[bone.bone_index] = Mat4.identity();
             }
 
             for (node_transform.meshes.items) |mesh_index| {
