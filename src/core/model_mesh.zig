@@ -38,7 +38,11 @@ pub const ModelVertex = extern struct {
     }
 
     pub fn set_bone_data(self: *Self, bone_id: u32, weight: f32) void {
-        //set first available free spot if there is any
+        // skip zero weights
+        if (weight == 0.0) {
+            return;
+        }
+        // set first available free spot if there is any
         for (0..MAX_BONE_INFLUENCE) |i| {
             if (self.bone_ids[i] < 0) {
                 self.bone_ids[i] = @intCast(bone_id);
@@ -84,9 +88,9 @@ pub const ModelMesh = struct {
         self.allocator.destroy(self.vertices);
         self.indices.deinit();
         self.allocator.destroy(self.indices);
-        // for (self.textures.items) |texture| {
-        //     texture.deinit();
-        // }
+        for (self.textures.items) |texture| {
+            texture.deinit();
+        }
         self.textures.deinit();
         for (self.colors.items) |color| {
             self.allocator.destroy(color);
@@ -128,6 +132,9 @@ pub const ModelMesh = struct {
     }
 
     pub fn render(self: *ModelMesh, shader: *const Shader) void {
+        const has_texture = self.*.textures.items.len > 0;
+        shader.set_bool("has_texture", has_texture);
+
         for (self.*.textures.items, 0..) |texture, i| {
             const texture_unit: u32 = @intCast(i);
 
@@ -136,7 +143,7 @@ pub const ModelMesh = struct {
 
             const uniform = texture.texture_type.toString();
             shader.set_int(uniform, @as(i32, @intCast(texture_unit)));
-            // std.debug.print("texture id: {d}  name: {s}\n", .{i, texture.texture_path});
+            // std.debug.print("has_texture: {any} texture id: {d}  name: {s}\n", .{has_texture, i, texture.texture_path});
         }
 
         const has_color = self.*.colors.items.len > 0;

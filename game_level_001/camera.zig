@@ -18,7 +18,7 @@ pub const SPEED: f32 = 100.5;
 pub const SENSITIVITY: f32 = 0.1;
 pub const FOV: f32 = 45.0;
 pub const NEAR: f32 = 0.01;
-pub const FAR: f32 = 1000.0;
+pub const FAR: f32 = 2000.0;
 pub const ORTHO_SCALE: f32 = 10.0;
 
 pub const CameraMovement = enum {

@@ -76,7 +76,7 @@ pub const Quat = extern struct {
         return Quat { .data = result };
     }
 
-    pub fn to_axes(rotation: *const Quat) [3]Vec4 {
+    pub fn toAxes(rotation: *const Quat) [3]Vec4 {
         // glam_assert!(rotation.is_normalized());
         const x = rotation.data[0];
         const y = rotation.data[1];

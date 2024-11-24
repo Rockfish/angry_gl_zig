@@ -117,6 +117,7 @@ pub const Texture = struct {
     const Self = @This();
 
     pub fn deinit(self: *const Texture) void {
+        // todo: delete texture from gpu
         self.allocator.free(self.texture_path);
         self.allocator.destroy(self);
     }

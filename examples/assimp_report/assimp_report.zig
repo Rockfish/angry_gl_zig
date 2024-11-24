@@ -46,11 +46,12 @@ pub fn main() !void {
         "/Users/john/spacesuit_blender_export.glb",
         "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/CesiumMan/glTF/CesiumMan.gltf",
         "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/BrainStem/glTF/BrainStem.gltf",
+        "/Users/john/Dev/Assets/astronaut_character/astronaut_game_character_animated/scene.gltf",
     };
 
     // const model_path = "examples/sample_animation/colorful_cube/scene.gltf";
 
-    const path = model_paths[15];
+    const path = model_paths[16];
 
     if (!core.utils.fileExists(path)) {
         std.debug.print("File not found: {s}\n", .{path});
@@ -420,11 +421,11 @@ const SceneParser = struct {
             //         const m = channel.mRotationKeys[ci];
             //         self.print_aiQuatKey(m);
             //     }
-            //     std.debug.print("scaling keys\n", .{});
-            //     for (0..channel.mNumPositionKeys) |ci| {
-            //         const m = channel.mScalingKeys[ci];
-            //         self.print_aiVectorKey(m);
-            //     }
+            std.debug.print("scaling keys\n", .{});
+            for (0..channel.mNumScalingKeys) |ci| {
+                const m = channel.mScalingKeys[ci];
+                std.debug.print("scaling id: {d}  {s}\n", .{ci, aiVectorAsString(&buffer, m)});
+            }
             // }
         }
         std.debug.print("\n", .{});

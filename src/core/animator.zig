@@ -257,7 +257,7 @@ pub const Animator = struct {
 
     pub fn playAnimationById(self: *Self, id: usize) !void {
         if (id < 0 or id >= self.animations.items.len) {
-            std.debug.print("Invalid clip id: {d}  num animations: {d}", .{id, self.animations.items.len});
+            std.log.warn("Invalid clip id: {d}  num animations: {d}", .{id, self.animations.items.len});
             return;
         }
 
@@ -467,6 +467,9 @@ pub const Animator = struct {
 
         if (node_keyframes) |keyframes| {
             const node_transform = keyframes.get_animation_transform(current_tick);
+            // if (node_transform.scale.x < 0.9 or node_transform.scale.y < 0.9 or node_transform.scale.z < 0.9) {
+            //     std.log.debug("node_transform: tick: {d} {any}", .{current_tick, node_transform});
+            // }
             global_transform = parent_transform.mul_transform(node_transform);
         } else {
             global_transform = parent_transform.mul_transform(node_data.transform);

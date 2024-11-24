@@ -51,7 +51,7 @@ const State = state_.State;
 
 pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
-    std.debug.print("running spacesuit_animation\n", .{});
+    std.debug.print("running test_animation\n", .{});
 
     const window_scale = window.getContentScale();
 
@@ -90,7 +90,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             .mouse_y = scaled_height / 2.0,
             .key_presses = std.EnumSet(glfw.Key).initEmpty(),
         },
-        .animation_id = 10,
+        .animation_id = 0,
     };
 
     const state = &state_.state;
@@ -109,9 +109,11 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var texture_cache = std.ArrayList(*Texture).init(allocator);
 
     //const model_path = "/Users/john/Dev/Assets/modular_characters/Individual Characters/FBX/Spacesuit.fbx";
-    // const model_path = "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Spacesuit.gltf";
-    const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/CesiumMan/glTF/CesiumMan.gltf";
+    const model_path = "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Spacesuit.gltf";
+    // const model_path = "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Adventurer.gltf";
+    // const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/CesiumMan/glTF/CesiumMan.gltf";
     // const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/BrainStem/glTF/BrainStem.gltf";
+    // const model_path = "/Users/john/Dev/Assets/astronaut_character/astronaut_game_character_animated/scene.gltf";
     // const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/StainedGlassLamp/glTF/StainedGlassLamp.gltf";
     // const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/1.0/WalkingLady/glTF/WalkingLady.gltf";
     // const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/CesiumMan/glTF-Binary/CesiumMan.glb"; // trouble with embedded texture
@@ -141,7 +143,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // };
     // // const clip = AnimationClip.new(1.0, 2.0, AnimationRepeat.Forever);
     // try model.playClip(clip);
-    try model.animator.playAnimationById(10);
+    try model.animator.playAnimationById(0);
 
     // try core.dumpModelNodes(model);
 
@@ -153,6 +155,13 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     // state.single_mesh_id = 2;
     var last_animation: i32 = 0;
+
+    shader.set_bool("has_color", false);
+    shader.set_vec3("diffuse_color", &vec3(0.0, 0.0, 0.0));
+    shader.set_vec3("ambient_color", &vec3(0.0, 0.0, 0.0));
+    shader.set_vec3("specular_color", &vec3(0.0, 0.0, 0.0));
+    shader.set_vec3("emissive_color", &vec3(0.0, 0.0, 0.0));
+    shader.set_vec3("hit_color", &vec3(0.0, 0.0, 0.0));
 
     while (!window.shouldClose()) {
         const current_time: f32 = @floatCast(glfw.getTime());
@@ -178,14 +187,15 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         //model_transform.scale(&vec3(1.0, 1.0, 1.0));
         //model_transform.translation(&vec3(0.0, 0.0, 0.0));
         // model_transform.rotateByDegrees(&vec3(1.0, 0.0, 0.0), -90.0);
-        model_transform.scale(&vec3(2.0, 2.0, 2.0));
+        model_transform.scale(&vec3(3.0, 3.0, 3.0));
+        //model_transform.scale(&vec3(0.02, 0.02, 0.02));
         shader.set_mat4("matModel", &model_transform);
 
         shader.set_bool("useLight", true);
         shader.set_vec3("ambient", &ambientColor);
-        shader.set_vec3("ambient_color", &vec3(1.0, 0.8, 0.8));
+        shader.set_vec3("ambient_light", &vec3(1.0, 0.8, 0.8));
         shader.set_vec3("light_color", &vec3(0.1, 0.1, 0.1));
-        shader.set_vec3("light_dir", &vec3(0.0, 0.0, 50.0));
+        shader.set_vec3("light_dir", &vec3(10.0, 10.0, 2.0));
 
         const identity = Mat4.identity();
         shader.set_mat4("aimRot", &identity);

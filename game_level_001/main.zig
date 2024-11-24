@@ -5,7 +5,7 @@ const gl = @import("zopengl").bindings;
 const core = @import("core");
 const math = @import("math");
 const run_app = @import("run_app.zig").run;
-const run_animation = @import("spacesuit_animation.zig").run;
+const run_animation = @import("test_animation.zig").run;
 
 const SCR_WIDTH: f32 = 1000.0;
 const SCR_HEIGHT: f32 = 1000.0;

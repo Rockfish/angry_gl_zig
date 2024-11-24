@@ -159,9 +159,14 @@ pub const ModelBuilder = struct {
         try self.load_model(aiScene);
         try self.add_textures();
 
-        const root = aiScene[0].mRootNode;
-        const root_node = try createModelNodeTree(self.allocator, root);
-        const transform = assimp.mat4FromAiMatrix(&root.*.mTransformation);
+        // TODO: investigate a better way of determining the root node.
+        var root = findRootNode(aiScene[0].mRootNode);
+        if (root == null) {
+            root = aiScene[0].mRootNode;
+        }
+
+        const root_node = try createModelNodeTree(self.allocator, root.?);
+        const transform = assimp.mat4FromAiMatrix(&root.?.*.mTransformation);
         const animations = try loadAnimations(self.allocator, aiScene);
 
         const animator = try Animator.init(
@@ -290,7 +295,7 @@ pub const ModelBuilder = struct {
         for (color_keys) |color_key| {
             const color = GetMaterialColor(material, color_key);
             if (color) |c| {
-                // std.debug.print("color {s}: {any}\n", .{ color_key.ai_key, c });
+                std.log.debug("color {s}: {any}", .{ color_key.uniform, c });
                 const mesh_color = try self.allocator.create(MeshColor);
                 mesh_color.* = .{ .uniform = color_key.uniform, .color = c };
                 try colors.*.append(mesh_color);
@@ -320,7 +325,6 @@ pub const ModelBuilder = struct {
                 if (ai_return == Assimp.AI_SUCCESS) {
                     const texture_config = TextureConfig.init(texture_type, self.flip_v);
                     const texture = try self.loadTexture(texture_config, path.data[0..path.length]);
-                    //std.debug.print("texture: {any}\n", .{texture});
                     try material_textures.append(texture);
                 }
             }
@@ -356,9 +360,11 @@ pub const ModelBuilder = struct {
         defer self.allocator.free(filename);
 
         for (self.texture_cache.items) |cached_texture| {
-            if (std.mem.eql(u8, cached_texture.texture_path, file_path)) {
+            if (std.mem.eql(u8, cached_texture.texture_path, filename)) {
                 const texture = try cached_texture.clone();
-                texture.texture_type = texture_config.texture_type;
+                // can the texture types be different? Yes, it's uncommon but does happen.
+                texture.texture_type = texture_config.texture_type; 
+                // std.log.debug("cached texture hit: type: {any}  path: {s}", .{texture.texture_type, texture.texture_path});
                 return texture;
             }
         }
@@ -366,9 +372,9 @@ pub const ModelBuilder = struct {
         const texture = try Texture.new(self.allocator, filename, texture_config);
         try self.texture_cache.append(texture);
 
-        //std.debug.print("texture: {any}\n", .{texture});
-        // std.debug.print("Builder: created a new texture: {s}\n", .{texture.texture_path});
-        return texture;
+        std.log.debug("loaded {any}  path: {s}", .{texture.texture_type, texture.texture_path});
+        // cloning to match cloning above, so memory ownership is clear.
+        return try texture.clone();
     }
 
     fn extract_bone_weights_for_vertices(self: *Self, vertices: *ArrayList(ModelVertex), aiMesh: Assimp.aiMesh) !void {
@@ -517,28 +523,51 @@ pub fn loadAnimations(allocator: Allocator, aiScene: [*c]const Assimp.aiScene) !
 }
 
 /// Converts scene Node tree to local NodeData tree. Converting all the transforms to column major form.
-fn createModelNodeTree(allocator: Allocator, source: [*c]Assimp.aiNode) !*ModelNode {
-    const name = try String.from_aiString(source.*.mName);
+fn createModelNodeTree(allocator: Allocator, aiNode: [*c]Assimp.aiNode) !*ModelNode {
+    const name = try String.from_aiString(aiNode.*.mName);
     var model_node = try ModelNode.init(allocator, name);
 
-    const aiTransform = source.*.mTransformation;
+    const aiTransform = aiNode.*.mTransformation;
     const transformMatrix = assimp.mat4FromAiMatrix(&aiTransform);
     const transform = Transform.from_matrix(&transformMatrix);
     model_node.*.transform = transform;
 
-    if (source.*.mNumMeshes > 0) {
-        for (source.*.mMeshes[0..source.*.mNumMeshes]) |mesh_id| {
+    if (aiNode.*.mNumMeshes > 0) {
+        for (aiNode.*.mMeshes[0..aiNode.*.mNumMeshes]) |mesh_id| {
             try model_node.*.meshes.append(mesh_id);
         }
     }
 
-    if (source.*.mNumChildren > 0) {
-        for (source.*.mChildren[0..source.*.mNumChildren]) |child| {
+    if (aiNode.*.mNumChildren > 0) {
+        for (aiNode.*.mChildren[0..aiNode.*.mNumChildren]) |child| {
             const node = try createModelNodeTree(allocator, child);
             try model_node.childern.append(node);
         }
     }
     return model_node;
+}
+
+fn findRootNode(node: [*c]Assimp.aiNode) ?[*c]Assimp.aiNode {
+    const rootNode = "RootNode";
+    const name: []const u8 = node.*.mName.data[0..node.*.mName.length];
+    std.debug.print("Node: '{s}'  node_name: '{s}'\n", .{rootNode, name});
+
+    if (std.mem.eql(u8, name, rootNode)) {
+        return node;
+    }
+
+    if (node == null or node.*.mNumChildren == 0) {
+        return null;
+    }
+
+    for (node.*.mChildren[0..node.*.mNumChildren]) |child| {
+        const result = findRootNode(child);
+        if (result) |found| {
+            std.debug.print("found node\n", .{});
+            return found;
+        }
+    }
+    return null;
 }
 
 fn printSceneInfo(aiScene: Assimp.aiScene) void {

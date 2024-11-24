@@ -214,7 +214,7 @@ pub const Mat4 = extern struct {
     }
 
     pub fn from_scale_rotation_translation(scal: *const Vec3, rota: *const Quat, tran: *const Vec3) Mat4 {
-        const axis = Quat.to_axes(rota);
+        const axis = Quat.toAxes(rota);
 
         const mat = Mat4{
             .data = .{
