@@ -83,12 +83,20 @@ pub const Camera = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, position: Vec3, target: Vec3, scr_width: f32, scr_height: f32) !*Camera {
+    const Config = struct {
+        position: Vec3,
+        target: Vec3,
+        scr_width: f32,
+        scr_height: f32,
+    };
+
+
+    pub fn init(allocator: Allocator, config: Config) !*Camera {
         const camera = try allocator.create(Camera);
         camera.* = Camera{
             .world_up = vec3(0.0, 1.0, 0.0),
-            .position = position,
-            .target = target,
+            .position = config.position,
+            .target = config.target,
             .front = vec3(0.0, 0.0, -1.0),
             .up = vec3(0.0, 1.0, 0.0),
             .right = vec3(0.0, 0.0, 0.0),
@@ -97,10 +105,10 @@ pub const Camera = struct {
             .zoom = 45.0,
             .fovy = FOV,
             .ortho_scale = ORTHO_SCALE,
-            .ortho_width = scr_width / ORTHO_SCALE,
-            .ortho_height = scr_height / ORTHO_SCALE,
+            .ortho_width = config.scr_width / ORTHO_SCALE,
+            .ortho_height = config.scr_height / ORTHO_SCALE,
             .projection_type = ProjectionType.Perspective,
-            .aspect = scr_width / scr_height,
+            .aspect = config.scr_width / config.scr_height,
             .camera_speed = SPEED,
             .target_speed = SPEED,
             .mouse_sensitivity = SENSITIVITY,
@@ -175,13 +183,13 @@ pub const Camera = struct {
 
         switch (direction) {
             .Forward => {
-                self.position = self.position.add(&self.front.mulScalar(velocity));
+                self.position = self.position.add(&self.front.mulScalar(velocity * 0.2));
                 if (self.target_pans) {
                     self.target = self.target.add(&self.front.mulScalar(velocity));
                 }
             },
             .Backward => {
-                self.position = self.position.sub(&self.front.mulScalar(velocity));
+                self.position = self.position.sub(&self.front.mulScalar(velocity * 0.2));
                 if (self.target_pans) {
                     self.target = self.target.sub(&self.front.mulScalar(velocity));
                 }

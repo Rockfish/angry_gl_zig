@@ -56,8 +56,8 @@ void main() {
 
     //fragNormal = vec3(aimRot * vec4(vertNormal, 1.0));
     mat4 matNormal = transpose(inverse(matModel));
-
     fragNormal = normalize(vec3(matNormal * vec4(vertNormal, 1.0)));
+
     fragWorldPos = vec3(matModel * vec4(vertPosition, 1.0));
     fragPosLightSpace = matLightSpace * vec4(fragWorldPos, 1.0);
 }

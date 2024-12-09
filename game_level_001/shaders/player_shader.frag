@@ -45,9 +45,10 @@ float ShadowCalculation(float bias, vec4 fragPosLightSpace) {
 
 void main() {
     vec4 color = vec4(1.0);
+    vec3 diffuse = max(dot(fragNormal, light_dir), 0.0) * diffuse_color;
 
     if (has_color == 1) {
-        color = diffuse_color;
+        color = diffuse;
     } else {
         color = texture(texture_diffuse, fragTexCoord);
     }

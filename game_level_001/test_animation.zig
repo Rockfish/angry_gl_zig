@@ -62,10 +62,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const camera = try Camera.init(
         allocator,
-        vec3(0.0, 10.0, 30.0),
-        vec3(0.0, 2.0, 0.0),
-        scaled_width,
-        scaled_height,
+        .{
+            .position = vec3(0.0, 10.0, 30.0),
+            .target = vec3(0.0, 2.0, 0.0),
+            .scr_width = scaled_width,
+            .scr_height = scaled_height,
+        },
     );
 
     state_.state = state_.State {
@@ -109,7 +111,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var texture_cache = std.ArrayList(*Texture).init(allocator);
 
     //const model_path = "/Users/john/Dev/Assets/modular_characters/Individual Characters/FBX/Spacesuit.fbx";
-    const model_path = "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Spacesuit.gltf";
+    //const model_path = "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Spacesuit.gltf";
+    // const model_path = "/Users/john/Dev/Assets/droid_d-0/droid_d-0/scene.gltf"; // only partially renders
+    //const model_path = "/Users/john/Dev/Assets/bit.bot.2/scene.gltf";
+
     // const model_path = "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Adventurer.gltf";
     // const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/CesiumMan/glTF/CesiumMan.gltf";
     // const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/BrainStem/glTF/BrainStem.gltf";
@@ -118,15 +123,23 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/1.0/WalkingLady/glTF/WalkingLady.gltf";
     // const model_path = "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/CesiumMan/glTF-Binary/CesiumMan.glb"; // trouble with embedded texture
     //const model_path =  "/Users/john/spacesuit_blender_export.glb";
-    std.debug.print("Main: loading model: {s}\n", .{model_path});
 
-    var builder = try ModelBuilder.init(allocator, &texture_cache, "Spacesuit", model_path);
+    // var builder = try ModelBuilder.init(allocator, &texture_cache, "Spacesuit", model_path);
 
     // const texture_diffuse = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
     // try builder.addTexture("Cesium_Man", texture_diffuse, "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/CesiumMan/glTF/CesiumMan_debug.jpg");
 
-    var model = try builder.build();
-    builder.deinit();
+    // var model = try builder.build();
+    // builder.deinit();
+
+    var model = blk: {
+        const model_path = "/Users/john/Dev/Assets/bit.bot.2/scene.gltf";
+        std.debug.print("Main: loading model: {s}\n", .{model_path});
+        var builder = try ModelBuilder.init(allocator, &texture_cache, "Spacesuit", model_path);
+        const model = try builder.build();
+        builder.deinit();
+        break :blk model;
+    };
 
     // const clip = AnimationClip {
     //     .id = 16,
@@ -186,9 +199,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // model_transform.translate(&vec3(0.0, -10.4, -400.0));
         //model_transform.scale(&vec3(1.0, 1.0, 1.0));
         //model_transform.translation(&vec3(0.0, 0.0, 0.0));
-        // model_transform.rotateByDegrees(&vec3(1.0, 0.0, 0.0), -90.0);
+        model_transform.rotateByDegrees(&vec3(1.0, 0.0, 0.0), -90.0);
         model_transform.scale(&vec3(3.0, 3.0, 3.0));
-        //model_transform.scale(&vec3(0.02, 0.02, 0.02));
+        // model_transform.scale(&vec3(0.02, 0.02, 0.02));
         shader.set_mat4("matModel", &model_transform);
 
         shader.set_bool("useLight", true);
