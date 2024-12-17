@@ -42,7 +42,7 @@
   ModelNode = struct {
       node_name: *String,
       transform: Transform,
-      childern: *ArrayList(*ModelNode),
+      children: *ArrayList(*ModelNode),
       meshes: *ArrayList(u32),
   };
 ```

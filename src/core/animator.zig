@@ -440,7 +440,7 @@ pub const Animator = struct {
         );
         // std.debug.print("calculate_transform_maps  node_data.name = {s}  parent_transform = {any}  global_transform = {any}\n", .{node_data.name.str, parent_transform, global_transformation});
 
-        for (node_data.childern.items) |child_node| {
+        for (node_data.children.items) |child_node| {
             try self.calculate_transform_maps(
                 child_node,
                 node_animations,
@@ -500,9 +500,6 @@ pub const Animator = struct {
             if (self.bone_map.get(node_name)) |bone| {
                 const transform = node_transform.transform.mul_transform(bone.offset_transform);
                 self.final_bone_matrices[bone.bone_index] = transform.get_matrix();
-                // TODO: temp override of bone offset
-                // self.final_bone_matrices[bone.bone_index] = node_transform.transform.get_matrix();
-                //self.final_bone_matrices[bone.bone_index] = Mat4.identity();
             }
 
             for (node_transform.meshes.items) |mesh_index| {

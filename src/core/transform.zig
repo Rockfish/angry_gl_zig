@@ -20,7 +20,7 @@ pub const Transform = struct {
     const Self = @This();
 
     pub fn from_matrix(m: *const Mat4) Transform {
-        const trs = m.to_scale_rotation_translation();
+        const trs = m.to_translation_rotation_scale();
         return Transform {
             .translation = trs.translation,
             .rotation = trs.rotation,
@@ -72,7 +72,7 @@ pub const Transform = struct {
     }
 
     pub fn get_matrix(self: *const Self) Mat4 {
-        return  Mat4.from_scale_rotation_translation(&self.scale, &self.rotation, &self.translation);
+        return  Mat4.from_translation_rotation_scale(&self.translation, &self.rotation, &self.scale);
     }
 
     pub fn asString(self: *const Self, buf: []u8) [:0]u8 {

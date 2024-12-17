@@ -194,7 +194,7 @@ pub const Mat4 = extern struct {
         scale: Vec3,
     };
 
-    pub fn to_scale_rotation_translation(self: *const Self) TrnRotScl {
+    pub fn to_translation_rotation_scale(self: *const Self) TrnRotScl {
         var tran: [4]f32 = undefined;
         var rota: [4][4]f32 = undefined;
         var scal: [3]f32 = undefined;
@@ -213,7 +213,7 @@ pub const Mat4 = extern struct {
         };
     }
 
-    pub fn from_scale_rotation_translation(scal: *const Vec3, rota: *const Quat, tran: *const Vec3) Mat4 {
+    pub fn from_translation_rotation_scale(tran: *const Vec3, rota: *const Quat, scal: *const Vec3) Mat4 {
         const axis = Quat.toAxes(rota);
 
         const mat = Mat4{

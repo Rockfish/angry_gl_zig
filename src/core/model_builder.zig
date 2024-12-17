@@ -392,6 +392,7 @@ pub const ModelBuilder = struct {
                 bone_id = bone_entry.?.bone_index;
             } else {
                 const model_bone = try self.allocator.create(ModelBone);
+
                 model_bone.* = ModelBone{
                     .bone_name = try String.new(bone_name),
                     .bone_index = self.bone_count,
@@ -401,11 +402,10 @@ pub const ModelBuilder = struct {
 
                 const key = try self.allocator.dupe(u8, bone_name);
                 try self.model_bone_map.put(key, model_bone);
+
                 bone_id = self.bone_count;
                 self.bone_count += 1;
             }
-
-            // const mesh_name = aiMesh.mName.data[0..aiMesh.mName.length];
 
             // Set the per vertex bone ids and weights
             for (bone.*.mWeights[0..bone.*.mNumWeights]) |bone_weight| {
@@ -415,11 +415,6 @@ pub const ModelBuilder = struct {
                 if (weight != 0.0) {
                     vertices.items[vertex_id].set_bone_data(bone_id, weight);
                 }
-                // if (std.mem.eql(u8, mesh_name, "Figure_2_geometry-2")) {
-                //     if (weight == 0.0) {
-                //         std.debug.print("bone_name: {s} bone_id: {d} bone_weight: {any}\n", .{bone_name, bone_id, bone_weight});
-                //     }
-                // }
             }
         }
     }
@@ -541,7 +536,7 @@ fn createModelNodeTree(allocator: Allocator, aiNode: [*c]Assimp.aiNode) !*ModelN
     if (aiNode.*.mNumChildren > 0) {
         for (aiNode.*.mChildren[0..aiNode.*.mNumChildren]) |child| {
             const node = try createModelNodeTree(allocator, child);
-            try model_node.childern.append(node);
+            try model_node.children.append(node);
         }
     }
     return model_node;

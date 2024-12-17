@@ -13,20 +13,20 @@ const Mat4 = math.Mat4;
 pub const ModelNode = struct {
     node_name: *String,
     transform: Transform,
-    childern: *ArrayList(*ModelNode),
+    children: *ArrayList(*ModelNode),
     meshes: *ArrayList(u32),
     allocator: Allocator,
 
     const Self = @This();
 
     pub fn deinit(self: *Self) void {
-        for (self.childern.items) |child| {
+        for (self.children.items) |child| {
             child.deinit();
         }
-        self.childern.deinit();
+        self.children.deinit();
         self.node_name.deinit();
         self.meshes.deinit();
-        self.allocator.destroy(self.childern);
+        self.allocator.destroy(self.children);
         self.allocator.destroy(self.meshes);
         self.allocator.destroy(self);
     }
@@ -36,11 +36,11 @@ pub const ModelNode = struct {
         node.* = ModelNode{
             .node_name = name,
             .transform = Transform.default(),
-            .childern = try allocator.create(ArrayList(*ModelNode)),
+            .children = try allocator.create(ArrayList(*ModelNode)),
             .meshes = try allocator.create(ArrayList(u32)),
             .allocator = allocator,
         };
-        node.childern.* = ArrayList(*ModelNode).init(allocator);
+        node.children.* = ArrayList(*ModelNode).init(allocator);
         node.meshes.* = ArrayList(u32).init(allocator);
         return node;
     }
@@ -59,17 +59,18 @@ pub const ModelBone = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, name: []const u8, id: u32, offset: Mat4) !*ModelBone {
-        const bone = try allocator.create(ModelBone);
-        bone.* = ModelBone{
-            .bone_name = String.new(name),
-            .bone_index = id,
-            .offset_transform = Transform.from_matrix(offset),
-            .allocator = allocator,
-        };
-
-        return bone;
-    }
+    // not used
+    // pub fn init(allocator: Allocator, name: []const u8, id: u32, offset: Mat4) !*ModelBone {
+    //     const bone = try allocator.create(ModelBone);
+    //     bone.* = ModelBone{
+    //         .bone_name = String.new(name),
+    //         .bone_index = id,
+    //         .offset_transform = Transform.from_matrix(offset),
+    //         .allocator = allocator,
+    //     };
+    //
+    //     return bone;
+    // }
 
     pub fn asString(self: *const Self, buf: []u8) [:0]u8 {
         var buffer: [256]u8 = undefined;
