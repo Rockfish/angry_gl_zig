@@ -12,5 +12,3 @@ backup
 *.DS_Store
 .DS_Store
 
-# Unity copyrighted assets
-angrybots_assets/

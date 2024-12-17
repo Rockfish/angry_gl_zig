@@ -102,6 +102,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "ray_selection", .exe_name = "ray_selection_example", .source = "examples/ray_selection/main.zig" },
         .{ .name = "scene_tree", .exe_name = "scene_tree_example", .source = "examples/scene_tree/main.zig" },
         .{ .name = "game_level_001", .exe_name = "game_level_001", .source = "game_level_001/main.zig" },
+        .{ .name = "zgltf_port", .exe_name = "zgltf_port", .source = "examples/zgltf_port/main.zig" },
     }) |app| {
         const exe = b.addExecutable(.{
             .name = app.exe_name,
