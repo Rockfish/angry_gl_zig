@@ -2,7 +2,7 @@ const std = @import("std");
 const core = @import("core");
 const Shader = core.Shader;
 
-const ModelMesh = @import("mesh.zig").ModelMesh;
+const MeshPrimitive = @import("mesh.zig").MeshPrimitive;
 const Animator = @import("animator.zig").Animator;
 
 // const animation = @import("animator.zig");
@@ -20,13 +20,13 @@ const MAX_NODES = 200;
 pub const Model = struct {
     allocator: Allocator,
     name: []const u8,
-    meshes: *ArrayList(*ModelMesh),
+    meshes: *ArrayList(*MeshPrimitive),
     animator: *Animator,
     single_mesh_select: i32 = -1,
 
     const Self = @This();
 
-    pub fn init(allocator: Allocator, name: []const u8, meshes: *ArrayList(*ModelMesh), animator: *Animator) !Self {
+    pub fn init(allocator: Allocator, name: []const u8, meshes: *ArrayList(*MeshPrimitive), animator: *Animator) !Self {
         const model = try allocator.create(Model);
         model.* = Model{
             .allocator = allocator,
@@ -86,7 +86,7 @@ pub const Model = struct {
         }
     }
 
-    pub fn set_shader_bones_for_mesh(self: *Self, shader: *const Shader, mesh: *ModelMesh) !void {
+    pub fn set_shader_bones_for_mesh(self: *Self, shader: *const Shader, mesh: *MeshPrimitive) !void {
         var buf: [256:0]u8 = undefined;
 
         for (0..MAX_BONES) |i| {

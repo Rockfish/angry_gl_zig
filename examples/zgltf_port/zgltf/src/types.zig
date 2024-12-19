@@ -98,7 +98,7 @@ pub const Accessor = struct {
     /// Computed stride: @sizeOf(component_type) * type.
     stride: usize,
     /// The number of elements referenced by this accessor.
-    count: i32,
+    count: usize,
     /// Specifies whether integer data values are normalized before usage.
     normalized: bool = false,
 

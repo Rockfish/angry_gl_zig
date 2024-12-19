@@ -6,6 +6,8 @@ const Shader = core.Shader;
 const utils = core.utils;
 const math = @import("math");
 
+const Material = @import("material.zig").Material;
+
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
@@ -13,16 +15,24 @@ const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
 
-const MAX_BONE_INFLUENCE: usize = 4;
 
-pub const ModelVertex = extern struct {
+pub const ModelMesh = struct {
+    allocator: Allocator,
+    name: []const u8,
+    primitives: *ArrayList(MeshPrimitive),
+    // weights
+    // extensions
+    // extras
+};
+
+pub const PrimitiveVertex = extern struct {
     position: Vec3,
     normal: Vec3,
     uv: Vec2,
     tangent: Vec3,
     bi_tangent: Vec3,
-    bone_ids: [MAX_BONE_INFLUENCE]u32,
-    bone_weights: [MAX_BONE_INFLUENCE]f32,
+    bone_ids: [4]u32,
+    bone_weights: [4]f32,
 
     const Self = @This();
 
@@ -37,51 +47,35 @@ pub const ModelVertex = extern struct {
             .bone_weights = [_]f32{ 0.0, 0.0, 0.0, 0.0 },
         };
     }
-
-    pub fn set_bone_data(self: *Self, bone_id: u32, weight: f32) void {
-        // skip zero weights
-        if (weight == 0.0) {
-            return;
-        }
-        // set first available free spot if there is any
-        for (0..MAX_BONE_INFLUENCE) |i| {
-            if (self.bone_ids[i] < 0) {
-                self.bone_ids[i] = @intCast(bone_id);
-                self.bone_weights[i] = weight;
-                break;
-            }
-        }
-    }
 };
 
 const OFFSET_OF_POSITION = 0;
-const OFFSET_OF_NORMAL = @offsetOf(ModelVertex, "normal");
-const OFFSET_OF_TEXCOORDS = @offsetOf(ModelVertex, "uv");
-const OFFSET_OF_TANGENT = @offsetOf(ModelVertex, "tangent");
-const OFFSET_OF_BITANGENT = @offsetOf(ModelVertex, "bi_tangent");
-const OFFSET_OF_BONE_IDS = @offsetOf(ModelVertex, "bone_ids");
-const OFFSET_OF_WEIGHTS = @offsetOf(ModelVertex, "bone_weights");
+const OFFSET_OF_NORMAL = @offsetOf(PrimitiveVertex, "normal");
+const OFFSET_OF_TEXCOORDS = @offsetOf(PrimitiveVertex, "uv");
+const OFFSET_OF_TANGENT = @offsetOf(PrimitiveVertex, "tangent");
+const OFFSET_OF_BITANGENT = @offsetOf(PrimitiveVertex, "bi_tangent");
+const OFFSET_OF_BONE_IDS = @offsetOf(PrimitiveVertex, "bone_ids");
+const OFFSET_OF_WEIGHTS = @offsetOf(PrimitiveVertex, "bone_weights");
 
 pub const MeshColor = struct {
     uniform: [:0]const u8,
     color: Vec4,
 };
 
-pub const ModelMesh = struct {
+pub const MeshPrimitive = struct {
     allocator: Allocator,
     id: i32,
     name: []const u8,
-    vertices: *ArrayList(ModelVertex),
+    vertices: *ArrayList(PrimitiveVertex),
     indices: *ArrayList(u32),
-    textures: *ArrayList(*Texture),
-    colors: *ArrayList(*MeshColor),
+    material: Material,
     vao: c_uint,
     vbo: c_uint,
     ebo: c_uint,
 
     const Self = @This();
 
-    pub fn deinit(self: *ModelMesh) void {
+    pub fn deinit(self: *MeshPrimitive) void {
         gl.deleteVertexArrays(1, &self.vao);
         gl.deleteBuffers(1, &self.vbo);
         gl.deleteBuffers(1, &self.ebo);
@@ -89,16 +83,6 @@ pub const ModelMesh = struct {
         self.allocator.destroy(self.vertices);
         self.indices.deinit();
         self.allocator.destroy(self.indices);
-        for (self.textures.items) |texture| {
-            texture.deinit();
-        }
-        self.textures.deinit();
-        for (self.colors.items) |color| {
-            self.allocator.destroy(color);
-        }
-        self.colors.deinit();
-        self.allocator.destroy(self.colors);
-        self.allocator.destroy(self.textures);
         self.allocator.free(self.name);
         self.allocator.destroy(self);
     }
@@ -107,53 +91,47 @@ pub const ModelMesh = struct {
         allocator: Allocator,
         id: i32,
         name: []const u8,
-        vertices: *ArrayList(ModelVertex),
+        vertices: *ArrayList(PrimitiveVertex),
         indices: *ArrayList(u32),
-        textures: *ArrayList(*Texture),
-        colors: *ArrayList(*MeshColor),
-    ) !*ModelMesh {
-        const model_mesh = try allocator.create(ModelMesh);
-        model_mesh.* = ModelMesh{
+    ) !*MeshPrimitive {
+        const model_mesh = try allocator.create(MeshPrimitive);
+        model_mesh.* = MeshPrimitive{
             .allocator = allocator,
             .id = id,
             .name = try allocator.dupe(u8, name),
             .vertices = vertices,
             .indices = indices,
-            .textures = textures,
-            .colors = colors,
             .vao = 0,
             .vbo = 0,
             .ebo = 0,
         };
 
-        // std.debug.print("ModelMesh: setting up mesh, name: {s}\n", .{name});
+        // std.debug.print("MeshPrimitive: setting up mesh, name: {s}\n", .{name});
         model_mesh.setupMesh();
         // print_model_mesh(model_mesh);
         return model_mesh;
     }
 
-    pub fn render(self: *ModelMesh, shader: *const Shader) void {
-        const has_texture = self.*.textures.items.len > 0;
-        shader.set_bool("has_texture", has_texture);
-
-        for (self.*.textures.items, 0..) |texture, i| {
-            const texture_unit: u32 = @intCast(i);
-
-            gl.activeTexture(gl.TEXTURE0 + texture_unit);
-            gl.bindTexture(gl.TEXTURE_2D, texture.id);
-
-            const uniform = texture.texture_type.toString();
-            shader.set_int(uniform, @as(i32, @intCast(texture_unit)));
-            // std.debug.print("has_texture: {any} texture id: {d}  name: {s}\n", .{has_texture, i, texture.texture_path});
-        }
-
-        const has_color = self.*.colors.items.len > 0;
-        shader.set_bool("has_color", has_color);
-
-        for (self.*.colors.items) |mesh_color| {
-            shader.set_vec4(mesh_color.uniform, &mesh_color.color);
-            // std.debug.print("rendering color: {any}\n", .{mesh_color.color});
-        }
+    pub fn render(self: *MeshPrimitive, shader: *const Shader) void {
+        // TODO: replace with material
+        // const has_texture = self.*.textures.items.len > 0;
+        // shader.set_bool("has_texture", has_texture);
+        // for (self.*.textures.items, 0..) |texture, i| {
+        //     const texture_unit: u32 = @intCast(i);
+        //
+        //     gl.activeTexture(gl.TEXTURE0 + texture_unit);
+        //     gl.bindTexture(gl.TEXTURE_2D, texture.id);
+        //
+        //     const uniform = texture.texture_type.toString();
+        //     shader.set_int(uniform, @as(i32, @intCast(texture_unit)));
+        //     // std.debug.print("has_texture: {any} texture id: {d}  name: {s}\n", .{has_texture, i, texture.texture_path});
+        // }
+        // const has_color = self.*.colors.items.len > 0;
+        // shader.set_bool("has_color", has_color);
+        // for (self.*.colors.items) |mesh_color| {
+        //     shader.set_vec4(mesh_color.uniform, &mesh_color.color);
+        //     // std.debug.print("rendering color: {any}\n", .{mesh_color.color});
+        // }
 
         gl.bindVertexArray(self.vao);
         gl.drawElements(
@@ -167,7 +145,7 @@ pub const ModelMesh = struct {
         shader.set_bool("has_color", false);
     }
 
-    pub fn renderNoTextures(self: *ModelMesh) void {
+    pub fn renderNoTextures(self: *MeshPrimitive) void {
         gl.bindVertexArray(self.vao);
         gl.drawElements(
             gl.TRIANGLES,
@@ -178,8 +156,8 @@ pub const ModelMesh = struct {
         gl.bindVertexArray(0);
     }
 
-    pub fn setupMesh(self: *ModelMesh) void {
-        // std.debug.print("ModelMesh: calling opengl\n", .{});
+    pub fn setupMesh(self: *MeshPrimitive) void {
+        // std.debug.print("MeshPrimitive: calling opengl\n", .{});
 
         var vao: gl.Uint = undefined;
         var vbo: gl.Uint = undefined;
@@ -197,7 +175,7 @@ pub const ModelMesh = struct {
         gl.bindBuffer(gl.ARRAY_BUFFER, self.vbo);
         gl.bufferData(
             gl.ARRAY_BUFFER,
-            @intCast(self.vertices.items.len * @sizeOf(ModelVertex)),
+            @intCast(self.vertices.items.len * @sizeOf(PrimitiveVertex)),
             self.vertices.items.ptr,
             gl.STATIC_DRAW,
         );
@@ -218,7 +196,7 @@ pub const ModelMesh = struct {
             3,
             gl.FLOAT,
             gl.FALSE,
-            @sizeOf(ModelVertex),
+            @sizeOf(PrimitiveVertex),
             @ptrFromInt(OFFSET_OF_POSITION),
         );
 
@@ -229,7 +207,7 @@ pub const ModelMesh = struct {
             3,
             gl.FLOAT,
             gl.FALSE,
-            @sizeOf(ModelVertex),
+            @sizeOf(PrimitiveVertex),
             @ptrFromInt(OFFSET_OF_NORMAL),
         );
 
@@ -240,7 +218,7 @@ pub const ModelMesh = struct {
             2,
             gl.FLOAT,
             gl.FALSE,
-            @sizeOf(ModelVertex),
+            @sizeOf(PrimitiveVertex),
             @ptrFromInt(OFFSET_OF_TEXCOORDS),
         );
 
@@ -251,7 +229,7 @@ pub const ModelMesh = struct {
             3,
             gl.FLOAT,
             gl.FALSE,
-            @sizeOf(ModelVertex),
+            @sizeOf(PrimitiveVertex),
             @ptrFromInt(OFFSET_OF_TANGENT),
         );
 
@@ -262,7 +240,7 @@ pub const ModelMesh = struct {
             3,
             gl.FLOAT,
             gl.FALSE,
-            @sizeOf(ModelVertex),
+            @sizeOf(PrimitiveVertex),
             @ptrFromInt(OFFSET_OF_BITANGENT),
         );
 
@@ -272,7 +250,7 @@ pub const ModelMesh = struct {
             5,
             4,
             gl.INT,
-            @sizeOf(ModelVertex),
+            @sizeOf(PrimitiveVertex),
             @ptrFromInt(OFFSET_OF_BONE_IDS),
         );
 
@@ -283,14 +261,14 @@ pub const ModelMesh = struct {
             4,
             gl.FLOAT,
             gl.FALSE,
-            @sizeOf(ModelVertex),
+            @sizeOf(PrimitiveVertex),
             @ptrFromInt(OFFSET_OF_WEIGHTS),
         );
 
         gl.bindVertexArray(0);
     }
 
-    pub fn printMeshVertices(self: *const ModelMesh) void {
+    pub fn printMeshVertices(self: *const MeshPrimitive) void {
         std.debug.print("mesh: {s}\n", .{self.name});
         for (self.vertices.items) |v| {
             std.debug.print("vert: {{{d}, {d}, {d}}} bone_ids: [{d}, {d}, {d}, {d}], bone_weights: [{d}, {d}, {d}, {d}]\n", .{
@@ -302,7 +280,7 @@ pub const ModelMesh = struct {
     }
 };
 
-pub fn printModelMesh(mesh: *ModelMesh) void {
+pub fn printMeshPrimitive(mesh: *MeshPrimitive) void {
     // _ = mesh;
 
     std.debug.print("OFFSET_OF_POSITION: {any}\n", .{OFFSET_OF_POSITION});
@@ -318,7 +296,7 @@ pub fn printModelMesh(mesh: *ModelMesh) void {
     std.debug.print("size of [4]i32: {d}\n", .{@sizeOf([4]i32)});
     std.debug.print("size of [4]f32: {d}\n", .{@sizeOf([4]f32)});
 
-    std.debug.print("size vertex: {d}\n", .{@sizeOf(ModelVertex)});
+    std.debug.print("size vertex: {d}\n", .{@sizeOf(PrimitiveVertex)});
     std.debug.print("size of vertex parts: {d}\n", .{@sizeOf(Vec3) * 4 + @sizeOf(Vec2) + @sizeOf([4]i32) + @sizeOf([4]f32)});
 
     std.debug.print("mesh.id: {any}\n", .{mesh.id});

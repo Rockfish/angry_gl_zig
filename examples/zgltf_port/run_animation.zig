@@ -119,6 +119,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         break :blk model;
     };
 
+    std.debug.print("\n--- Build gltf model ----------------------\n\n", .{});
     const gltfmodel = blk: {
         std.debug.print("Main: loading model: {s}\n", .{model_path});
         var builder = try Builder.init(allocator, &texture_cache, "Spacesuit", model_path);
@@ -129,7 +130,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
 
     defer gltfmodel.deinit();
 
-
+    std.debug.print("\n----------------------\n", .{});
 
 
     // const clip = AnimationClip {

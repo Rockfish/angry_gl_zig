@@ -721,7 +721,7 @@ fn parseGltfJson(self: *Self, gltf_json: []const u8) !void {
             }
 
             if (object.get("count")) |count| {
-                accessor.count = @as(i32, @intCast(count.integer));
+                accessor.count = @as(usize, @intCast(count.integer));
             } else {
                 panic("Accessor's count is missing.", .{});
             }
