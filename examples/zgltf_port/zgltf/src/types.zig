@@ -177,7 +177,9 @@ pub fn AccessorIterator(comptime T: type) type {
 
         /// Returns the next element of the accessor, or null if iteration is done.
         pub fn next(self: *@This()) ?[]const T {
-            if (self.current >= self.total_count) return null;
+            if (self.current >= self.total_count) { 
+                return null;
+            }
 
             const slice = (self.data + self.offset + self.current * self.stride)[0..self.datum_count];
             self.current += 1;

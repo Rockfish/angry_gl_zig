@@ -77,7 +77,8 @@ pub const Data = struct {
 arena: *ArenaAllocator,
 data: Data,
 
-glb_binary: ?[]align(4) const u8 = null,
+// glb_binary: ?[]align(4) const u8 = null,
+buffer_data: ArrayList([]align(4) const u8),
 
 pub fn init(allocator: Allocator) Self {
     var arena = allocator.create(ArenaAllocator) catch {
@@ -89,6 +90,7 @@ pub fn init(allocator: Allocator) Self {
     const alloc = arena.allocator();
     return Self{
         .arena = arena,
+        .buffer_data = ArrayList([]align(4) const u8).init(alloc),
         .data = .{
             .asset = Asset{ .version = "Undefined" },
             .scenes = ArrayList(Scene).init(alloc),
@@ -107,6 +109,11 @@ pub fn init(allocator: Allocator) Self {
             .lights = ArrayList(Light).init(alloc),
         },
     };
+}
+
+pub fn deinit(self: *Self) void {
+    self.arena.deinit();
+    self.arena.child_allocator.destroy(self.arena);
 }
 
 /// Fill data by parsing a glTF file's buffer.
@@ -241,11 +248,6 @@ pub fn getDataFromBufferView(
     }
 }
 
-pub fn deinit(self: *Self) void {
-    self.arena.deinit();
-    self.arena.child_allocator.destroy(self.arena);
-}
-
 pub fn getLocalTransform(node: Node) Mat4 {
     return blk: {
         if (node.matrix) |mat4x4| {
@@ -362,8 +364,9 @@ fn parseGlb(self: *Self, glb_buffer: []align(4) const u8) !void {
         break :blk binary;
     };
 
+    try self.buffer_data.append(binary_buffer);
+
     try self.parseGltfJson(json_buffer);
-    self.glb_binary = binary_buffer;
 
     const buffer_views = self.data.buffer_views.items;
 

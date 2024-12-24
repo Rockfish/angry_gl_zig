@@ -119,6 +119,13 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         break :blk model;
     };
 
+    // std.debug.print("\n--- Assimp model ----------------------\n\n", .{});
+    //
+    // const mesh = model.meshes.items[0];
+    // for (mesh.vertices.items, 0..) |vertex, i| {
+    //     std.debug.print("  {d} : {any}\n", .{i, vertex.position});
+    // }
+
     std.debug.print("\n--- Build gltf model ----------------------\n\n", .{});
     const gltfmodel = blk: {
         std.debug.print("Main: loading model: {s}\n", .{model_path});
@@ -148,7 +155,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     // };
     // // const clip = AnimationClip.new(1.0, 2.0, AnimationRepeat.Forever);
     // try model.playClip(clip);
-    try model.animator.playAnimationById(0);
+
+    // try model.animator.playAnimationById(0);
 
     // try core.dumpModelNodes(model);
 

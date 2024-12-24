@@ -111,7 +111,12 @@ pub const GltfBuilder = struct {
         self.load_textures = false;
     }
 
+    // TODO: the transform of the skinned mesh node MUST be ignored
+
     pub fn build(self: *Self) !*Model {
+
+        // TODO: check file extension for glb or gltf
+
         const buf = std.fs.cwd().readFileAllocOptions(
             self.allocator,
             self.filepath,
@@ -128,9 +133,7 @@ pub const GltfBuilder = struct {
 
         try gltf.parse(buf);
 
-        const data = gltf.data;
-        std.debug.print("meshes count: {d}\n", .{data.meshes.items.len});
-
+        try self.loadBufferData(&gltf);
         try self.loadMeshes(&gltf);
 
         const animator = try Animator.init(self.allocator);
@@ -146,7 +149,53 @@ pub const GltfBuilder = struct {
         return model;
     }
 
-    // Gltf meshes are collections of primitives. Each primitive is a collection of vertices. 
+    // Uri patterns found in the Khonos examples.
+    // data:application/gltf-buffer;base64
+    // data:application/octet-stream;base64
+    // data:image/jpeg;base64
+    // data:image/png;base64
+
+    pub fn loadBufferData(self: *Self, gltf: *Gltf) !void {
+        const alloc = gltf.arena.allocator();
+        for (gltf.data.buffers.items, 0..) |buffer, i| {
+            if (buffer.uri) |uri| {
+                if (std.mem.eql(u8, "data:", uri)) {
+                    const comma = strchr(uri, ',');
+                    if (comma) |idx| {
+                        // "uri" : "data:application/octet-stream;base64,
+                        std.debug.print("uri: {s}\n", .{uri[0..idx]});
+                        const decoder = std.base64.standard.Decoder;
+                        const decoded_length = try decoder.calcSizeForSlice(uri[idx..uri.len]);
+                        const decoded_buffer:[]align(4) u8 = try alloc.allocWithOptions(u8, decoded_length, 4, null);
+                        try decoder.decode(decoded_buffer, uri[idx..uri.len]);
+                        try gltf.buffer_data.append(decoded_buffer);
+                    }
+                } else if (!std.mem.eql(u8, "://", uri)) {
+                    const directory = Path.dirname(self.filepath);
+                    const path = try std.fs.path.join(self.allocator, &[_][]const u8{ directory.?, uri });
+                    defer self.allocator.free(path);
+
+                    std.debug.print("position buffer file path: {s}\n", .{path});
+
+                    const glb_buf = try std.fs.cwd().readFileAllocOptions(
+                        alloc,
+                        path,
+                        512_000,
+                        null,
+                        4,
+                        null,
+                    );
+
+                    std.debug.print("buffer: {d} length: {d}\n", .{ i, glb_buf.len });
+                    try gltf.buffer_data.append(glb_buf);
+                } else {
+                    std.debug.panic("Unknown buffer type.", .{});
+                }
+            }
+        }
+    }
+
+    // Gltf meshes are collections of primitives. Each primitive is a collection of vertices.
     pub fn loadMeshes(self: *Self, gltf: *Gltf) !void {
         for (gltf.data.meshes.items) |mesh| {
             const mesh_name = try self.allocator.dupe(u8, mesh.name);
@@ -154,106 +203,67 @@ pub const GltfBuilder = struct {
             // A primitive is the same as assimp.mesh
             // primitives are a struct of arrays
             for (mesh.primitives.items) |primitive| {
-
                 const vertices = try self.allocator.create(ArrayList(PrimitiveVertex));
                 vertices.* = ArrayList(PrimitiveVertex).init(self.allocator);
-                const indices = try self.allocator.create(ArrayList(u32));
-                indices.* = ArrayList(u32).init(self.allocator);
+                // const indices = try self.allocator.create(ArrayList(u32));
+                // indices.* = ArrayList(u32).init(self.allocator);
 
-                var positions: ?Gltf.Accessor = null;
-                var normals: ?Gltf.Accessor = null;
-                var texcoords: ?Gltf.Accessor = null;
-                var tangents: ?Gltf.Accessor = null;
-                var colors: ?Gltf.Accessor = null;
-                var joints: ?Gltf.Accessor = null;
-                var weights: ?Gltf.Accessor = null;
+                var positions: ?[]Vec3 = null;
+                var normals: ?[]Vec3 = null;
+                var texcoords: ?[]Vec2= null;
+                var tangents: ?[]Vec3 = null;
+                var colors: ?[]Vec4 = null;
+                var joints: ?[][4]u16 = null;
+                var weights: ?[][4]f32 = null;
+                var indices: ?[]u32 = null;
 
                 for (primitive.attributes.items) |attribute| {
                     switch (attribute) {
                         .position => |accessor_id| {
-                            positions = gltf.data.accessors.items[accessor_id];
+                            positions = getBufferSlice(Vec3, gltf, accessor_id);
                         },
                         .normal => |accessor_id| {
-                            normals = gltf.data.accessors.items[accessor_id];
+                            normals = getBufferSlice(Vec3, gltf, accessor_id);
                         },
                         .texcoord => |accessor_id| {
-                            texcoords = gltf.data.accessors.items[accessor_id];
+                            texcoords = getBufferSlice(Vec2, gltf, accessor_id);
                         },
                         .tangent => |accessor_id| {
-                            tangents = gltf.data.accessors.items[accessor_id];
+                            tangents = getBufferSlice(Vec3, gltf, accessor_id);
                         },
                         .color => |accessor_id| {
-                            colors = gltf.data.accessors.items[accessor_id];
+                            colors = getBufferSlice(Vec4, gltf, accessor_id);
                         },
                         .joints => |accessor_id| {
-                            joints = gltf.data.accessors.items[accessor_id];
+                            joints = getBufferSlice([4]u16, gltf, accessor_id);
                         },
                         .weights => |accessor_id| {
-                            weights = gltf.data.accessors.items[accessor_id];
+                            weights = getBufferSlice([4]f32, gltf, accessor_id);
                         },
                     }
                 }
 
-                if (positions) |accessor| {
-                    std.debug.print("position accessor: {any}\n", .{accessor});
-                    if (accessor.buffer_view) |buffer_view_id| {
-                        const buffer_view = gltf.data.buffer_views.items[buffer_view_id];
-                        std.debug.print("position buffer_view: {any}\n", .{buffer_view});
-
-                        const buffer = gltf.data.buffers.items[buffer_view.buffer];
-                        std.debug.print("position buffer: {any}\n", .{buffer});
-                        if (buffer.uri) |uri| {
-                            std.debug.print("position buffer uri: {s}\n", .{uri});
-                            const directory = Path.dirname(self.filepath);
-                            const path = try std.fs.path.join(self.allocator, &[_][]const u8{ directory.?, uri });
-                            defer self.allocator.free(path);
-                            std.debug.print("position buffer file path: {s}\n", .{path});
-                            const glb_buf = try std.fs.cwd().readFileAllocOptions(
-                                self.allocator, path, 512_000, null, 4, null);
-                            defer self.allocator.free(glb_buf);
-                            std.debug.print("glf_buf length: {d}\n", .{glb_buf.len});
-                            var iter = accessor.iterator(f32, gltf, glb_buf);
-                            const first = iter.next();
-                            std.debug.print("first: {any}\n", .{first});
-
-                        }
+                if (positions != null) {
+                    for (0..positions.?.len) |i| {
+                        const vertex = PrimitiveVertex{
+                            .position = if (positions) |pos| pos[i] else Vec3.fromArray([3]f32{0, 0, 0}),
+                            .normal = if (normals) |norm| norm[i] else Vec3.fromArray([3]f32{0, 0, 1}),
+                            .uv = if (texcoords) |uv| uv[i] else Vec2.fromArray([2]f32{0, 0}),
+                            .tangent = if (tangents) |tan| tan[i] else Vec3.fromArray([3]f32{1, 0, 0}),
+                            //.bitangent = if (tangents and normals) cross(normal, tangent.xyz) * tangent.w else [3]f32{0, 1, 0},
+                            .bi_tangent = Vec3.fromArray([3]f32{0, 1, 0}),
+                            .bone_ids = if (joints) |j| j[i] else [4]u16{0, 0, 0, 0},
+                            .bone_weights = if (weights) |w| w[i] else [4]f32{0, 0, 0, 0},
+                        };
+                        try vertices.append(vertex);
                     }
-                    std.debug.print("\n", .{});
-                }
-                if (normals) |accessor| {
-                    std.debug.print("normals accessor: {any}\n", .{accessor});
-                }
-                if (texcoords) |accessor| {
-                    std.debug.print("texcoords accessor: {any}\n", .{accessor});
-                }
-                if (tangents) |accessor| {
-                    std.debug.print("tangents accessor: {any}\n", .{accessor});
-                }
-                if (colors) |accessor| {
-                    std.debug.print("colors accessor: {any}\n", .{accessor});
-                }
-                if (joints) |accessor| {
-                    std.debug.print("joints accessor: {any}\n", .{accessor});
-                }
-                if (weights) |accessor| {
-                    std.debug.print("weights accessor: {any}\n", .{accessor});
                 }
 
-                // if (positions) |accessor| {
-                //     for (0..accessor.count) |i| {
-                //         const vertex = PrimitiveVertex{
-                //             .position = if (positions) |pos| pos[i] else [3]f32{0, 0, 0},
-                //             .normal = if (normals) |norm| norm[i] else [3]f32{0, 0, 1},
-                //             .uv = if (texcoords) |uv| uv[i] else [2]f32{0, 0},
-                //             .tangent = if (tangents) |tan| tan[i] else [4]f32{1, 0, 0, 1},
-                //             //.bitangent = if (tangents and normals) cross(normal, tangent.xyz) * tangent.w else [3]f32{0, 1, 0},
-                //             .bitangent = [3]f32{0, 1, 0},
-                //         };
-                //         try vertices.append(vertex);
-                //     }
-                // }
+                if (primitive.indices) |accessor_id| {
+                    indices = getBufferSlice(u32, gltf, accessor_id);
+                }
 
-                const material = Material {
+                const material = Material{
                     .name = "material",
                 };
 
@@ -269,27 +279,34 @@ pub const GltfBuilder = struct {
                     .vbo = 0,
                     .ebo = 0,
                 };
+
+                model_primitive.printMeshVertices();
+
                 try self.meshes.append(model_primitive);
-
-            } 
-
-
-
-        // var vertices = std.ArrayList(Vertex).init(allocator);
-        // for (0..numVertices) |i| {
-        //     var vertex = Vertex{
-        //         .position = if (positions) |pos| pos[i] else [3]f32{0, 0, 0},
-        //         .normal = if (normals) |norm| norm[i] else [3]f32{0, 0, 1},
-        //         .uv = if (uvs) |uv| uv[i] else [2]f32{0, 0},
-        //         .tangent = if (tangents) |tan| tan[i] else [4]f32{1, 0, 0, 1},
-        //         .bitangent = if (tangents and normals) cross(normal, tangent.xyz) * tangent.w else [3]f32{0, 1, 0},
-        //     };
-        //     try vertices.append(vertex);
-        // }
-
-
-
+            }
         }
-
     }
 };
+
+fn getBufferSlice(comptime T: type, gltf: *Gltf, accessor_id: usize) []T {
+    const accessor = gltf.data.accessors.items[accessor_id];
+    if (@sizeOf(T) != accessor.stride) {
+        std.debug.panic("sizeOf(T) : {d} does not equal accessor.stride: {d}", .{@sizeOf(T), accessor.stride});
+    }
+    const buffer_view = gltf.data.buffer_views.items[accessor.buffer_view.?];
+    const glb_buf = gltf.buffer_data.items[buffer_view.buffer];
+    const start = accessor.byte_offset + buffer_view.byte_offset;
+    const end = start + buffer_view.byte_length;
+    const slice = glb_buf[start..end];
+    const data = @as([*]T, @ptrCast(@alignCast(@constCast(slice))))[0..accessor.count];
+    return data;
+}
+
+fn strchr(str: []const u8, c: u8) ?usize {
+    for (str, 0..) |char, i| {
+        if (char == c) {
+            return i;
+        }
+    }
+    return null;
+}

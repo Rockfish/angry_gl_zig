@@ -31,7 +31,7 @@ pub const PrimitiveVertex = extern struct {
     uv: Vec2,
     tangent: Vec3,
     bi_tangent: Vec3,
-    bone_ids: [4]u32,
+    bone_ids: [4]u16,
     bone_weights: [4]f32,
 
     const Self = @This();
@@ -67,7 +67,7 @@ pub const MeshPrimitive = struct {
     id: i32,
     name: []const u8,
     vertices: *ArrayList(PrimitiveVertex),
-    indices: *ArrayList(u32),
+    indices: ?[]u32,
     material: Material,
     vao: c_uint,
     vbo: c_uint,
@@ -81,8 +81,8 @@ pub const MeshPrimitive = struct {
         gl.deleteBuffers(1, &self.ebo);
         self.vertices.deinit();
         self.allocator.destroy(self.vertices);
-        self.indices.deinit();
-        self.allocator.destroy(self.indices);
+        // self.indices.deinit();
+        // self.allocator.destroy(self.indices);
         self.allocator.free(self.name);
         self.allocator.destroy(self);
     }
@@ -180,7 +180,7 @@ pub const MeshPrimitive = struct {
             gl.STATIC_DRAW,
         );
 
-        // load index data into element buffer
+        // load index data into indices element buffer
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.ebo);
         gl.bufferData(
             gl.ELEMENT_ARRAY_BUFFER,
