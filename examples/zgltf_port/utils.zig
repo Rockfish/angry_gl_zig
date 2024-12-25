@@ -1,7 +1,7 @@
 const std = @import("std");
 const Gltf = @import("zgltf/src/main.zig");
 
-fn getBufferSlice(comptime T: type, gltf: *Gltf, accessor_id: usize) []T {
+pub fn getBufferSlice(comptime T: type, gltf: *Gltf, accessor_id: usize) []T {
     const accessor = gltf.data.accessors.items[accessor_id];
     if (@sizeOf(T) != accessor.stride) {
         std.debug.panic("sizeOf(T) : {d} does not equal accessor.stride: {d}", .{@sizeOf(T), accessor.stride});

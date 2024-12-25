@@ -6,7 +6,9 @@ const math = @import("math");
 
 const Gltf = @import("zgltf/src/main.zig");
 const Model = @import("model.zig").Model;
-const MeshPrimitive = @import("mesh.zig").MeshPrimitive;
+// const MeshPrimitive = @import("mesh.zig").MeshPrimitive;
+const Mesh = @import("gltf_mesh.zig").Mesh;
+const MeshPrimitive = @import("gltf_mesh.zig").MeshPrimitive;
 const PrimitiveVertex = @import("mesh.zig").PrimitiveVertex;
 const Material = @import("material.zig").Material;
 const Animator = @import("animator.zig").Animator;
@@ -32,7 +34,7 @@ const Vec4 = math.Vec4;
 
 pub const GltfBuilder = struct {
     name: []const u8,
-    meshes: *ArrayList(*MeshPrimitive),
+    meshes: *ArrayList(*Mesh),
     texture_cache: *ArrayList(*Texture),
     added_textures: ArrayList(AddedTexture),
     bone_count: u32,
@@ -66,8 +68,8 @@ pub const GltfBuilder = struct {
     };
 
     pub fn init(allocator: Allocator, texture_cache: *ArrayList(*Texture), name: []const u8, path: []const u8) !*Self {
-        const meshes = try allocator.create(ArrayList(*MeshPrimitive));
-        meshes.* = ArrayList(*MeshPrimitive).init(allocator);
+        const meshes = try allocator.create(ArrayList(*Mesh));
+        meshes.* = ArrayList(*Mesh).init(allocator);
 
         // const model_bone_map = try allocator.create(StringHashMap(*ModelBone));
         // model_bone_map.* = StringHashMap(*ModelBone).init(allocator);
@@ -195,8 +197,15 @@ pub const GltfBuilder = struct {
         }
     }
 
-    // Gltf meshes are collections of primitives. Each primitive is a collection of vertices.
     pub fn loadMeshes(self: *Self, gltf: *Gltf) !void {
+        for (gltf.data.meshes.items) |gltf_mesh| {
+            const mesh = try Mesh.init(self.allocator, gltf, gltf_mesh);
+            try self.meshes.append(mesh);
+        }
+    }
+
+    // Gltf meshes are collections of primitives. Each primitive is a collection of vertices.
+    pub fn xloadMeshes(self: *Self, gltf: *Gltf) !void {
         for (gltf.data.meshes.items) |mesh| {
             const mesh_name = try self.allocator.dupe(u8, mesh.name);
 

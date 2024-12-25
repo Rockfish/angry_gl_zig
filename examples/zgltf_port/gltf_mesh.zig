@@ -19,9 +19,44 @@ const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
 const Vec4 = math.Vec4;
 
+pub const Mesh = struct {
+    allocator: Allocator,
+    name: []const u8,
+    primitives: ArrayList(*MeshPrimitive),
+
+    const Self = @This();
+
+    pub fn deinit(self: *Self) void {
+        for (self.primitives.items) |primitive| {
+            primitive.deinit();
+        }
+        self.primitives.deinit();
+        self.allocator.destroy(self);
+    }
+
+    pub fn init(allocator: Allocator, gltf: *Gltf, gltf_mesh: Gltf.Mesh) !*Mesh {
+        const mesh = try allocator.create(Mesh);
+
+        mesh.* = Mesh {
+            .allocator = allocator,
+            .name = gltf_mesh.name,
+            .primitives = ArrayList(*MeshPrimitive).init(allocator),
+        };
+
+        for (gltf_mesh.primitives.items, 0..) |primitive, id| {
+
+            const mesh_primitive = try MeshPrimitive.init(allocator, gltf, primitive, id);
+            try mesh.primitives.append(mesh_primitive);
+        }
+
+        return mesh;
+    }
+};
+
+
 pub const MeshPrimitive = struct {
     allocator: Allocator,
-    id: i32,
+    id: usize,
     name: []const u8 = undefined,
     material: Material = undefined,
     vao: c_uint = undefined,
@@ -36,10 +71,15 @@ pub const MeshPrimitive = struct {
 
     const Self = @This();
     
-    pub fn initPrimitive(allocator: Allocator, gltf: Gltf, primitive: Gltf.Primitive, id: usize) !MeshPrimitive {
+    pub fn deinit(self: *Self) void {
+        self.allocator.destroy(self);
+    }
+
+    pub fn init(allocator: Allocator, gltf: *Gltf, primitive: Gltf.Primitive, id: usize) !*MeshPrimitive {
 
         const mesh_primitive = try allocator.create(MeshPrimitive);
         mesh_primitive.* = MeshPrimitive {
+            .allocator = allocator,
             .id = id,
         };
 
@@ -80,8 +120,8 @@ pub const MeshPrimitive = struct {
         }
 
         if (primitive.indices) |accessor_id| {
-            const indices = getBufferSlice(u32, gltf, accessor_id);
-            mesh_primitive.eboIndices = createGlElementBuffer(u32, indices);
+            const indices = getBufferSlice(u16, gltf, accessor_id);
+            mesh_primitive.eboIndices = createGlElementBuffer(u16, indices);
         }
 
         return mesh_primitive;
@@ -113,7 +153,7 @@ pub fn createGlArrayBuffer(index: u32, comptime T: type, data: []T) c_uint {
 pub fn createGlElementBuffer(comptime T: type, data: []T) c_uint {
     var ebo: gl.Uint = undefined;
     gl.genBuffers(1, &ebo);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, .ebo);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
     gl.bufferData(
         gl.ELEMENT_ARRAY_BUFFER,
         @intCast(data.len * @sizeOf(T)),

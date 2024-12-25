@@ -2,7 +2,8 @@ const std = @import("std");
 const core = @import("core");
 const Shader = core.Shader;
 
-const MeshPrimitive = @import("mesh.zig").MeshPrimitive;
+const Mesh = @import("gltf_mesh.zig").Mesh;
+const MeshPrimitive = @import("gltf_mesh.zig").MeshPrimitive;
 const Animator = @import("animator.zig").Animator;
 
 // const animation = @import("animator.zig");
@@ -20,7 +21,7 @@ const MAX_NODES = 200;
 pub const Model = struct {
     allocator: Allocator,
     name: []const u8,
-    meshes: *ArrayList(*MeshPrimitive),
+    meshes: *ArrayList(*Mesh),
     animator: *Animator,
     single_mesh_select: i32 = -1,
 
