@@ -13,6 +13,10 @@ pub const Vec2 = extern struct {
         return .{ .x = 0.0, .y = 0.0 };
     }
 
+    pub fn fromArray(value: [2]f32) Vec2 {
+        return @as(*Vec2, @ptrCast(@constCast(&value))).*;
+    }
+
     pub fn asArray(self: *const Vec2) [2]f32 {
         return @as(*[2]f32, @ptrCast(@constCast(self))).*;
     }
@@ -63,6 +67,10 @@ pub const Vec3 = extern struct {
 
     pub fn fromArray(value: [3]f32) Vec3 {
         return @as(*Vec3, @ptrCast(@constCast(&value))).*;
+    }
+
+    pub fn fromSlice(value: []const f32) Vec3 {
+        return @as(*Vec3, @ptrCast(@constCast(value))).*;
     }
 
     pub fn asArray(self: *const Vec3) [3]f32 {
@@ -171,6 +179,10 @@ pub const Vec4 = extern struct {
 
     pub fn new(x: f32, y: f32, z: f32, w: f32) Vec4 {
         return .{ .x = x, .y = y, .z = z, .w = w };
+    }
+
+    pub fn fromArray(value: [4]f32) Vec4 {
+        return @as(*Vec4, @ptrCast(@constCast(&value))).*;
     }
 
     pub fn asArray(self: *const Vec4) [4]f32 {

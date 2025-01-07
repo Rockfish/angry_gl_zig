@@ -101,9 +101,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
 
     const shader = try Shader.new(
         allocator,
-        "game_level_001/shaders/player_shader.vert", 
+        "examples/zgltf_port/shaders/player_shader.vert", 
         //"game_level_001/shaders/player_shader.frag",
-        "game_level_001/shaders/basic_model.frag",
+        "examples/zgltf_port/shaders/basic_model.frag",
     );
 
     std.debug.print("Shader id: {d}\n", .{shader.id});
@@ -221,7 +221,9 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
             try model.animator.playAnimationById(@intCast(state.animation_id));
             last_animation = state.animation_id;
         }
-        model.render(shader);
+
+       // model.render(shader);
+       gltfmodel.render(shader);
 
         //try core.dumpModelNodes(model);
         window.swapBuffers();

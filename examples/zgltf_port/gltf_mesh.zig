@@ -51,6 +51,12 @@ pub const Mesh = struct {
 
         return mesh;
     }
+
+    pub fn render(self: *Self, shader: *const Shader) void {
+        for (self.primitives.items) |primitive| {
+            primitive.render(shader);
+        }
+    }
 };
 
 
@@ -59,6 +65,7 @@ pub const MeshPrimitive = struct {
     id: usize,
     name: []const u8 = undefined,
     material: Material = undefined,
+    indices_count: u32,
     vao: c_uint = undefined,
     vboPositions: c_uint = undefined,
     vboNormals: c_uint = undefined,
@@ -81,6 +88,7 @@ pub const MeshPrimitive = struct {
         mesh_primitive.* = MeshPrimitive {
             .allocator = allocator,
             .id = id,
+            .indices_count = 0,
         };
 
         gl.genVertexArrays(1, &mesh_primitive.vao);
@@ -91,30 +99,37 @@ pub const MeshPrimitive = struct {
                 .position => |accessor_id| {
                     const positions = getBufferSlice(Vec3, gltf, accessor_id);
                     mesh_primitive.vboPositions = createGlArrayBuffer(0, Vec3, positions);
+                    std.debug.print("has_positions\n", .{});
                 },
                 .normal => |accessor_id| {
                     const normals = getBufferSlice(Vec3, gltf, accessor_id);
                     mesh_primitive.vboNormals = createGlArrayBuffer(1, Vec3, normals);
+                    std.debug.print("has_normals\n", .{});
                 },
                 .texcoord => |accessor_id| {
-                    const texcoords = getBufferSlice(Vec2, gltf, accessor_id);
-                    mesh_primitive.vboTexcoords = createGlArrayBuffer(2, Vec2, texcoords);
+                    const texcoord = getBufferSlice(Vec2, gltf, accessor_id);
+                    mesh_primitive.vboTexcoords = createGlArrayBuffer(2, Vec2, texcoord);
+                    std.debug.print("has_texcoords\n", .{});
                 },
                 .tangent => |accessor_id| {
                     const tangents = getBufferSlice(Vec3, gltf, accessor_id);
                     mesh_primitive.vboTangents = createGlArrayBuffer(3, Vec3, tangents);
+                    std.debug.print("has_tangents\n", .{});
                 },
                 .color => |accessor_id| {
                     const colors = getBufferSlice(Vec4, gltf, accessor_id);
                     mesh_primitive.vboColors = createGlArrayBuffer(4, Vec4, colors);
+                    std.debug.print("has_colors\n", .{});
                 },
                 .joints => |accessor_id| {
                     const joints = getBufferSlice([4]u16, gltf, accessor_id);
                     mesh_primitive.vboJoints = createGlArrayBuffer(5, [4]u16, joints);
+                    std.debug.print("has_joints\n", .{});
                 },
                 .weights => |accessor_id| {
                     const weights = getBufferSlice([4]f32, gltf, accessor_id);
                     mesh_primitive.vboWeights = createGlArrayBuffer(6, [4]f32, weights);
+                    std.debug.print("has_weights\n", .{});
                 },
             }
         }
@@ -122,9 +137,49 @@ pub const MeshPrimitive = struct {
         if (primitive.indices) |accessor_id| {
             const indices = getBufferSlice(u16, gltf, accessor_id);
             mesh_primitive.eboIndices = createGlElementBuffer(u16, indices);
+            const accessor = gltf.data.accessors.items[accessor_id];
+            mesh_primitive.indices_count = @intCast(accessor.count);
+            std.debug.print("has_indices count: {d}\n", .{accessor.count});
+        }
+
+        if (primitive.material) |accessor_id| {
+            const material = gltf.data.materials.items[accessor_id];
+            std.debug.print("has_material: {any}\n", .{material});
         }
 
         return mesh_primitive;
+    }
+
+    pub fn render(self: *MeshPrimitive, shader: *const Shader) void {
+        // const has_texture = self.*.textures.items.len > 0;
+        // shader.set_bool("has_texture", has_texture);
+        //
+        // for (self.*.textures.items, 0..) |texture, i| {
+        //     const texture_unit: u32 = @intCast(i);
+        //
+        //     gl.activeTexture(gl.TEXTURE0 + texture_unit);
+        //     gl.bindTexture(gl.TEXTURE_2D, texture.id);
+        //
+        //     const uniform = texture.texture_type.toString();
+        //     shader.set_int(uniform, @as(i32, @intCast(texture_unit)));
+        //     // std.debug.print("has_texture: {any} texture id: {d}  name: {s}\n", .{has_texture, i, texture.texture_path});
+        // }
+
+        // TODO: temp color
+        shader.set_bool("has_texture", false);
+        shader.set_bool("has_color", true);
+        shader.set_vec4("diffuse_color", &Vec4.fromArray(.{0.8, 0.2, 0.2, 1.0}));
+
+        gl.bindVertexArray(self.vao);
+        gl.drawElements(
+            gl.TRIANGLES,
+            @intCast(self.indices_count),
+            gl.UNSIGNED_SHORT,
+            null,
+        );
+        gl.bindVertexArray(0);
+
+        shader.set_bool("has_color", false);
     }
 };
 
@@ -141,7 +196,7 @@ pub fn createGlArrayBuffer(index: u32, comptime T: type, data: []T) c_uint {
     gl.enableVertexAttribArray(index);
     gl.vertexAttribPointer(
         index,
-        @sizeOf(T),
+        @sizeOf(T) / @sizeOf(f32),
         gl.FLOAT,
         gl.FALSE,
         0,

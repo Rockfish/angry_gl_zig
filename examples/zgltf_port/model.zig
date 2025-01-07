@@ -81,8 +81,8 @@ pub const Model = struct {
                 continue;
             }
 
-            shader.set_int("mesh_id", mesh.id);
-            shader.set_mat4("nodeTransform", &self.animator.final_node_matrices[@intCast(mesh.id)]);
+            shader.set_int("mesh_id", @intCast(n));
+            shader.set_mat4("nodeTransform", &self.animator.final_node_matrices[@intCast(n)]);
             mesh.render(shader);
         }
     }

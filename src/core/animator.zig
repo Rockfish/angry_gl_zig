@@ -173,7 +173,9 @@ pub const Animator = struct {
         }
 
         for (self.transitions.items) |transition| {
-            transition.?.deinit();
+            if (transition) |t| {
+                t.deinit();
+            }
         }
         self.transitions.deinit();
         self.allocator.destroy(self.transitions);
