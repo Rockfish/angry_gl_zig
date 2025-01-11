@@ -191,8 +191,7 @@ pub const MeshPrimitive = struct {
 
         // set the vertex attribute pointers vertex Positions
         gl.enableVertexAttribArray(0);
-        gl.vertexAttribPointer(
-            0,
+        gl.vertexAttribPointer( 0,
             3,
             gl.FLOAT,
             gl.FALSE,

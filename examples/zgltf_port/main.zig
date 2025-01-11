@@ -50,6 +50,8 @@ pub fn main() !void {
 
     const model_paths = [_][]const u8 {
         "/Users/john/Dev/Zig/Repos/zgltf/test-samples/rigged_simple/RiggedSimple.gltf",
+        "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/BoxVertexColors/glTF/BoxVertexColors.gltf",
+        "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/BoxTextured/glTF/BoxTextured.gltf",
         "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/CesiumMan/glTF/CesiumMan.gltf",
         "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Spacesuit.gltf",
         "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Adventurer.gltf",
@@ -62,8 +64,8 @@ pub fn main() !void {
     };
 
     // try run_app(allocator, window);
-    try glftReport(model_paths[0]);
-    try run_animation(allocator, window, model_paths[0]);
+    try glftReport(model_paths[1]);
+    try run_animation(allocator, window, model_paths[1]);
 
     glfw.terminate();
 }

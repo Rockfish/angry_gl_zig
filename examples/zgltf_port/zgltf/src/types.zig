@@ -95,12 +95,37 @@ pub const Accessor = struct {
     component_type: ComponentType,
     /// Specifies if the accessor’s elements are scalars, vectors, or matrices.
     type: AccessorType,
-    /// Computed stride: @sizeOf(component_type) * type.
-    stride: usize,
     /// The number of elements referenced by this accessor.
-    count: usize,
+    count: i32,
     /// Specifies whether integer data values are normalized before usage.
     normalized: bool = false,
+
+    // not part of the definition
+    /// /// Computed stride: @sizeOf(component_type) * type.
+    /// stride: usize,
+
+    pub fn getComponentSize(accessor: Accessor) usize {
+        return switch (accessor.component_type) {
+            .byte => @sizeOf(i8),
+            .unsigned_byte => @sizeOf(u8),
+            .short => @sizeOf(i16),
+            .unsigned_short => @sizeOf(u16),
+            .unsigned_integer => @sizeOf(u32),
+            .float => @sizeOf(f32),
+        };
+    }
+
+    pub fn getTypeSize(accessor: Accessor) usize {
+        return switch (accessor.type) {
+            .scalar => 1,
+            .vec2 => 2,
+            .vec3 => 3,
+            .vec4 => 4,
+            .mat2x2 => 4,
+            .mat3x3 => 9,
+            .mat4x4 => 16,
+        };
+    }
 
     pub fn iterator(
         accessor: Accessor,
@@ -135,21 +160,23 @@ pub const Accessor = struct {
             if (buffer_view.byte_stride) |byte_stride| {
                 break :blk byte_stride / comp_size;
             } else {
-                break :blk accessor.stride / comp_size;
+                // break :blk accessor.stride / comp_size;
+                break :blk accessor.getTypeSize();
             }
         };
 
         const total_count: usize = @intCast(accessor.count);
-        const datum_count: usize = switch (accessor.type) {
-            .scalar => 1,
-            .vec2 => 2,
-            .vec3 => 3,
-            .vec4 => 4,
-            .mat4x4 => 16,
-            else => {
-                panic("Accessor type '{}' not implemented.", .{accessor.type});
-            },
-        };
+        // const datum_count: usize = switch (accessor.type) {
+        //     .scalar => 1,
+        //     .vec2 => 2,
+        //     .vec3 => 3,
+        //     .vec4 => 4,
+        //     .mat4x4 => 16,
+        //     else => {
+        //         panic("Accessor type '{}' not implemented.", .{accessor.type});
+        //     },
+        // };
+        const datum_count: usize = accessor.getTypeSize();
 
         const data: [*]const T = @ptrCast(@alignCast(binary.ptr));
 

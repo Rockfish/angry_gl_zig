@@ -1,13 +1,14 @@
 const std = @import("std");
 const Gltf = @import("zgltf/src/main.zig");
 
+// TODO: rewrite, no point casting to a type, just leave as []u8
 pub fn getBufferSlice(comptime T: type, gltf: *Gltf, accessor_id: usize) []T {
     const accessor = gltf.data.accessors.items[accessor_id];
 
     // Don't think this is correct, think it should be fine as long as stride > than sizeOf
-    if (@sizeOf(T) != accessor.stride) {
-        std.log.err("sizeOf(T) : {d} does not equal accessor.stride: {d}, which is not supported yet", .{@sizeOf(T), accessor.stride});
-    }
+    // if (@sizeOf(T) != accessor.stride) {
+    //     std.log.err("sizeOf(T) : {d} does not equal accessor.stride: {d}, which is not supported yet", .{@sizeOf(T), accessor.stride});
+    // }
 
     const buffer_view = gltf.data.buffer_views.items[accessor.buffer_view.?];
     const buffer = gltf.buffer_data.items[buffer_view.buffer];
@@ -18,7 +19,7 @@ pub fn getBufferSlice(comptime T: type, gltf: *Gltf, accessor_id: usize) []T {
     const slice = buffer[start..end];
 
     // these doesn't work in all cases because the stride can be greater then sizeOf(T)
-    const data = @as([*]T, @ptrCast(@alignCast(@constCast(slice))))[0..accessor.count * accessor.stride];
+    const data = @as([*]T, @ptrCast(@alignCast(@constCast(slice))))[0..accessor.count];
     return data;
 }
 

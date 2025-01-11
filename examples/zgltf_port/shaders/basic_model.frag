@@ -2,6 +2,7 @@
 
 in vec2 fragTexCoord;
 in vec3 fragNormal;
+in vec4 fragColor;
 
 uniform int mesh_id;
 
@@ -32,7 +33,7 @@ void main()
         color = texture(texture_diffuse, fragTexCoord);
     }  else {
         if (has_color == 1) {
-           color = diffuse_color;
+           color = fragColor;
         }
     }
 
@@ -46,4 +47,6 @@ void main()
     finalColor = color * vec4((ambient + diffuse), 1.0f);
     // finalColor = texture(texture_diffuse, fragTexCoord);
     // finalColor = color + texture(texture_diffuse, fragTexCoord) + hit_color;
+    // finalColor = vec4(0.8, 0.2, 0.2, 1.0);
+    // finalColor = fragColor;
 }

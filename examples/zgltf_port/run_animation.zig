@@ -111,6 +111,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     const ambientColor: Vec3 = vec3(NON_BLUE * 0.7, NON_BLUE * 0.7, 0.7);
     var texture_cache = std.ArrayList(*Texture).init(allocator);
 
+    // var texture_map = std.HashMap(usize, *Texture).init(allocator);
+
     var model = blk: {
         std.debug.print("Main: loading model: {s}\n", .{model_path});
         var builder = try ModelBuilder.init(allocator, &texture_cache, "Spacesuit", model_path);
