@@ -79,7 +79,7 @@ pub const BufferView = struct {
     /// The offset into the buffer in bytes.
     byte_offset: usize = 0,
     /// The stride, in bytes.
-    byte_stride: ?usize = null,
+    byte_stride: usize = 0,
     /// The hint representing the intended GPU buffer type
     /// to use with this buffer view.
     target: ?Target = null,
@@ -96,7 +96,7 @@ pub const Accessor = struct {
     /// Specifies if the accessor’s elements are scalars, vectors, or matrices.
     type: AccessorType,
     /// The number of elements referenced by this accessor.
-    count: i32,
+    count: usize,
     /// Specifies whether integer data values are normalized before usage.
     normalized: bool = false,
 
@@ -289,7 +289,7 @@ const OcclusionTextureInfo = struct {
 /// A set of parameter values that are used to define
 /// the metallic-roughness material model
 /// from Physically-Based Rendering methodology.
-pub const MetallicRoughness = struct {
+pub const PbrMetallicRoughness = struct {
     /// The factors for the base color of the material.
     base_color_factor: [4]f32 = [_]f32{ 1, 1, 1, 1 },
     /// The base color texture.
@@ -309,7 +309,7 @@ pub const Material = struct {
     /// A set of parameter values that are used to define
     /// the metallic-roughness material model
     /// from Physically Based Rendering methodology.
-    metallic_roughness: MetallicRoughness = .{},
+    pbr_metallic_roughness: PbrMetallicRoughness = .{},
     /// The tangent space normal texture.
     normal_texture: ?NormalTextureInfo = null,
     /// The occlusion texture.

@@ -1,7 +1,7 @@
 const std = @import("std");
 const core = @import("core");
 const gl = @import("zopengl").bindings;
-const Texture = core.texture.Texture;
+const Texture = @import("texture.zig").Texture;
 const Shader = core.Shader;
 const utils = core.utils;
 const math = @import("math");
@@ -77,7 +77,7 @@ pub const MeshPrimitive = struct {
     ebo_indices: c_uint = undefined,
 
     const Self = @This();
-    
+
     pub fn deinit(self: *Self) void {
         self.allocator.destroy(self);
     }
@@ -142,8 +142,15 @@ pub const MeshPrimitive = struct {
         }
 
         if (primitive.material) |accessor_id| {
-            mesh_primitive.material = gltf.data.materials.items[accessor_id];
+            const material = gltf.data.materials.items[accessor_id];
             std.debug.print("has_material: {any}\n", .{mesh_primitive.material});
+
+            if(material.pbr_metallic_roughness.base_color_texture) |base_color_texture| {
+                const texture = try Texture.init(allocator, gltf, base_color_texture.index, "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/BoxTextured/glTF");
+                try gltf.loaded_textures.put(base_color_texture.index, texture);
+            }
+
+            mesh_primitive.material = material;
         }
 
         return mesh_primitive;

@@ -64,8 +64,8 @@ pub fn main() !void {
     };
 
     // try run_app(allocator, window);
-    try glftReport(model_paths[1]);
-    try run_animation(allocator, window, model_paths[1]);
+    try glftReport(model_paths[2]);
+    try run_animation(allocator, window, model_paths[2]);
 
     glfw.terminate();
 }

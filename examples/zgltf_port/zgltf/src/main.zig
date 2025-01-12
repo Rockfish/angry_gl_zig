@@ -5,8 +5,10 @@
 const Self = @This();
 
 const std = @import("std");
+const core = @import("core");
 const helpers = @import("helpers.zig");
 const types = @import("types.zig");
+const _texture = @import("../../texture.zig");
 
 const mem = std.mem;
 const math = std.math;
@@ -43,7 +45,7 @@ pub const Attribute = types.Attribute;
 pub const Mode = types.Mode;
 pub const ComponentType = types.ComponentType;
 pub const Target = types.Target;
-pub const MetallicRoughness = types.MetallicRoughness;
+pub const PbrMetallicRoughness = types.PbrMetallicRoughness;
 pub const AnimationSampler = types.AnimationSampler;
 pub const Channel = types.Channel;
 pub const MagFilter = types.MagFilter;
@@ -79,6 +81,7 @@ data: Data,
 
 // glb_binary: ?[]align(4) const u8 = null,
 buffer_data: ArrayList([]align(4) const u8),
+loaded_textures: std.AutoHashMap(usize, *_texture.Texture),
 
 pub fn init(allocator: Allocator) Self {
     var arena = allocator.create(ArenaAllocator) catch {
@@ -91,6 +94,7 @@ pub fn init(allocator: Allocator) Self {
     return Self{
         .arena = arena,
         .buffer_data = ArrayList([]align(4) const u8).init(alloc),
+        .loaded_textures = std.AutoHashMap(usize, *_texture.Texture).init(alloc),
         .data = .{
             .asset = Asset{ .version = "Undefined" },
             .scenes = ArrayList(Scene).init(alloc),
@@ -637,6 +641,14 @@ fn parseGltfJson(self: *Self, gltf_json: []const u8) !void {
                             );
                         }
 
+                        if (attributes.object.get("COLOR_0")) |color| {
+                            try primitive.attributes.append(
+                                .{
+                                    .color = parseIndex(color),
+                                },
+                            );
+                        }
+
                         const texcoords = [_][]const u8{
                             "TEXCOORD_0",
                             "TEXCOORD_1",
@@ -714,7 +726,7 @@ fn parseGltfJson(self: *Self, gltf_json: []const u8) !void {
                 .component_type = undefined,
                 .type = undefined,
                 .count = undefined,
-                .stride = undefined,
+                // .stride = undefined,
             };
 
             if (object.get("componentType")) |component_type| {
@@ -763,24 +775,24 @@ fn parseGltfJson(self: *Self, gltf_json: []const u8) !void {
                 accessor.byte_offset = @as(usize, @intCast(byte_offset.integer));
             }
 
-            const component_size: usize = switch (accessor.component_type) {
-                .byte => @sizeOf(i8),
-                .unsigned_byte => @sizeOf(u8),
-                .short => @sizeOf(i16),
-                .unsigned_short => @sizeOf(u16),
-                .unsigned_integer => @sizeOf(u32),
-                .float => @sizeOf(f32),
-            };
-
-            accessor.stride = switch (accessor.type) {
-                .scalar => component_size,
-                .vec2 => 2 * component_size,
-                .vec3 => 3 * component_size,
-                .vec4 => 4 * component_size,
-                .mat2x2 => 4 * component_size,
-                .mat3x3 => 9 * component_size,
-                .mat4x4 => 16 * component_size,
-            };
+            // const component_size: usize = switch (accessor.component_type) {
+            //     .byte => @sizeOf(i8),
+            //     .unsigned_byte => @sizeOf(u8),
+            //     .short => @sizeOf(i16),
+            //     .unsigned_short => @sizeOf(u16),
+            //     .unsigned_integer => @sizeOf(u32),
+            //     .float => @sizeOf(f32),
+            // };
+            //
+            // accessor.stride = switch (accessor.type) {
+            //     .scalar => component_size,
+            //     .vec2 => 2 * component_size,
+            //     .vec3 => 3 * component_size,
+            //     .vec4 => 4 * component_size,
+            //     .mat2x2 => 4 * component_size,
+            //     .mat3x3 => 9 * component_size,
+            //     .mat4x4 => 16 * component_size,
+            // };
 
             try self.data.accessors.append(accessor);
         }
@@ -886,7 +898,7 @@ fn parseGltfJson(self: *Self, gltf_json: []const u8) !void {
             }
 
             if (object.get("pbrMetallicRoughness")) |pbrMetallicRoughness| {
-                var metallic_roughness: MetallicRoughness = .{};
+                var metallic_roughness: PbrMetallicRoughness = .{};
                 if (pbrMetallicRoughness.object.get("baseColorFactor")) |color_factor| {
                     for (color_factor.array.items, 0..) |factor, i| {
                         metallic_roughness.base_color_factor[i] = parseFloat(f32, factor);
@@ -929,7 +941,7 @@ fn parseGltfJson(self: *Self, gltf_json: []const u8) !void {
                     }
                 }
 
-                material.metallic_roughness = metallic_roughness;
+                material.pbr_metallic_roughness = metallic_roughness;
             }
 
             if (object.get("normalTexture")) |normal_texture| {
