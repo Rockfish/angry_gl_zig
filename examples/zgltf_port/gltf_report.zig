@@ -122,7 +122,7 @@ fn printAccessor(id: usize, accessor: Accessor) void {
     print("   buffer_view: {any}\n", .{accessor.buffer_view});
     print("   count: {d}\n", .{accessor.count});
     print("   byte_offset: {d}\n", .{accessor.byte_offset});
-    print("   stride: {d}\n", .{accessor.stride});
+    // print("   stride: {d}\n", .{accessor.stride});
     print("   normalized: {any}\n", .{accessor.normalized});
 }
 

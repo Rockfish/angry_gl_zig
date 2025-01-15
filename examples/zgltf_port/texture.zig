@@ -55,7 +55,7 @@ const Allocator = std.mem.Allocator;
 
 pub const Texture = struct {
     id: u32,
-    texture_path: []const u8,
+    texture_path: [:0]const u8,
     // texture_type: TextureType,
     width: u32,
     height: u32,
@@ -69,7 +69,7 @@ pub const Texture = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: std.mem.Allocator, gltf: *Gltf, texture_id: usize, directory: []const u8) !*Texture {
+    pub fn init(allocator: std.mem.Allocator, gltf: *Gltf, texture_index: usize, directory: []const u8) !*Texture {
         zstbi.init(allocator);
         defer zstbi.deinit();
 
@@ -77,17 +77,20 @@ pub const Texture = struct {
         // OpenGL assumes texture coordinates have a bottom-left origin
         zstbi.setFlipVerticallyOnLoad(true);
 
-        const gltf_texture = gltf.data.textures.items[texture_id];
+        const gltf_texture = gltf.data.textures.items[texture_index];
         const source_id = gltf_texture.source orelse std.debug.panic("texture.source null not supported yet.", .{});
         const image_id = gltf.data.images.items[source_id];
         const uri = image_id.uri orelse std.debug.panic("image.uri null not supported yet.", .{});
 
-        const path = try std.fs.path.join(allocator, &[_][]const u8{ directory, uri });
-        var buf: [256]u8 = undefined;
-        const c_path = utils.bufCopyZ(&buf, path);
+        const c_path = try std.fs.path.joinZ(allocator, &[_][]const u8{ directory, uri });
+
+        // var buf: [256]u8 = undefined;
+        // const c_path = utils.bufCopyZ(&buf, path);
+
+        std.debug.print("Loading texture: {s}\n", .{c_path});
 
         var image = zstbi.Image.loadFromFile(c_path, 0) catch |err| {
-            std.debug.print("Texture loadFromFile error: {any}  filepath: {s}\n", .{ err, path });
+            std.debug.print("Texture loadFromFile error: {any}  filepath: {s}\n", .{ err, c_path });
             @panic(@errorName(err));
         };
         defer image.deinit();
@@ -101,10 +104,7 @@ pub const Texture = struct {
 
         var gl_texture_id: gl.Uint = undefined;
 
-        // std.debug.print("Texture: generating a texture\n", .{});
         gl.genTextures(1, &gl_texture_id);
-
-        // std.debug.print("Texture: binding a texture\n", .{});
         gl.bindTexture(gl.TEXTURE_2D, gl_texture_id);
 
         gl.texImage2D(
@@ -125,9 +125,11 @@ pub const Texture = struct {
             if (gltf_texture.sampler) |sampler_id| {
                 break :blk gltf.data.samplers.items[sampler_id];
             } else {
-                break :blk Gltf.TextureSampler {};
+                break :blk Gltf.TextureSampler{};
             }
         };
+
+        std.debug.print("texture sampler: {any}\n", .{sampler});
 
         const wrap_s: i32 = switch (sampler.wrap_s) {
             Gltf.WrapMode.clamp_to_edge => gl.CLAMP_TO_EDGE,
@@ -175,8 +177,8 @@ pub const Texture = struct {
 
         const texture = try allocator.create(Texture);
         texture.* = Texture{
-            .id = @intCast(texture_id),
-            .texture_path = try allocator.dupe(u8, path),
+            .id = @intCast(gl_texture_id),
+            .texture_path = c_path,
             // .texture_type = texture_config.texture_type,
             .width = image.width,
             .height = image.height,
@@ -198,4 +200,3 @@ pub const Texture = struct {
         return texture;
     }
 };
-

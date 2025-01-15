@@ -131,7 +131,7 @@ pub const GltfBuilder = struct {
         defer self.allocator.free(buf);
 
         var gltf = Gltf.init(self.allocator);
-        defer gltf.deinit();
+        //defer gltf.deinit();
 
         try gltf.parse(buf);
 
@@ -146,6 +146,7 @@ pub const GltfBuilder = struct {
             .name = try self.allocator.dupe(u8, self.name),
             .meshes = self.meshes,
             .animator = animator,
+            .gltf = gltf,
         };
 
         return model;
@@ -157,6 +158,9 @@ pub const GltfBuilder = struct {
     // data:image/jpeg;base64
     // data:image/png;base64
 
+    // TODO: Note this could be done on demand when required by a mesh
+    // because its is possible that are multiple scences with different meshes
+    // and not all meshes will be loaded depending on the selected scene.
     pub fn loadBufferData(self: *Self, gltf: *Gltf) !void {
         const alloc = gltf.arena.allocator();
         for (gltf.data.buffers.items, 0..) |buffer, i| {
@@ -168,7 +172,7 @@ pub const GltfBuilder = struct {
                         std.debug.print("uri: {s}\n", .{uri[0..idx]});
                         const decoder = std.base64.standard.Decoder;
                         const decoded_length = try decoder.calcSizeForSlice(uri[idx..uri.len]);
-                        const decoded_buffer:[]align(4) u8 = try alloc.allocWithOptions(u8, decoded_length, 4, null);
+                        const decoded_buffer: []align(4) u8 = try alloc.allocWithOptions(u8, decoded_length, 4, null);
                         try decoder.decode(decoded_buffer, uri[idx..uri.len]);
                         try gltf.buffer_data.append(decoded_buffer);
                     }
@@ -219,7 +223,7 @@ pub const GltfBuilder = struct {
 
                 var positions: ?[]Vec3 = null;
                 var normals: ?[]Vec3 = null;
-                var texcoords: ?[]Vec2= null;
+                var texcoords: ?[]Vec2 = null;
                 var tangents: ?[]Vec3 = null;
                 var colors: ?[]Vec4 = null;
                 var joints: ?[][4]u16 = null;
@@ -255,14 +259,14 @@ pub const GltfBuilder = struct {
                 if (positions != null) {
                     for (0..positions.?.len) |i| {
                         const vertex = PrimitiveVertex{
-                            .position = if (positions) |pos| pos[i] else Vec3.fromArray([3]f32{0, 0, 0}),
-                            .normal = if (normals) |norm| norm[i] else Vec3.fromArray([3]f32{0, 0, 1}),
-                            .uv = if (texcoords) |uv| uv[i] else Vec2.fromArray([2]f32{0, 0}),
-                            .tangent = if (tangents) |tan| tan[i] else Vec3.fromArray([3]f32{1, 0, 0}),
+                            .position = if (positions) |pos| pos[i] else Vec3.fromArray([3]f32{ 0, 0, 0 }),
+                            .normal = if (normals) |norm| norm[i] else Vec3.fromArray([3]f32{ 0, 0, 1 }),
+                            .uv = if (texcoords) |uv| uv[i] else Vec2.fromArray([2]f32{ 0, 0 }),
+                            .tangent = if (tangents) |tan| tan[i] else Vec3.fromArray([3]f32{ 1, 0, 0 }),
                             //.bitangent = if (tangents and normals) cross(normal, tangent.xyz) * tangent.w else [3]f32{0, 1, 0},
-                            .bi_tangent = Vec3.fromArray([3]f32{0, 1, 0}),
-                            .bone_ids = if (joints) |j| j[i] else [4]u16{0, 0, 0, 0},
-                            .bone_weights = if (weights) |w| w[i] else [4]f32{0, 0, 0, 0},
+                            .bi_tangent = Vec3.fromArray([3]f32{ 0, 1, 0 }),
+                            .bone_ids = if (joints) |j| j[i] else [4]u16{ 0, 0, 0, 0 },
+                            .bone_weights = if (weights) |w| w[i] else [4]f32{ 0, 0, 0, 0 },
                         };
                         try vertices.append(vertex);
                     }
@@ -300,7 +304,7 @@ pub const GltfBuilder = struct {
 fn getBufferSlice(comptime T: type, gltf: *Gltf, accessor_id: usize) []T {
     const accessor = gltf.data.accessors.items[accessor_id];
     if (@sizeOf(T) != accessor.stride) {
-        std.debug.panic("sizeOf(T) : {d} does not equal accessor.stride: {d}", .{@sizeOf(T), accessor.stride});
+        std.debug.panic("sizeOf(T) : {d} does not equal accessor.stride: {d}", .{ @sizeOf(T), accessor.stride });
     }
     const buffer_view = gltf.data.buffer_views.items[accessor.buffer_view.?];
     const glb_buf = gltf.buffer_data.items[buffer_view.buffer];

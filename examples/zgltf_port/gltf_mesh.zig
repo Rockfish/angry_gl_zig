@@ -37,14 +37,13 @@ pub const Mesh = struct {
     pub fn init(allocator: Allocator, gltf: *Gltf, gltf_mesh: Gltf.Mesh) !*Mesh {
         const mesh = try allocator.create(Mesh);
 
-        mesh.* = Mesh {
+        mesh.* = Mesh{
             .allocator = allocator,
             .name = gltf_mesh.name,
             .primitives = ArrayList(*MeshPrimitive).init(allocator),
         };
 
         for (gltf_mesh.primitives.items, 0..) |primitive, id| {
-
             const mesh_primitive = try MeshPrimitive.init(allocator, gltf, primitive, id);
             try mesh.primitives.append(mesh_primitive);
         }
@@ -58,7 +57,6 @@ pub const Mesh = struct {
         }
     }
 };
-
 
 pub const MeshPrimitive = struct {
     allocator: Allocator,
@@ -83,9 +81,8 @@ pub const MeshPrimitive = struct {
     }
 
     pub fn init(allocator: Allocator, gltf: *Gltf, primitive: Gltf.Primitive, id: usize) !*MeshPrimitive {
-
         const mesh_primitive = try allocator.create(MeshPrimitive);
-        mesh_primitive.* = MeshPrimitive {
+        mesh_primitive.* = MeshPrimitive{
             .allocator = allocator,
             .id = id,
             .indices_count = 0,
@@ -97,37 +94,30 @@ pub const MeshPrimitive = struct {
         for (primitive.attributes.items) |attribute| {
             switch (attribute) {
                 .position => |accessor_id| {
-                    // const positions = getBufferSlice(Vec3, gltf, accessor_id);
                     mesh_primitive.vbo_positions = createGlArrayBuffer(gltf, 0, accessor_id);
                     std.debug.print("has_positions\n", .{});
                 },
                 .normal => |accessor_id| {
-                    // const normals = getBufferSlice(Vec3, gltf, accessor_id);
                     mesh_primitive.vbo_normals = createGlArrayBuffer(gltf, 1, accessor_id);
                     std.debug.print("has_normals\n", .{});
                 },
                 .texcoord => |accessor_id| {
-                    // const texcoord = getBufferSlice(Vec2, gltf, accessor_id);
                     mesh_primitive.vbo_texcoords = createGlArrayBuffer(gltf, 2, accessor_id);
                     std.debug.print("has_texcoords\n", .{});
                 },
                 .tangent => |accessor_id| {
-                    // const tangents = getBufferSlice(Vec3, gltf, accessor_id);
                     mesh_primitive.vbo_tangents = createGlArrayBuffer(gltf, 3, accessor_id);
                     std.debug.print("has_tangents\n", .{});
                 },
                 .color => |accessor_id| {
-                    // const colors = getBufferSlice(Vec4, gltf, accessor_id);
                     mesh_primitive.vbo_colors = createGlArrayBuffer(gltf, 4, accessor_id);
                     std.debug.print("has_colors\n", .{});
                 },
                 .joints => |accessor_id| {
-                    // const joints = getBufferSlice([4]u16, gltf, accessor_id);
                     mesh_primitive.vbo_joints = createGlArrayBuffer(gltf, 5, accessor_id);
                     std.debug.print("has_joints\n", .{});
                 },
                 .weights => |accessor_id| {
-                    // const weights = getBufferSlice([4]f32, gltf, accessor_id);
                     mesh_primitive.vbo_weights = createGlArrayBuffer(gltf, 6, accessor_id);
                     std.debug.print("has_weights\n", .{});
                 },
@@ -145,8 +135,14 @@ pub const MeshPrimitive = struct {
             const material = gltf.data.materials.items[accessor_id];
             std.debug.print("has_material: {any}\n", .{mesh_primitive.material});
 
-            if(material.pbr_metallic_roughness.base_color_texture) |base_color_texture| {
-                const texture = try Texture.init(allocator, gltf, base_color_texture.index, "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/BoxTextured/glTF");
+            if (material.pbr_metallic_roughness.base_color_texture) |base_color_texture| {
+                // TODO: replace hardcoded directory
+                const texture = try Texture.init(
+                    allocator,
+                    gltf,
+                    base_color_texture.index,
+                    "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/BoxTextured/glTF",
+                );
                 try gltf.loaded_textures.put(base_color_texture.index, texture);
             }
 
@@ -157,7 +153,7 @@ pub const MeshPrimitive = struct {
     }
 
     // Gltf Material to Assimp Mapping
-    // 
+    //
     // material.metallic_roughness.base_color_factor  : diffuse_color
     // material.metallic_roughness.base_color_factor  : base_color
     // material.pbrMetallicRoughness.baseColorTexture : aiTextureType_DIFFUSE
@@ -167,27 +163,14 @@ pub const MeshPrimitive = struct {
     // mat.pbrMetallicRoughness.metallicRoughnessTexture : aiTextureType_DIFFUSE_ROUGHNESS
     //
 
-
     pub fn render(self: *MeshPrimitive, shader: *const Shader) void {
-        // const has_texture = self.*.textures.items.len > 0;
-        // shader.set_bool("has_texture", has_texture);
-        //
-        // for (self.*.textures.items, 0..) |texture, i| {
-        //     const texture_unit: u32 = @intCast(i);
-        //
-        //     gl.activeTexture(gl.TEXTURE0 + texture_unit);
-        //     gl.bindTexture(gl.TEXTURE_2D, texture.id);
-        //
-        //     const uniform = texture.texture_type.toString();
-        //     shader.set_int(uniform, @as(i32, @intCast(texture_unit)));
-        //     // std.debug.print("has_texture: {any} texture id: {d}  name: {s}\n", .{has_texture, i, texture.texture_path});
-        // }
+        shader.set_bool("has_color", false);
+        shader.set_vec4(
+            "diffuse_color",
+            &Vec4.fromArray(self.material.pbr_metallic_roughness.base_color_factor),
+        );
 
-
-        shader.set_bool("has_color", true);
-        shader.set_vec4("diffuse_color", &Vec4.fromArray(self.material.pbr_metallic_roughness.base_color_factor));
-
-        shader.set_bool("has_texture", false);
+        shader.set_bool("has_texture", true);
 
         gl.bindVertexArray(self.vao);
         gl.drawElements(
@@ -259,4 +242,3 @@ pub fn createGlElementBuffer(gltf: *Gltf, accessor_id: usize) c_uint {
     );
     return ebo;
 }
-

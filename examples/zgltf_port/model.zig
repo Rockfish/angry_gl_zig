@@ -1,6 +1,7 @@
 const std = @import("std");
 const core = @import("core");
 const Shader = core.Shader;
+const Gltf = @import("zgltf/src/main.zig");
 
 const Mesh = @import("gltf_mesh.zig").Mesh;
 const MeshPrimitive = @import("gltf_mesh.zig").MeshPrimitive;
@@ -24,16 +25,18 @@ pub const Model = struct {
     meshes: *ArrayList(*Mesh),
     animator: *Animator,
     single_mesh_select: i32 = -1,
+    gltf: Gltf,
 
     const Self = @This();
 
-    pub fn init(allocator: Allocator, name: []const u8, meshes: *ArrayList(*MeshPrimitive), animator: *Animator) !Self {
+    pub fn init(allocator: Allocator, name: []const u8, meshes: *ArrayList(*MeshPrimitive), animator: *Animator, gltf: Gltf,) !Self {
         const model = try allocator.create(Model);
         model.* = Model{
             .allocator = allocator,
             .name = try allocator.dupe(u8, name),
             .meshes = meshes,
             .animator = animator,
+            .gltf = gltf,
         };
 
         return model;
@@ -47,6 +50,7 @@ pub const Model = struct {
         self.allocator.destroy(self.meshes);
         self.allocator.free(self.name);
         self.animator.deinit();
+        self.gltf.deinit();
         self.allocator.destroy(self);
     }
 

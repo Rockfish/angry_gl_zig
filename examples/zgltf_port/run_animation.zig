@@ -51,7 +51,6 @@ const state_ = @import("state.zig");
 const State = state_.State;
 
 pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []const u8) !void {
-
     std.debug.print("running test_animation\n", .{});
 
     const window_scale = window.getContentScale();
@@ -71,7 +70,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         },
     );
 
-    state_.state = state_.State {
+    state_.state = state_.State{
         .viewport_width = viewport_width,
         .viewport_height = viewport_height,
         .scaled_width = scaled_width,
@@ -101,7 +100,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
 
     const shader = try Shader.new(
         allocator,
-        "examples/zgltf_port/shaders/player_shader.vert", 
+        "examples/zgltf_port/shaders/player_shader.vert",
         //"game_level_001/shaders/player_shader.frag",
         "examples/zgltf_port/shaders/basic_model.frag",
     );
@@ -129,7 +128,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     // }
 
     std.debug.print("\n--- Build gltf model ----------------------\n\n", .{});
-    const gltfmodel = blk: {
+    const gltf_model = blk: {
         std.debug.print("Main: loading model: {s}\n", .{model_path});
         var builder = try Builder.init(allocator, &texture_cache, "Spacesuit", model_path);
         const gltfmodel = try builder.build();
@@ -137,10 +136,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         break :blk gltfmodel;
     };
 
-    defer gltfmodel.deinit();
-
     std.debug.print("\n----------------------\n", .{});
-
 
     // const clip = AnimationClip {
     //     .id = 16,
@@ -171,6 +167,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     // state.single_mesh_id = 2;
     var last_animation: i32 = 0;
 
+    shader.use_shader();
     shader.set_bool("has_color", false);
     shader.set_vec3("diffuse_color", &vec3(0.0, 0.0, 0.0));
     shader.set_vec3("ambient_color", &vec3(0.0, 0.0, 0.0));
@@ -196,7 +193,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
 
         shader.set_mat4("matProjection", &state.projection);
         shader.set_mat4("matView", &state.camera.get_lookat_view());
-  
+
         var model_transform = Mat4.identity();
         // model_transform.translate(&vec3(0.0, -10.4, -400.0));
         //model_transform.scale(&vec3(1.0, 1.0, 1.0));
@@ -224,8 +221,18 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
             last_animation = state.animation_id;
         }
 
-       // model.render(shader);
-       gltfmodel.render(shader);
+        const material = gltf_model.gltf.data.materials.items[0];
+        if (material.pbr_metallic_roughness.base_color_texture) |baseColorTexture| {
+            const texUnit: u32 = 0;
+            const texture = gltf_model.gltf.loaded_textures.get(baseColorTexture.index) orelse std.debug.panic("texture not loaded.", .{});
+            gl.activeTexture(gl.TEXTURE0 + @as(c_uint, @intCast(texUnit)));
+            gl.bindTexture(gl.TEXTURE_2D, texture.id);
+            shader.set_int("texture_diffuse", texUnit);
+            shader.set_bool("has_texture", true);
+        }
+
+        // model.render(shader);
+        gltf_model.render(shader);
 
         //try core.dumpModelNodes(model);
         window.swapBuffers();
@@ -234,17 +241,16 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     }
 
     // try core.dumpModelNodes(model);
-    // model.meshes.items[2].printMeshVertices(); 
+    // model.meshes.items[2].printMeshVertices();
 
     std.debug.print("\nRun completed.\n\n", .{});
 
     shader.deinit();
     camera.deinit();
     model.deinit();
+    gltf_model.deinit();
     for (texture_cache.items) |_texture| {
         _texture.deinit();
     }
     texture_cache.deinit();
 }
-
-

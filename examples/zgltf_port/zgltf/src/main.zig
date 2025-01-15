@@ -80,8 +80,9 @@ arena: *ArenaAllocator,
 data: Data,
 
 // glb_binary: ?[]align(4) const u8 = null,
+// TODO: consider moving these to a wrapper class
 buffer_data: ArrayList([]align(4) const u8),
-loaded_textures: std.AutoHashMap(usize, *_texture.Texture),
+loaded_textures: std.AutoHashMap(usize, *const _texture.Texture),
 
 pub fn init(allocator: Allocator) Self {
     var arena = allocator.create(ArenaAllocator) catch {
@@ -94,7 +95,7 @@ pub fn init(allocator: Allocator) Self {
     return Self{
         .arena = arena,
         .buffer_data = ArrayList([]align(4) const u8).init(alloc),
-        .loaded_textures = std.AutoHashMap(usize, *_texture.Texture).init(alloc),
+        .loaded_textures = std.AutoHashMap(usize, *const _texture.Texture).init(alloc),
         .data = .{
             .asset = Asset{ .version = "Undefined" },
             .scenes = ArrayList(Scene).init(alloc),
@@ -116,6 +117,10 @@ pub fn init(allocator: Allocator) Self {
 }
 
 pub fn deinit(self: *Self) void {
+    var iterator = self.loaded_textures.valueIterator();
+    while (iterator.next()) |val| {
+        val.*.deinit();
+    }
     self.arena.deinit();
     self.arena.child_allocator.destroy(self.arena);
 }
