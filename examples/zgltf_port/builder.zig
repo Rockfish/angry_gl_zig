@@ -3,6 +3,7 @@ const gl = @import("zopengl").bindings;
 const panic = @import("std").debug.panic;
 const core = @import("core");
 const math = @import("math");
+const utils = @import("utils.zig");
 
 const Gltf = @import("zgltf/src/main.zig");
 const Model = @import("model.zig").Model;
@@ -26,7 +27,6 @@ const TextureFilter = texture_.TextureFilter;
 const TextureWrap = texture_.TextureWrap;
 const Transform = core.Transform;
 const String = core.String;
-const utils = core.utils;
 
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
@@ -119,21 +119,21 @@ pub const GltfBuilder = struct {
 
         // TODO: check file extension for glb or gltf
 
-        const buf = std.fs.cwd().readFileAllocOptions(
+        const file_contents = std.fs.cwd().readFileAllocOptions(
             self.allocator,
             self.filepath,
-            512_000,
+            4_512_000,
             null,
             4,
             null,
         ) catch |err| std.debug.panic("error: {any}\n", .{err});
 
-        defer self.allocator.free(buf);
+        defer self.allocator.free(file_contents);
 
         var gltf = Gltf.init(self.allocator);
         //defer gltf.deinit();
 
-        try gltf.parse(buf);
+        try gltf.parse(file_contents);
 
         try self.loadBufferData(&gltf);
         try self.loadMeshes(&gltf);
@@ -165,15 +165,21 @@ pub const GltfBuilder = struct {
         const alloc = gltf.arena.allocator();
         for (gltf.data.buffers.items, 0..) |buffer, i| {
             if (buffer.uri) |uri| {
-                if (std.mem.eql(u8, "data:", uri)) {
-                    const comma = strchr(uri, ',');
+                if (std.mem.eql(u8, "data:", uri[0..5])) {
+                    const comma = utils.strchr(uri, ',');
                     if (comma) |idx| {
                         // "uri" : "data:application/octet-stream;base64,
-                        std.debug.print("uri: {s}\n", .{uri[0..idx]});
-                        const decoder = std.base64.standard.Decoder;
-                        const decoded_length = try decoder.calcSizeForSlice(uri[idx..uri.len]);
+                        std.debug.print("uri: {s}  first 10 of data: {s}\n", .{uri[0..idx+1], uri[idx+1..idx+1+10]});
+                        const decoder = std.base64.standard_no_pad.Decoder;
+                        const decoded_length = decoder.calcSizeForSlice(uri[idx+1..uri.len]) catch |err| {
+                            std.debug.panic("decoder calcSizeForSlice error: {any}\n", .{ err });
+                        };
+                        std.debug.print("calcSizeForSlice for decode: {d}\n", .{decoded_length});
                         const decoded_buffer: []align(4) u8 = try alloc.allocWithOptions(u8, decoded_length, 4, null);
-                        try decoder.decode(decoded_buffer, uri[idx..uri.len]);
+                        decoder.decode(decoded_buffer, uri[idx..uri.len]) catch |err| {
+                            std.debug.panic("decoder decode error: {any}\n", .{ err });
+                        };
+
                         try gltf.buffer_data.append(decoded_buffer);
                     }
                 } else if (!std.mem.eql(u8, "://", uri)) {
@@ -183,14 +189,16 @@ pub const GltfBuilder = struct {
 
                     std.debug.print("position buffer file path: {s}\n", .{path});
 
-                    const glb_buf = try std.fs.cwd().readFileAllocOptions(
+                    const glb_buf = std.fs.cwd().readFileAllocOptions(
                         alloc,
                         path,
-                        512_000,
+                        4_512_000,
                         null,
                         4,
                         null,
-                    );
+                    ) catch |err| {
+                        std.debug.panic("readFile error: {any}  path: {s}\n", .{err, path});
+                    };
 
                     std.debug.print("buffer: {d} length: {d}\n", .{ i, glb_buf.len });
                     try gltf.buffer_data.append(glb_buf);
@@ -203,7 +211,7 @@ pub const GltfBuilder = struct {
 
     pub fn loadMeshes(self: *Self, gltf: *Gltf) !void {
         for (gltf.data.meshes.items) |gltf_mesh| {
-            const mesh = try Mesh.init(self.allocator, gltf, gltf_mesh);
+            const mesh = try Mesh.init(self.allocator, gltf, self.directory, gltf_mesh);
             try self.meshes.append(mesh);
         }
     }
@@ -315,11 +323,3 @@ fn getBufferSlice(comptime T: type, gltf: *Gltf, accessor_id: usize) []T {
     return data;
 }
 
-fn strchr(str: []const u8, c: u8) ?usize {
-    for (str, 0..) |char, i| {
-        if (char == c) {
-            return i;
-        }
-    }
-    return null;
-}

@@ -82,7 +82,11 @@ data: Data,
 // glb_binary: ?[]align(4) const u8 = null,
 // TODO: consider moving these to a wrapper class
 buffer_data: ArrayList([]align(4) const u8),
+
+// TODO: refactor so that we know the number of texture before 
+// defining loaded_textures so we can use an array instead of a map.
 loaded_textures: std.AutoHashMap(usize, *const _texture.Texture),
+//loaded_textures: ArrayList(?*const _texture.Texture),
 
 pub fn init(allocator: Allocator) Self {
     var arena = allocator.create(ArenaAllocator) catch {
@@ -95,6 +99,7 @@ pub fn init(allocator: Allocator) Self {
     return Self{
         .arena = arena,
         .buffer_data = ArrayList([]align(4) const u8).init(alloc),
+        //.loaded_textures = ArrayList(?*const _texture.Texture).initCapacity(alloc),
         .loaded_textures = std.AutoHashMap(usize, *const _texture.Texture).init(alloc),
         .data = .{
             .asset = Asset{ .version = "Undefined" },

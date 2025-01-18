@@ -34,3 +34,11 @@ pub fn stringHash(str: []const u8, seed: u32) u32 {
     return hash;
 }
 
+pub fn strchr(str: []const u8, c: u8) ?usize {
+    for (str, 0..) |char, i| {
+        if (char == c) {
+            return i;
+        }
+    }
+    return null;
+}

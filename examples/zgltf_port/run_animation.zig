@@ -112,13 +112,13 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
 
     // var texture_map = std.HashMap(usize, *Texture).init(allocator);
 
-    var model = blk: {
-        std.debug.print("Main: loading model: {s}\n", .{model_path});
-        var builder = try ModelBuilder.init(allocator, &texture_cache, "Spacesuit", model_path);
-        const model = try builder.build();
-        builder.deinit();
-        break :blk model;
-    };
+    // var model = blk: {
+    //     std.debug.print("Main: loading model: {s}\n", .{model_path});
+    //     var builder = try ModelBuilder.init(allocator, &texture_cache, "Spacesuit", model_path);
+    //     const model = try builder.build();
+    //     builder.deinit();
+    //     break :blk model;
+    // };
 
     // std.debug.print("\n--- Assimp model ----------------------\n\n", .{});
     //
@@ -165,7 +165,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     gl.enable(gl.DEPTH_TEST);
 
     // state.single_mesh_id = 2;
-    var last_animation: i32 = 0;
+    // var last_animation: i32 = 0;
 
     shader.use_shader();
     shader.set_bool("has_color", false);
@@ -213,24 +213,6 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         shader.set_mat4("aimRot", &identity);
         shader.set_mat4("lightSpaceMatrix", &identity);
 
-        try model.update_animation(state.delta_time);
-        //try model.playTick(1.0);
-        //model.single_mesh_select = state.single_mesh_id;
-        if (last_animation != state.animation_id) {
-            try model.animator.playAnimationById(@intCast(state.animation_id));
-            last_animation = state.animation_id;
-        }
-
-        const material = gltf_model.gltf.data.materials.items[0];
-        if (material.pbr_metallic_roughness.base_color_texture) |baseColorTexture| {
-            const texUnit: u32 = 0;
-            const texture = gltf_model.gltf.loaded_textures.get(baseColorTexture.index) orelse std.debug.panic("texture not loaded.", .{});
-            gl.activeTexture(gl.TEXTURE0 + @as(c_uint, @intCast(texUnit)));
-            gl.bindTexture(gl.TEXTURE_2D, texture.id);
-            shader.set_int("texture_diffuse", texUnit);
-            shader.set_bool("has_texture", true);
-        }
-
         // model.render(shader);
         gltf_model.render(shader);
 
@@ -247,7 +229,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
 
     shader.deinit();
     camera.deinit();
-    model.deinit();
+    // model.deinit();
     gltf_model.deinit();
     for (texture_cache.items) |_texture| {
         _texture.deinit();

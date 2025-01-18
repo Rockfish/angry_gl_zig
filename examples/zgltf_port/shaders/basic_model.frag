@@ -33,6 +33,8 @@ void main()
         color = texture(texture_diffuse, fragTexCoord);
     }  else {
         if (has_color == 1) {
+           color = diffuse_color;
+        } else {
            color = fragColor;
         }
     }

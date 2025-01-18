@@ -34,7 +34,7 @@ pub const Mesh = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, gltf: *Gltf, gltf_mesh: Gltf.Mesh) !*Mesh {
+    pub fn init(allocator: Allocator, gltf: *Gltf, directory: []const u8, gltf_mesh: Gltf.Mesh) !*Mesh {
         const mesh = try allocator.create(Mesh);
 
         mesh.* = Mesh{
@@ -44,16 +44,16 @@ pub const Mesh = struct {
         };
 
         for (gltf_mesh.primitives.items, 0..) |primitive, id| {
-            const mesh_primitive = try MeshPrimitive.init(allocator, gltf, primitive, id);
+            const mesh_primitive = try MeshPrimitive.init(allocator, gltf, directory, primitive, id);
             try mesh.primitives.append(mesh_primitive);
         }
 
         return mesh;
     }
 
-    pub fn render(self: *Self, shader: *const Shader) void {
+    pub fn render(self: *Self, gltf: *Gltf, shader: *const Shader) void {
         for (self.primitives.items) |primitive| {
-            primitive.render(shader);
+            primitive.render(gltf, shader);
         }
     }
 };
@@ -80,7 +80,7 @@ pub const MeshPrimitive = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, gltf: *Gltf, primitive: Gltf.Primitive, id: usize) !*MeshPrimitive {
+    pub fn init(allocator: Allocator, gltf: *Gltf, directory: []const u8, primitive: Gltf.Primitive, id: usize) !*MeshPrimitive {
         const mesh_primitive = try allocator.create(MeshPrimitive);
         mesh_primitive.* = MeshPrimitive{
             .allocator = allocator,
@@ -133,15 +133,14 @@ pub const MeshPrimitive = struct {
 
         if (primitive.material) |accessor_id| {
             const material = gltf.data.materials.items[accessor_id];
-            std.debug.print("has_material: {any}\n", .{mesh_primitive.material});
+            std.debug.print("has_material: {any}\n", .{material});
 
             if (material.pbr_metallic_roughness.base_color_texture) |base_color_texture| {
-                // TODO: replace hardcoded directory
                 const texture = try Texture.init(
                     allocator,
                     gltf,
+                    directory,
                     base_color_texture.index,
-                    "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/BoxTextured/glTF",
                 );
                 try gltf.loaded_textures.put(base_color_texture.index, texture);
             }
@@ -163,14 +162,20 @@ pub const MeshPrimitive = struct {
     // mat.pbrMetallicRoughness.metallicRoughnessTexture : aiTextureType_DIFFUSE_ROUGHNESS
     //
 
-    pub fn render(self: *MeshPrimitive, shader: *const Shader) void {
-        shader.set_bool("has_color", false);
-        shader.set_vec4(
-            "diffuse_color",
-            &Vec4.fromArray(self.material.pbr_metallic_roughness.base_color_factor),
-        );
+    pub fn render(self: *MeshPrimitive, gltf: *Gltf, shader: *const Shader) void {
 
-        shader.set_bool("has_texture", true);
+        if (self.material.pbr_metallic_roughness.base_color_texture) |baseColorTexture| {
+            const texUnit: u32 = 0;
+            const texture = gltf.loaded_textures.get(baseColorTexture.index) orelse std.debug.panic("texture not loaded.", .{});
+            gl.activeTexture(gl.TEXTURE0 + @as(c_uint, @intCast(texUnit)));
+            gl.bindTexture(gl.TEXTURE_2D, texture.gl_texture_id);
+            shader.set_int("texture_diffuse", texUnit);
+            shader.set_bool("has_texture", true);
+        } else {
+            const color = self.material.pbr_metallic_roughness.base_color_factor;
+            shader.set_4float("diffuse_color", &color);
+            shader.set_bool("has_color", true);
+        }
 
         gl.bindVertexArray(self.vao);
         gl.drawElements(
@@ -192,13 +197,16 @@ pub fn createGlArrayBuffer(gltf: *Gltf, index: u32, accessor_id: usize) c_uint {
 
     const data_size = accessor.getComponentSize() * accessor.getTypeSize() * accessor.count;
 
-    std.debug.print("\naccessor:  {any}\n\n", .{accessor});
-    std.debug.print("buffer_view:  {any}\n\n", .{buffer_view});
-    std.debug.print("buffer len:  {any}\n\n", .{buffer_data.len});
-    std.debug.print("data size:  {any}\n\n", .{data_size});
-
     const start = accessor.byte_offset + buffer_view.byte_offset;
     const end = start + data_size;
+
+    std.debug.print("\naccessor:  {any}\n", .{accessor});
+    std.debug.print("buffer_view:  {any}\n", .{buffer_view});
+    std.debug.print("buffer len:  {d}\n", .{buffer_data.len});
+    std.debug.print("data size:  {d}\n", .{data_size});
+    std.debug.print("start:  {d}\n", .{start});
+    std.debug.print("end:  {d}\n", .{end});
+
     const data = buffer_data[start..end];
 
     var vbo: gl.Uint = undefined;
@@ -225,11 +233,21 @@ pub fn createGlArrayBuffer(gltf: *Gltf, index: u32, accessor_id: usize) c_uint {
 pub fn createGlElementBuffer(gltf: *Gltf, accessor_id: usize) c_uint {
     const accessor = gltf.data.accessors.items[accessor_id];
     const buffer_view = gltf.data.buffer_views.items[accessor.buffer_view.?];
-    const buffer = gltf.buffer_data.items[buffer_view.buffer];
+    const buffer_data = gltf.buffer_data.items[buffer_view.buffer];
+
+    const data_size = accessor.getComponentSize() * accessor.getTypeSize() * accessor.count;
 
     const start = accessor.byte_offset + buffer_view.byte_offset;
-    const end = start + buffer_view.byte_length;
-    const data = buffer[start..end];
+    const end = start + data_size; // buffer_view.byte_length;
+
+    std.debug.print("\naccessor:  {any}\n", .{accessor});
+    std.debug.print("buffer_view:  {any}\n", .{buffer_view});
+    std.debug.print("buffer len:  {d}\n", .{buffer_data.len});
+    std.debug.print("data size:  {d}\n", .{data_size});
+    std.debug.print("start:  {d}\n", .{start});
+    std.debug.print("end:  {d}\n", .{end});
+
+    const data = buffer_data[start..end];
 
     var ebo: gl.Uint = undefined;
     gl.genBuffers(1, &ebo);

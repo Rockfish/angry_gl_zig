@@ -29,7 +29,7 @@ pub const Model = struct {
 
     const Self = @This();
 
-    pub fn init(allocator: Allocator, name: []const u8, meshes: *ArrayList(*MeshPrimitive), animator: *Animator, gltf: Gltf,) !Self {
+    pub fn init(allocator: Allocator, name: []const u8, meshes: *ArrayList(*MeshPrimitive), animator: *Animator, gltf: *Gltf,) !Self {
         const model = try allocator.create(Model);
         model.* = Model{
             .allocator = allocator,
@@ -87,7 +87,7 @@ pub const Model = struct {
 
             shader.set_int("mesh_id", @intCast(n));
             shader.set_mat4("nodeTransform", &self.animator.final_node_matrices[@intCast(n)]);
-            mesh.render(shader);
+            mesh.render(&self.gltf, shader);
         }
     }
 

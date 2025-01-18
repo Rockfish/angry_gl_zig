@@ -53,19 +53,19 @@ pub fn main() !void {
         "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/BoxVertexColors/glTF/BoxVertexColors.gltf",
         "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/BoxTextured/glTF/BoxTextured.gltf",
         "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/CesiumMan/glTF/CesiumMan.gltf",
-        "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Spacesuit.gltf",
-        "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Adventurer.gltf",
         "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/BrainStem/glTF/BrainStem.gltf",
-        "/Users/john/Dev/Assets/astronaut_character/astronaut_game_character_animated/scene.gltf",
         "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/StainedGlassLamp/glTF/StainedGlassLamp.gltf",
         "/Users/john/Dev/Assets/glTF-Sample-Models/1.0/WalkingLady/glTF/WalkingLady.gltf",
+        "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Spacesuit.gltf",
+        "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Adventurer.gltf",
+        "/Users/john/Dev/Assets/astronaut_character/astronaut_game_character_animated/scene.gltf",
         "/Users/john/Dev/Assets/glTF-Sample-Models/2.0/CesiumMan/glTF-Binary/CesiumMan.glb", // trouble with embedded texture
         "/Users/john/spacesuit_blender_export.glb",
     };
 
     // try run_app(allocator, window);
-    try glftReport(model_paths[2]);
-    try run_animation(allocator, window, model_paths[2]);
+    // try glftReport(model_paths[4]);
+    try run_animation(allocator, window, model_paths[4]);
 
     glfw.terminate();
 }
