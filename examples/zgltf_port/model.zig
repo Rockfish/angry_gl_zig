@@ -1,8 +1,8 @@
 const std = @import("std");
 const core = @import("core");
-const Shader = core.Shader;
 const Gltf = @import("zgltf/src/main.zig");
 
+const Shader = @import("shader.zig").Shader;
 const Mesh = @import("gltf_mesh.zig").Mesh;
 const MeshPrimitive = @import("gltf_mesh.zig").MeshPrimitive;
 const Animator = @import("animator.zig").Animator;

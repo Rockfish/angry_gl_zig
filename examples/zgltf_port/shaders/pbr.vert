@@ -1,5 +1,6 @@
 #version 330 core
 
+// Input attributes
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inTexCoord;
@@ -19,44 +20,25 @@ uniform mat4 matView;
 uniform mat4 matModel;
 uniform mat4 matLightSpace;
 
-out vec2 fragTexCoord;
-out vec3 fragNormal;
-out vec4 fragColor;
-out vec4 fragPosLightSpace;
-out vec3 fragWorldPos;
 
-//uniform mat4 aimRot;
+// Output
+out vec3 fragWorldPos;
+out vec2 fragTexCoord;
+out vec3 fragTangent;
+out vec4 fragColor;
+out vec3 fragNormal;
+out vec4 fragPosLightSpace;
 
 void main() {
-    vec4 totalPosition = vec4(0.0f);
 
-    // for (int i = 0; i < MAX_BONE_INFLUENCE; i++)
-    // {
-    //     if (inBoneIds[i] == -1) {
-    //         continue;
-    //     }
-    //
-    //     if (inBoneIds[i] >= MAX_BONES) {
-    //         totalPosition = vec4(inPosition, 1.0f);
-    //         break;
-    //     }
-    //
-    //     vec4 localPosition = finalBonesMatrices[inBoneIds[i]] * vec4(inPosition, 1.0f);
-    //     totalPosition += localPosition * inWeights[i];
-    //
-    //     vec3 localNormal = mat3(finalBonesMatrices[inBoneIds[i]]) * inNormal;
-    // }
-
-    // if (totalPosition == vec4(0.0f)) {
-    //     totalPosition = nodeTransform * vec4(inPosition, 1.0f);
-    // }
-    //
-    // gl_Position = matProjection * matView * matModel * totalPosition;
+    mat4 matTest = finalBonesMatrices[0];
+    mat4 nodeMat = nodeTransform;
 
     gl_Position = matProjection * matView * matModel * vec4(inPosition, 1.0f);
 
     fragTexCoord = inTexCoord;
     fragColor = inColor;
+    fragTangent = inTangent;
 
     //fragNormal = vec3(aimRot * vec4(inNormal, 1.0));
     mat4 matNormal = transpose(inverse(matModel));
@@ -65,3 +47,4 @@ void main() {
     fragWorldPos = vec3(matModel * vec4(inPosition, 1.0));
     fragPosLightSpace = matLightSpace * vec4(fragWorldPos, 1.0);
 }
+

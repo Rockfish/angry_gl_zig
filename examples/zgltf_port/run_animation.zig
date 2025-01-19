@@ -15,9 +15,10 @@ const Model = core.Model;
 const ModelBuilder = core.ModelBuilder;
 const animation = core.animation;
 //const Camera = core.Camera;
-const Shader = core.Shader;
 const String = core.string.String;
 const FrameCount = core.FrameCount;
+
+const Shader = @import("shader.zig").Shader;
 
 const Vec2 = math.Vec2;
 const Vec3 = math.Vec3;
@@ -100,14 +101,15 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
 
     const shader = try Shader.new(
         allocator,
-        "examples/zgltf_port/shaders/player_shader.vert",
-        //"game_level_001/shaders/player_shader.frag",
-        "examples/zgltf_port/shaders/basic_model.frag",
+        // "examples/zgltf_port/shaders/player_shader.vert",
+        // "examples/zgltf_port/shaders/basic_model.frag",
+        "examples/zgltf_port/shaders/pbr.vert",
+        "examples/zgltf_port/shaders/pbr.frag",
     );
 
     std.debug.print("Shader id: {d}\n", .{shader.id});
 
-    const ambientColor: Vec3 = vec3(NON_BLUE * 0.7, NON_BLUE * 0.7, 0.7);
+    // const ambientColor: Vec3 = vec3(NON_BLUE * 0.7, NON_BLUE * 0.7, 0.7);
     var texture_cache = std.ArrayList(*Texture).init(allocator);
 
     // var texture_map = std.HashMap(usize, *Texture).init(allocator);
@@ -168,12 +170,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     // var last_animation: i32 = 0;
 
     shader.use_shader();
-    shader.set_bool("has_color", false);
-    shader.set_vec3("diffuse_color", &vec3(0.0, 0.0, 0.0));
-    shader.set_vec3("ambient_color", &vec3(0.0, 0.0, 0.0));
-    shader.set_vec3("specular_color", &vec3(0.0, 0.0, 0.0));
-    shader.set_vec3("emissive_color", &vec3(0.0, 0.0, 0.0));
-    shader.set_vec3("hit_color", &vec3(0.0, 0.0, 0.0));
+    // shader.set_bool("has_color", false);
+    // shader.set_vec3("diffuse_color", &vec3(0.0, 0.0, 0.0));
+    // shader.set_vec3("ambient_color", &vec3(0.0, 0.0, 0.0));
+    // shader.set_vec3("specular_color", &vec3(0.0, 0.0, 0.0));
+    // shader.set_vec3("emissive_color", &vec3(0.0, 0.0, 0.0));
+    // shader.set_vec3("hit_color", &vec3(0.0, 0.0, 0.0));
 
     while (!window.shouldClose()) {
         const current_time: f32 = @floatCast(glfw.getTime());
@@ -203,14 +205,17 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         // model_transform.scale(&vec3(0.02, 0.02, 0.02));
         shader.set_mat4("matModel", &model_transform);
 
-        shader.set_bool("useLight", true);
-        shader.set_vec3("ambient", &ambientColor);
-        shader.set_vec3("ambient_light", &vec3(1.0, 0.8, 0.8));
-        shader.set_vec3("light_color", &vec3(0.1, 0.1, 0.1));
-        shader.set_vec3("light_dir", &vec3(10.0, 10.0, 2.0));
+        // shader.set_bool("useLight", true);
+        // shader.set_vec3("ambient", &ambientColor);
+        // shader.set_vec3("ambient_light", &vec3(1.0, 0.8, 0.8));
+        // shader.set_vec3("light_color", &vec3(0.1, 0.1, 0.1));
+        // shader.set_vec3("light_dir", &vec3(10.0, 10.0, 2.0));
+
+        shader.set_vec3("lightPosition", &state.light_postion);
+        shader.set_vec3("viewPosition", &state.camera.position);
 
         const identity = Mat4.identity();
-        shader.set_mat4("aimRot", &identity);
+        // shader.set_mat4("aimRot", &identity);
         shader.set_mat4("lightSpaceMatrix", &identity);
 
         // model.render(shader);
@@ -231,6 +236,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     camera.deinit();
     // model.deinit();
     gltf_model.deinit();
+
     for (texture_cache.items) |_texture| {
         _texture.deinit();
     }

@@ -2,13 +2,12 @@ const std = @import("std");
 const core = @import("core");
 const gl = @import("zopengl").bindings;
 const Texture = @import("texture.zig").Texture;
-const Shader = core.Shader;
+const Shader = @import("shader.zig").Shader;
 const utils = core.utils;
 const math = @import("math");
 
 const Gltf = @import("zgltf/src/main.zig");
 const gltf_utils = @import("utils.zig");
-// const Material = @import("material.zig").Material;
 
 const getBufferSlice = gltf_utils.getBufferSlice;
 
@@ -53,7 +52,7 @@ pub const Mesh = struct {
 
     pub fn render(self: *Self, gltf: *Gltf, shader: *const Shader) void {
         for (self.primitives.items) |primitive| {
-            primitive.render(gltf, shader);
+            primitive.renderPBR(gltf, shader);
         }
     }
 };
@@ -61,7 +60,7 @@ pub const Mesh = struct {
 pub const MeshPrimitive = struct {
     allocator: Allocator,
     id: usize,
-    name: []const u8 = undefined,
+    name: ?[]const u8 = null,
     material: Gltf.Material = undefined,
     indices_count: u32,
     vao: c_uint = undefined,
@@ -77,6 +76,10 @@ pub const MeshPrimitive = struct {
     const Self = @This();
 
     pub fn deinit(self: *Self) void {
+        // depending on who owns the name.
+        // if (self.name) |name| {
+        //     self.allocator.free(name);
+        // }
         self.allocator.destroy(self);
     }
 
@@ -133,19 +136,24 @@ pub const MeshPrimitive = struct {
 
         if (primitive.material) |accessor_id| {
             const material = gltf.data.materials.items[accessor_id];
+            mesh_primitive.material = material;
             std.debug.print("has_material: {any}\n", .{material});
 
             if (material.pbr_metallic_roughness.base_color_texture) |base_color_texture| {
-                const texture = try Texture.init(
-                    allocator,
-                    gltf,
-                    directory,
-                    base_color_texture.index,
-                );
-                try gltf.loaded_textures.put(base_color_texture.index, texture);
+                loadMaterialTexture(allocator, directory, gltf, base_color_texture.index);
             }
-
-            mesh_primitive.material = material;
+            if (material.pbr_metallic_roughness.metallic_roughness_texture) |metallic_roughness_texture| {
+                loadMaterialTexture(allocator, directory, gltf, metallic_roughness_texture.index);
+            }
+            if (material.normal_texture) |normal_texture| {
+                loadMaterialTexture(allocator, directory, gltf, normal_texture.index);
+            }
+            if (material.emissive_texture) |emissive_texture| {
+                loadMaterialTexture(allocator, directory, gltf, emissive_texture.index);
+            }
+            if (material.occlusion_texture) |occlusion_texture| {
+                loadMaterialTexture(allocator, directory, gltf, occlusion_texture.index);
+            }
         }
 
         return mesh_primitive;
@@ -163,7 +171,6 @@ pub const MeshPrimitive = struct {
     //
 
     pub fn render(self: *MeshPrimitive, gltf: *Gltf, shader: *const Shader) void {
-
         if (self.material.pbr_metallic_roughness.base_color_texture) |baseColorTexture| {
             const texUnit: u32 = 0;
             const texture = gltf.loaded_textures.get(baseColorTexture.index) orelse std.debug.panic("texture not loaded.", .{});
@@ -188,7 +195,71 @@ pub const MeshPrimitive = struct {
 
         shader.set_bool("has_color", false);
     }
+
+    pub fn renderPBR(self: *MeshPrimitive, gltf: *Gltf, shader: *const Shader) void {
+
+        // Base Color
+        shader.set_4float("material.baseColorFactor", &self.material.pbr_metallic_roughness.base_color_factor);
+        shader.set_float("material.metallicFactor", self.material.pbr_metallic_roughness.metallic_factor);
+        shader.set_float("material.roughnessFactor", self.material.pbr_metallic_roughness.roughness_factor);
+        shader.set_3float("material.emissiveFactor", &self.material.emissive_factor);
+
+        if (self.material.pbr_metallic_roughness.base_color_texture) |baseColorTexture| {
+            const texUnit = 0;
+            const texture = gltf.loaded_textures.get(baseColorTexture.index) orelse std.debug.panic("texture not loaded.", .{});
+            shader.bind_texture(texUnit, "baseColorTexture", texture);
+        }
+
+        if (self.material.pbr_metallic_roughness.metallic_roughness_texture) |metallicRoughnessTexture| {
+            const texUnit = 1;
+            const texture = gltf.loaded_textures.get(metallicRoughnessTexture.index) orelse std.debug.panic("texture not loaded.", .{});
+            shader.bind_texture(texUnit, "metallicRoughnessTexture", texture);
+        }
+
+        if (self.material.normal_texture) |normalTexture| {
+            const texUnit = 2;
+            const texture = gltf.loaded_textures.get(normalTexture.index) orelse std.debug.panic("texture not loaded.", .{});
+            shader.bind_texture(texUnit, "normalTexture", texture);
+        }
+
+        if (self.material.emissive_texture) |emissiveTexture| {
+            const texUnit = 3;
+            const texture = gltf.loaded_textures.get(emissiveTexture.index) orelse std.debug.panic("texture not loaded.", .{});
+            shader.bind_texture(texUnit, "emissiveTexture", texture);
+        }
+
+        if (self.material.occlusion_texture) |occlusionTexture| {
+            const texUnit = 4;
+            const texture = gltf.loaded_textures.get(occlusionTexture.index) orelse std.debug.panic("texture not loaded.", .{});
+            shader.bind_texture(texUnit, "occlusionTexture", texture);
+        }
+
+        gl.bindVertexArray(self.vao);
+        gl.drawElements(
+            gl.TRIANGLES,
+            @intCast(self.indices_count),
+            gl.UNSIGNED_SHORT,
+            null,
+        );
+        gl.bindVertexArray(0);
+    }
 };
+
+fn loadMaterialTexture(allocator: Allocator, directory: []const u8, gltf: *Gltf, texture_index: usize) void {
+    if (!gltf.loaded_textures.contains(texture_index)) {
+        const texture = Texture.init(
+            allocator,
+            gltf,
+            directory,
+            texture_index,
+        ) catch |err| {
+            std.debug.panic("Error loading texture index: {d} error: {any}", .{ texture_index, err });
+        };
+        gltf.loaded_textures.put(texture_index, texture) catch |err| {
+            std.debug.panic("Error storing texture index: {d} error: {any}", .{ texture_index, err });
+        };
+    }
+}
 
 pub fn createGlArrayBuffer(gltf: *Gltf, index: u32, accessor_id: usize) c_uint {
     const accessor = gltf.data.accessors.items[accessor_id];

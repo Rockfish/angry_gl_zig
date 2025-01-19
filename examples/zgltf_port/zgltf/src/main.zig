@@ -123,7 +123,9 @@ pub fn init(allocator: Allocator) Self {
 
 pub fn deinit(self: *Self) void {
     var iterator = self.loaded_textures.valueIterator();
+    std.debug.print("gltf.deinit freeing textures\n", .{});
     while (iterator.next()) |val| {
+        std.debug.print("  texture id: {d}\n", .{val.*.gltf_texture_id});
         val.*.deinit();
     }
     self.arena.deinit();
