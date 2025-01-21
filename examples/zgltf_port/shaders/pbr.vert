@@ -31,7 +31,6 @@ out mat3 fragTBN;
 void main() {
 
     mat4 matTest = finalBonesMatrices[0];
-    mat4 nodeMat = nodeTransform;
 
     mat3 normalMatrix = transpose(inverse(mat3(matModel)));
     vec3 N = normalize(normalMatrix * inNormal);
@@ -46,6 +45,6 @@ void main() {
     fragNormal = normalize(normalMatrix * inNormal);
     fragTBN = mat3(T, B, N);
 
-    gl_Position = matProjection * matView * matModel * vec4(inPosition, 1.0f);
+    gl_Position = matProjection * matView * matModel * nodeTransform * vec4(inPosition, 1.0f);
 }
 

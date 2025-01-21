@@ -162,7 +162,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
 
     // --- event loop
     state.total_time = @floatCast(glfw.getTime());
-    var frame_counter = FrameCount.new();
+    // var frame_counter = FrameCount.new();
 
     gl.enable(gl.DEPTH_TEST);
 
@@ -184,7 +184,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
 
         state_.processKeys();
 
-        frame_counter.update();
+        // frame_counter.update();
 
         glfw.pollEvents();
         gl.clearColor(0.5, 0.5, 0.5, 1.0);

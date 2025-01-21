@@ -1,6 +1,14 @@
 const std = @import("std");
 const core = @import("core");
+const math = @import("math");
 const Gltf = @import("zgltf/src/main.zig");
+
+const Transform = core.Transform;
+const Mat4 = math.Mat4;
+const mat4 = math.mat4;
+const Vec3 = math.Vec3;
+const vec3 = math.vec3;
+const Quat = math.Quat;
 
 const Shader = @import("shader.zig").Shader;
 const Mesh = @import("gltf_mesh.zig").Mesh;
@@ -22,6 +30,7 @@ const MAX_NODES = 200;
 pub const Model = struct {
     allocator: Allocator,
     name: []const u8,
+    scene: usize,
     meshes: *ArrayList(*Mesh),
     animator: *Animator,
     single_mesh_select: i32 = -1,
@@ -33,6 +42,7 @@ pub const Model = struct {
         const model = try allocator.create(Model);
         model.* = Model{
             .allocator = allocator,
+            .scene = 0,
             .name = try allocator.dupe(u8, name),
             .meshes = meshes,
             .animator = animator,
@@ -71,23 +81,40 @@ pub const Model = struct {
     // }
 
     pub fn render(self: *Self, shader: *const Shader) void {
-        shader.use_shader();
-        var buf: [256:0]u8 = undefined;
+        // var buf: [256:0]u8 = undefined;
+        // for (0..MAX_BONES) |i| {
+        //     const bone_transform = self.animator.final_bone_matrices[i];
+        //     const uniform = std.fmt.bufPrintZ(&buf, "finalBonesMatrices[{d}]", .{i}) catch unreachable;
+        //     shader.set_mat4(uniform, &bone_transform);
+        // }
 
-        for (0..MAX_BONES) |i| {
-            const bone_transform = self.animator.final_bone_matrices[i];
-            const uniform = std.fmt.bufPrintZ(&buf, "finalBonesMatrices[{d}]", .{i}) catch unreachable;
-            shader.set_mat4(uniform, &bone_transform);
+        const scene = self.gltf.data.scenes.items[self.scene];
+
+        for (scene.nodes.?.items) |node_index| {
+            const node = self.gltf.data.nodes.items[node_index];
+            self.renderNodes(shader, node, Mat4.identity());
+        }
+    }
+
+    fn renderNodes(self: *Self, shader: *const Shader, node: Gltf.Node, parent_transform: Mat4) void {
+        const transform = Transform {
+            .translation = Vec3.fromArray(node.translation),
+            .rotation = Quat.fromArray(node.rotation),
+            .scale = Vec3.fromArray(node.scale),
+        };
+        const local_matrix = transform.get_matrix();
+        const global_matrix = parent_transform.mulMat4(&local_matrix);
+
+        shader.set_mat4("nodeTransform", &global_matrix);
+
+        if (node.mesh) |mesh_index| { 
+            const mesh = self.meshes.items[mesh_index]; 
+            mesh.render(&self.gltf, shader);
         }
 
-        for (self.meshes.items, 0..) |mesh,n| {
-            if (self.single_mesh_select != -1 and @as(usize, @intCast(self.single_mesh_select)) != n) {
-                continue;
-            }
-
-            shader.set_int("mesh_id", @intCast(n));
-            shader.set_mat4("nodeTransform", &self.animator.final_node_matrices[@intCast(n)]);
-            mesh.render(&self.gltf, shader);
+        for (node.children.items) |node_index| {
+            const child = self.gltf.data.nodes.items[node_index];
+            self.renderNodes(shader, child, global_matrix);
         }
     }
 

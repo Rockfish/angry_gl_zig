@@ -168,7 +168,6 @@ pub const MeshPrimitive = struct {
     // mat.pbrMetallicRoughness.metallicRoughnessTexture : AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE
     // mat.pbrMetallicRoughness.metallicRoughnessTexture : aiTextureType_METALNESS
     // mat.pbrMetallicRoughness.metallicRoughnessTexture : aiTextureType_DIFFUSE_ROUGHNESS
-    //
 
     pub fn render(self: *MeshPrimitive, gltf: *Gltf, shader: *const Shader) void {
         if (self.material.pbr_metallic_roughness.base_color_texture) |baseColorTexture| {

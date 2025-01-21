@@ -143,6 +143,7 @@ pub const GltfBuilder = struct {
         const model = try self.allocator.create(Model);
         model.* = Model{
             .allocator = self.allocator,
+            .scene = 0,
             .name = try self.allocator.dupe(u8, self.name),
             .meshes = self.meshes,
             .animator = animator,
