@@ -64,7 +64,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     const camera = try Camera.init(
         allocator,
         .{
-            .position = vec3(0.0, 10.0, 30.0),
+            .position = vec3(10.0, 10.0, 30.0),
             .target = vec3(0.0, 2.0, 0.0),
             .scr_width = scaled_width,
             .scr_height = scaled_height,
@@ -81,7 +81,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         .projection = camera.get_perspective_projection(),
         .projection_type = .Perspective,
         .view_type = .LookAt,
-        .light_postion = vec3(1.2, 1.0, 2.0),
+        .light_postion = vec3(-10.0, 10.0, 30.0),
         .delta_time = 0.0,
         .total_time = 0.0,
         .world_point = null,
@@ -187,20 +187,21 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         frame_counter.update();
 
         glfw.pollEvents();
-        gl.clearColor(0.05, 0.5, 0.05, 1.0);
+        gl.clearColor(0.5, 0.5, 0.5, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         // const debug_camera = try Camera.camera_vec3(allocator, vec3(0.0, 40.0, 120.0));
         // defer debug_camera.deinit();
 
         shader.set_mat4("matProjection", &state.projection);
-        shader.set_mat4("matView", &state.camera.get_lookat_view());
+        //shader.set_mat4("matView", &state.camera.get_lookat_view());
+        shader.set_mat4("matView", &state.camera.get_lookto_view());
 
         var model_transform = Mat4.identity();
         // model_transform.translate(&vec3(0.0, -10.4, -400.0));
         //model_transform.scale(&vec3(1.0, 1.0, 1.0));
-        //model_transform.translation(&vec3(0.0, 0.0, 0.0));
-        model_transform.rotateByDegrees(&vec3(1.0, 0.0, 0.0), -90.0);
+        ////model_transform.translation(&vec3(0.0, 0.0, 0.0));
+        //model_transform.rotateByDegrees(&vec3(1.0, 0.0, 0.0), -90.0);
         model_transform.scale(&vec3(3.0, 3.0, 3.0));
         // model_transform.scale(&vec3(0.02, 0.02, 0.02));
         shader.set_mat4("matModel", &model_transform);
@@ -212,11 +213,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         // shader.set_vec3("light_dir", &vec3(10.0, 10.0, 2.0));
 
         shader.set_vec3("lightPosition", &state.light_postion);
+        shader.set_vec3("lightColor", &vec3(1.0, 1.0, 1.0));
+        shader.set_float("lightIntensity", 1.0);
+
         shader.set_vec3("viewPosition", &state.camera.position);
 
-        const identity = Mat4.identity();
         // shader.set_mat4("aimRot", &identity);
-        shader.set_mat4("lightSpaceMatrix", &identity);
+        // lightSpaceMatrix is a view * ortho projection matrix for shadows
+        // shader.set_mat4("lightSpaceMatrix", &identity);
 
         // model.render(shader);
         gltf_model.render(shader);

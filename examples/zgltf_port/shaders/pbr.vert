@@ -1,4 +1,4 @@
-#version 330 core
+#version 400 core
 
 // Input attributes
 layout(location = 0) in vec3 inPosition;
@@ -20,31 +20,32 @@ uniform mat4 matView;
 uniform mat4 matModel;
 uniform mat4 matLightSpace;
 
-
 // Output
-out vec3 fragWorldPos;
+out vec3 fragWorldPosition;
 out vec2 fragTexCoord;
 out vec3 fragTangent;
 out vec4 fragColor;
 out vec3 fragNormal;
-out vec4 fragPosLightSpace;
+out mat3 fragTBN;
 
 void main() {
 
     mat4 matTest = finalBonesMatrices[0];
     mat4 nodeMat = nodeTransform;
 
-    gl_Position = matProjection * matView * matModel * vec4(inPosition, 1.0f);
+    mat3 normalMatrix = transpose(inverse(mat3(matModel)));
+    vec3 N = normalize(normalMatrix * inNormal);
+    vec3 T = normalize(normalMatrix * inTangent);
+    T = normalize(T - dot(T, N) * N);
+    vec3 B = cross(N, T);
 
+    fragWorldPosition = vec3(matModel * vec4(inPosition, 1.0));
     fragTexCoord = inTexCoord;
-    fragColor = inColor;
     fragTangent = inTangent;
+    fragColor = inColor;
+    fragNormal = normalize(normalMatrix * inNormal);
+    fragTBN = mat3(T, B, N);
 
-    //fragNormal = vec3(aimRot * vec4(inNormal, 1.0));
-    mat4 matNormal = transpose(inverse(matModel));
-    fragNormal = normalize(vec3(matNormal * vec4(inNormal, 1.0)));
-
-    fragWorldPos = vec3(matModel * vec4(inPosition, 1.0));
-    fragPosLightSpace = matLightSpace * vec4(fragWorldPos, 1.0);
+    gl_Position = matProjection * matView * matModel * vec4(inPosition, 1.0f);
 }
 

@@ -166,7 +166,7 @@ pub const Shader = struct {
         const key = self.allocator.dupe(u8, uniform) catch unreachable;
         const val = gl.getUniformLocation(self.id, uniform);
         self.locations.put(key, val) catch unreachable;
-        std.debug.print("Shader: {s} saving location: {s} value: {d}\n", .{ self.vert_file, key, val });
+        std.debug.print("Shader saving location: {s} value: {d}\n", .{ key, val });
         return val;
     }
 
@@ -321,7 +321,7 @@ fn checkCompileErrors(id: u32, check_type: []const u8) void {
             var len: c_int = 0;
             gl.getShaderiv(id, gl.INFO_LOG_LENGTH, &len);
             gl.getShaderInfoLog(id, 2024, null, &infoLog);
-            std.debug.panic("shader {s} compile error: {s}", .{check_type, infoLog[0..@intCast(len)]});
+            std.debug.panic("shader {s} compile error: {s}", .{ check_type, infoLog[0..@intCast(len)] });
         }
     } else {
         gl.getProgramiv(id, gl.LINK_STATUS, &successful);
@@ -329,8 +329,7 @@ fn checkCompileErrors(id: u32, check_type: []const u8) void {
             var len: c_int = 0;
             gl.getProgramiv(id, gl.INFO_LOG_LENGTH, &len);
             gl.getProgramInfoLog(id, 2024, null, &infoLog);
-            std.debug.panic("shader {s} link error: {s}", .{check_type,infoLog[0..@intCast(len)]});
+            std.debug.panic("shader {s} link error: {s}", .{ check_type, infoLog[0..@intCast(len)] });
         }
     }
 }
-
