@@ -178,7 +178,6 @@ pub const Mat4 = extern struct {
         return Mat4{ .data = view };
     }
 
-
     pub fn removeTranslation(self: *const Self) Mat4 {
         return Mat4{ .data = .{
             .{ self.data[0][0], self.data[0][1], self.data[0][2], 0.0 },

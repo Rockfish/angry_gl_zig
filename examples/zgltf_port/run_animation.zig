@@ -64,8 +64,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     const camera = try Camera.init(
         allocator,
         .{
-            .position = vec3(10.0, 10.0, 30.0),
-            .target = vec3(0.0, 2.0, 0.0),
+            .position = vec3(8.0, 1.0, 0.0),
+            .target = vec3(0.0, 0.0, 0.0),
             .scr_width = scaled_width,
             .scr_height = scaled_height,
         },
@@ -85,8 +85,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         .delta_time = 0.0,
         .total_time = 0.0,
         .world_point = null,
-        .current_position = vec3(0.0, 0.0, 0.0),
-        .target_position = vec3(0.0, 0.0, 0.0),
+        .current_position = vec3(0.0, 0.0, 0.0), // not used
+        .target_position = vec3(0.0, 0.0, 0.0), // not used
         .input = .{
             .first_mouse = true,
             .mouse_x = scaled_width / 2.0,
@@ -177,6 +177,35 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     // shader.set_vec3("emissive_color", &vec3(0.0, 0.0, 0.0));
     // shader.set_vec3("hit_color", &vec3(0.0, 0.0, 0.0));
 
+    // GLTL to openGL
+    // const conversion_matrix = Mat4{ .data = .{
+    //         .{ 1.0, 0.0, 0.0, 0.0 },
+    //         .{ 0.0, 1.0, 0.0, 0.0 },
+    //         .{ 0.0, 0.0, -1.0, 0.0 },
+    //         .{ 0.0, 0.0, 0.0, 1.0 },
+    //     } };
+    // gl.frontFace(gl.CW); // Adjust front-face culling
+    // Rotation matrix to convert glTF coordinate system to OpenGL
+    const gltf_to_openGL_coordinates = Mat4{ .data = .{
+        .{1.0, 0.0, 0.0, 0.0}, 
+        .{0.0, math.cos(-math.pi/2), -math.sin(-math.pi/2), 0.0 },
+        .{0.0, math.sin(-math.pi/2), math.cos(-math.pi/2), 0.0, },
+        .{0.0, 0.0, 0.0, 1.0},
+    } };
+    _ = gltf_to_openGL_coordinates;
+
+    gl.enable(gl.CULL_FACE);
+
+    shader.set_mat4("matProjection", &state.projection);
+
+    camera.position = vec3(-10.0, 8.0, 0.0);
+    camera.target = vec3(0.0, 2.0, 0.0);
+    // camera.forward = vec3(-4.0, 2.0, 0.0);
+    camera.target_pans = true;
+
+    var buf: [1024]u8 = undefined;
+    std.debug.print("{s}\n", .{ camera.asString(&buf) });
+
     while (!window.shouldClose()) {
         const current_time: f32 = @floatCast(glfw.getTime());
         state.delta_time = current_time - state.total_time;
@@ -190,19 +219,20 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         gl.clearColor(0.5, 0.5, 0.5, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        // const debug_camera = try Camera.camera_vec3(allocator, vec3(0.0, 40.0, 120.0));
-        // defer debug_camera.deinit();
 
-        shader.set_mat4("matProjection", &state.projection);
-        //shader.set_mat4("matView", &state.camera.get_lookat_view());
-        shader.set_mat4("matView", &state.camera.get_lookto_view());
+        // shader.set_mat4("matView", &state.camera.get_lookat_view());
+        shader.set_mat4("matView", &state.camera.get_view_by_type());
 
+        // _ = conversion_matrix;
         var model_transform = Mat4.identity();
+        // model_transform.rotateByDegrees(&vec3(0.0, 1.0, 0.0), 180.0);
+        // var model_transform = gltf_to_openGL_coordinates;
+        // var model_transform = conversion_matrix;
         // model_transform.translate(&vec3(0.0, -10.4, -400.0));
         //model_transform.scale(&vec3(1.0, 1.0, 1.0));
         ////model_transform.translation(&vec3(0.0, 0.0, 0.0));
         //model_transform.rotateByDegrees(&vec3(1.0, 0.0, 0.0), -90.0);
-        model_transform.scale(&vec3(3.0, 3.0, 3.0));
+        // model_transform.scale(&vec3(3.0, 3.0, 3.0));
         // model_transform.scale(&vec3(0.02, 0.02, 0.02));
         shader.set_mat4("matModel", &model_transform);
 

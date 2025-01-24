@@ -23,13 +23,15 @@ pub const ORTHO_SCALE: f32 = 10.0;
 
 pub const CameraMovement = enum {
     // panning movement in relation to up, front, right axes at camera position
+    // Should move
     Forward,
     Backward,
     Left,
     Right,
     Up,
     Down,
-    // rotation of camera position, ie. yaw and pitch
+    // rotation around camera position, ie. yaw and pitch
+    // Should change the forward vector
     RotateRight,
     RotateLeft,
     RotateUp,
@@ -37,8 +39,8 @@ pub const CameraMovement = enum {
     RollRight,
     RollLeft,
     // polar movement around the target
-    MoveIn,
-    MoveOut,
+    RadiusIn,
+    RadiusOut,
     OrbitUp,
     OrbitDown,
     OrbitLeft,
@@ -58,15 +60,18 @@ pub const ProjectionType = enum {
 pub const Camera = struct {
     position: Vec3,
     target: Vec3,
+    direction: CameraMovement = .Forward,
+    velocity: f32 = 0.0,
     world_up: Vec3,
     yaw: f32,
     pitch: f32,
-    front: Vec3, // store?
+    forward: Vec3, // store?
     up: Vec3, // store?
     right: Vec3, // store?
     zoom: f32, // hmm
     fovy: f32,
     projection_type: ProjectionType,
+    view_type: ViewType,
     ortho_scale: f32,
     ortho_width: f32,
     ortho_height: f32,
@@ -90,14 +95,13 @@ pub const Camera = struct {
         scr_height: f32,
     };
 
-
     pub fn init(allocator: Allocator, config: Config) !*Camera {
         const camera = try allocator.create(Camera);
         camera.* = Camera{
             .world_up = vec3(0.0, 1.0, 0.0),
             .position = config.position,
             .target = config.target,
-            .front = vec3(0.0, 0.0, -1.0),
+            .forward = config.position.sub(&config.target).normalize(),
             .up = vec3(0.0, 1.0, 0.0),
             .right = vec3(0.0, 0.0, 0.0),
             .yaw = YAW,
@@ -108,6 +112,7 @@ pub const Camera = struct {
             .ortho_width = config.scr_width / ORTHO_SCALE,
             .ortho_height = config.scr_height / ORTHO_SCALE,
             .projection_type = ProjectionType.Perspective,
+            .view_type = ViewType.LookTo,
             .aspect = config.scr_width / config.scr_height,
             .camera_speed = SPEED,
             .target_speed = SPEED,
@@ -138,25 +143,40 @@ pub const Camera = struct {
 
     fn update_camera_vectors(self: *Self) void {
         // calculate the new Front vector
-        self.front = vec3(
-            std.math.cos(to_rads(self.yaw)) * std.math.cos(to_rads(self.pitch)),
-            std.math.sin(to_rads(self.pitch)),
-            std.math.sin(to_rads(self.yaw)) * std.math.cos(to_rads(self.pitch)),
-        ).normalize();
+        // self.forward = vec3(
+        //     std.math.cos(to_rads(self.yaw)) * std.math.cos(to_rads(self.pitch)),
+        //     std.math.sin(to_rads(self.pitch)),
+        //     std.math.sin(to_rads(self.yaw)) * std.math.cos(to_rads(self.pitch)),
+        // ).normalize();
 
         // re-calculate the Right and Up vector
         // normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
-        self.right = self.front.cross(&self.world_up).normalize();
-        self.up = self.right.cross(&self.front).normalize();
+        self.right = self.forward.cross(&self.world_up).normalize();
+        self.up = self.right.cross(&self.forward).normalize();
         // std.debug.print("front: {any}\nright: {any}\nup: {any}\n", .{self.front, self.right, self.up});
     }
 
     pub fn get_lookto_view(self: *Self) Mat4 {
-        return Mat4.lookToRhGl(&self.position, &self.front, &self.up);
+        return Mat4.lookToRhGl(&self.position, &self.forward, &self.up);
     }
 
     pub fn get_lookat_view(self: *Self) Mat4 {
         return Mat4.lookAtRhGl(&self.position, &self.target, &self.up);
+    }
+
+    pub fn set_look_at(self: *Self) void {
+        self.view_type = .LookAt;
+    }
+
+    pub fn set_look_to(self: *Self) void {
+        self.view_type = .LookTo;
+    }
+
+    pub fn get_view_by_type(self: *Self) Mat4 {
+        return switch (self.view_type) {
+            .LookTo => self.get_lookto_view(),
+            .LookAt => self.get_lookat_view(),
+        };
     }
 
     pub fn get_ortho_projection(self: *Self) Mat4 {
@@ -183,15 +203,15 @@ pub const Camera = struct {
 
         switch (direction) {
             .Forward => {
-                self.position = self.position.add(&self.front.mulScalar(velocity * 0.2));
+                self.position = self.position.add(&self.forward.mulScalar(velocity * 0.2));
                 if (self.target_pans) {
-                    self.target = self.target.add(&self.front.mulScalar(velocity));
+                    self.target = self.target.add(&self.forward.mulScalar(velocity));
                 }
             },
             .Backward => {
-                self.position = self.position.sub(&self.front.mulScalar(velocity * 0.2));
+                self.position = self.position.sub(&self.forward.mulScalar(velocity * 0.2));
                 if (self.target_pans) {
-                    self.target = self.target.sub(&self.front.mulScalar(velocity));
+                    self.target = self.target.sub(&self.forward.mulScalar(velocity));
                 }
             },
             .Left => {
@@ -224,12 +244,12 @@ pub const Camera = struct {
             .RotateDown => {},
             .RollRight => {},
             .RollLeft => {},
-            // These directions are relative to the target
-            .MoveIn => { // MoveIn on the vector to target
+            // These are polar directions centered on the target
+            .RadiusIn => { // Move in on the radius vector to target
                 const dir = self.target.sub(&self.position).normalize();
                 self.position = self.position.add(&dir.mulScalar(velocity));
             },
-            .MoveOut => { // MoveOut on vector from target
+            .RadiusOut => { // Move out on the radius vector from target
                 const dir = self.target.sub(&self.position).normalize();
                 self.position = self.position.sub(&dir.mulScalar(velocity));
             },
@@ -241,7 +261,7 @@ pub const Camera = struct {
                 self.position = self.target.add(&rotated_vec);
 
                 // revisit - maybe accumulates errors?
-                self.front = rotation.rotateVec(&self.front);
+                self.forward = rotation.rotateVec(&self.forward);
                 self.right = rotation.rotateVec(&self.right);
                 //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
             },
@@ -253,7 +273,7 @@ pub const Camera = struct {
                 self.position = self.target.add(&rotated_vec);
 
                 // revisit - maybe accumulates errors?
-                self.front = rotation.rotateVec(&self.front);
+                self.forward = rotation.rotateVec(&self.forward);
                 self.right = rotation.rotateVec(&self.right);
                 //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
             },
@@ -275,6 +295,33 @@ pub const Camera = struct {
 
         // For FPS: make sure the user stays at the ground level
         // self.Position.y = 0.0; // <-- this one-liner keeps the user at the ground level (xz plane)
+
+        self.direction = direction;
+        self.velocity = velocity;
+
+        self.update_camera_vectors();
+
+        var buf: [1024]u8 = undefined;
+        std.debug.print("{s}\n", .{ self.asString(&buf) });
+    }
+
+    pub fn asString(self: *const Self, buf: []u8) []u8 {
+        var position: [50]u8 = undefined;
+        var target: [50]u8 = undefined;
+        var forward: [50]u8 = undefined;
+        var up: [50]u8 = undefined;
+        return std.fmt.bufPrint(
+            buf,
+            "Camera:\n   direction: {any}\n   velocity: {d}\n   position :{s}\n   target: {s}\n   forward: {s}\n   up: {s}\n",
+            .{
+                self.direction,
+                self.velocity,
+                self.position.asString(&position),
+                self.target.asString(&target),
+                self.forward.asString(&forward),
+                self.up.asString(&up),
+            },
+        ) catch |err| std.debug.panic("{any}", .{err});
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.

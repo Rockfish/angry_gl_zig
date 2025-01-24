@@ -34,6 +34,10 @@ pub const Quat = extern struct {
         return Quat { .data = self.data };
     }
 
+    pub fn fromArray(val: [4]f32) Self {
+        return Quat { .data = .{val[0], val[1], val[2], val[3]} };
+    }
+
     pub fn fromMat4(mat4: Mat4) Quat {
         var result: [4]f32 = undefined;
         cglm.glmc_mat4_quat(@constCast(&mat4.data), &result);

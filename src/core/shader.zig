@@ -170,8 +170,6 @@ pub const Shader = struct {
         return val;
     }
 
-    // utility uniform functions
-    // ------------------------------------------------------------------------
     pub fn set_bool(self: *const Shader, uniform: [:0]const u8, value: bool) void {
         self.use_shader();
         const v: u8 = if (value) 1 else 0;
@@ -181,7 +179,6 @@ pub const Shader = struct {
         }
     }
 
-    // ------------------------------------------------------------------------
     pub fn set_int(self: *const Shader, uniform: [:0]const u8, value: i32) void {
         self.use_shader();
         const location = self.get_uniform_location(uniform);
@@ -190,7 +187,6 @@ pub const Shader = struct {
         }
     }
 
-    // ------------------------------------------------------------------------
     pub fn set_uint(self: *const Shader, uniform: [:0]const u8, value: u32) void {
         self.use_shader();
         const location = self.get_uniform_location(uniform);
@@ -199,7 +195,6 @@ pub const Shader = struct {
         }
     }
 
-    // ------------------------------------------------------------------------
     pub fn set_float(self: *const Shader, uniform: [:0]const u8, value: f32) void {
         self.use_shader();
         const location = self.get_uniform_location(uniform);
@@ -208,7 +203,30 @@ pub const Shader = struct {
         }
     }
 
-    // ------------------------------------------------------------------------
+    pub fn set_2float(self: *const Shader, uniform: [:0]const u8, value: *const [2]f32) void {
+        self.use_shader();
+        const location = self.get_uniform_location(uniform);
+        if (location != -1) {
+            gl.uniform2fv(location, 1, value);
+        }
+    }
+
+    pub fn set_3float(self: *const Shader, uniform: [:0]const u8, value: *const [3]f32) void {
+        self.use_shader();
+        const location = self.get_uniform_location(uniform);
+        if (location != -1) {
+            gl.uniform3fv(location, 1, value);
+        }
+    }
+
+    pub fn set_4float(self: *const Shader, uniform: [:0]const u8, value: *const [4]f32) void {
+        self.use_shader();
+        const location = self.get_uniform_location(uniform);
+        if (location != -1) {
+            gl.uniform4fv(location, 1, value);
+        }
+    }
+
     pub fn set_vec2(self: *const Shader, uniform: [:0]const u8, value: *const Vec2) void {
         self.use_shader();
         const location = self.get_uniform_location(uniform);
@@ -217,7 +235,6 @@ pub const Shader = struct {
         }
     }
 
-    // ------------------------------------------------------------------------
     pub fn set_vec2_xy(self: *const Shader, uniform: [:0]const u8, x: f32, y: f32) void {
         self.use_shader();
         const location = self.get_uniform_location(uniform);
@@ -226,7 +243,6 @@ pub const Shader = struct {
         }
     }
 
-    // ------------------------------------------------------------------------
     pub fn set_vec3(self: *const Shader, uniform: [:0]const u8, value: *const Vec3) void {
         self.use_shader();
         const location = self.get_uniform_location(uniform);
@@ -235,7 +251,6 @@ pub const Shader = struct {
         }
     }
 
-    // ------------------------------------------------------------------------
     pub fn set_vec3_xyz(self: *const Shader, uniform: [:0]const u8, x: f32, y: f32, z: f32) void {
         self.use_shader();
         const location = self.get_uniform_location(uniform);
@@ -244,7 +259,6 @@ pub const Shader = struct {
         }
     }
 
-    // ------------------------------------------------------------------------
     pub fn set_vec4(self: *const Shader, uniform: [:0]const u8, value: *const Vec4) void {
         self.use_shader();
         const location = self.get_uniform_location(uniform);
@@ -253,7 +267,6 @@ pub const Shader = struct {
         }
     }
 
-    // ------------------------------------------------------------------------
     pub fn set_vec4_xyzw(self: *const Shader, uniform: [:0]const u8, x: f32, y: f32, z: f32, w: f32) void {
         self.use_shader();
         const location = self.get_uniform_location(uniform);
@@ -268,7 +281,6 @@ pub const Shader = struct {
     //     gl.uniformMatrix2fv(location, 1, gl.FALSE, &mat);
     // }
 
-    // ------------------------------------------------------------------------
     pub fn set_mat3(self: *const Shader, uniform: [:0]const u8, mat: *const Mat3) void {
         self.use_shader();
         const location = gl.getUniformLocation(self.id, uniform);
@@ -277,7 +289,6 @@ pub const Shader = struct {
         }
     }
 
-    // ------------------------------------------------------------------------
     pub fn set_mat4(self: *const Shader, uniform: [:0]const u8, mat: *const Mat4) void {
         self.use_shader();
         const location = self.get_uniform_location(uniform);
@@ -286,7 +297,6 @@ pub const Shader = struct {
         }
     }
 
-    // ------------------------------------------------------------------------
     pub fn set_texture_unit(self: *const Shader, texture_unit: u32, texture_id: u32) void {
         self.use_shader();
         gl.activeTexture(gl.TEXTURE0 + texture_unit);
@@ -302,7 +312,7 @@ pub const Shader = struct {
 };
 
 fn checkCompileErrors(id: u32, check_type: []const u8) void {
-    var infoLog: [2024]u8 = undefined;
+    var infoLog: [10000]u8 = undefined;
     var successful: c_int = undefined;
 
     if (!std.mem.eql(u8, check_type, "PROGRAM")) {
@@ -311,7 +321,7 @@ fn checkCompileErrors(id: u32, check_type: []const u8) void {
             var len: c_int = 0;
             gl.getShaderiv(id, gl.INFO_LOG_LENGTH, &len);
             gl.getShaderInfoLog(id, 2024, null, &infoLog);
-            std.debug.panic("shader compile error: {s}", .{infoLog[0..@intCast(len)]});
+            std.debug.panic("shader {s} compile error: {s}", .{check_type, infoLog[0..@intCast(len)]});
         }
     } else {
         gl.getProgramiv(id, gl.LINK_STATUS, &successful);
@@ -319,7 +329,7 @@ fn checkCompileErrors(id: u32, check_type: []const u8) void {
             var len: c_int = 0;
             gl.getProgramiv(id, gl.INFO_LOG_LENGTH, &len);
             gl.getProgramInfoLog(id, 2024, null, &infoLog);
-            std.debug.panic("shader link error: {s}", .{infoLog[0..@intCast(len)]});
+            std.debug.panic("shader {s} link error: {s}", .{check_type,infoLog[0..@intCast(len)]});
         }
     }
 }

@@ -35,10 +35,10 @@ pub const AABB = extern struct {
 
     pub fn expand_to_include(self: *Self, v: Vec3) void {
         self.min.x = @min(self.min.x, v.x);
-        self.max.x = @max(self.max.x, v.x);
         self.min.y = @min(self.min.y, v.y);
-        self.max.y = @max(self.max.y, v.y);
         self.min.z = @min(self.min.z, v.z);
+        self.max.x = @max(self.max.x, v.x);
+        self.max.y = @max(self.max.y, v.y);
         self.max.z = @max(self.max.z, v.z);
     }
 

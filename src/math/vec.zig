@@ -32,6 +32,10 @@ pub const Vec2 = extern struct {
     pub fn dot(lhs: *const Vec2, rhs: *const Vec2) f32 {
         return (lhs.x * rhs.x) + (lhs.y * rhs.y);
     }
+
+    pub fn asString(self: *const Vec2, buf: []u8) []u8 {
+        return std.fmt.bufPrint(buf, "Vec2{{ {d}, {d} }}", .{self.x, self.y}) catch |err| std.debug.panic("{any}", .{err});
+    }
 };
 
 pub fn vec2(x: f32, y: f32) Vec2 {
@@ -165,6 +169,10 @@ pub const Vec3 = extern struct {
         self.y = self.y + @min(a.y, b.y);
         self.z = self.z + @min(a.z, b.z);
     }
+
+    pub fn asString(self: *const Self, buf: []u8) []u8 {
+        return std.fmt.bufPrint(buf, "Vec3{{ {d}, {d}, {d} }}", .{self.x, self.y, self.z}) catch |err| std.debug.panic("{any}", .{err});
+    }
 };
 
 pub fn vec3(x: f32, y: f32, z: f32) Vec3 {
@@ -227,6 +235,10 @@ pub const Vec4 = extern struct {
             &result,
         );
         return @as(*Vec4, @ptrCast(&result)).*;
+    }
+
+    pub fn asString(self: *const Vec4, buf: []u8) []u8 {
+        return std.fmt.bufPrint(buf, "Vec4{{ {d}, {d}, {d}, {d} }", .{self.x, self.y, self.z, self.w}) catch |err| std.debug.panic("{any}", .{err});
     }
 };
 

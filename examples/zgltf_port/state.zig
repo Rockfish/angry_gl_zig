@@ -99,51 +99,51 @@ pub fn processKeys() void {
             .t => std.debug.print("time: {d}\n", .{state.delta_time}),
             .w => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.Forward, state.delta_time);
+                    state.camera.process_keyboard(.RadiusIn, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.MoveIn, state.delta_time);
+                    state.camera.process_keyboard(.Forward, state.delta_time);
                 }
             },
             .s => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.Backward, state.delta_time);
+                    state.camera.process_keyboard(.RadiusOut, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.MoveOut, state.delta_time);
+                    state.camera.process_keyboard(.Backward, state.delta_time);
                 }
             },
             .a => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.Left, state.delta_time);
-                } else {
                     state.camera.process_keyboard(.OrbitLeft, state.delta_time);
+                } else {
+                    state.camera.process_keyboard(.Left, state.delta_time);
                 }
             },
             .d => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.Right, state.delta_time);
-                } else {
                     state.camera.process_keyboard(.OrbitRight, state.delta_time);
+                } else {
+                    state.camera.process_keyboard(.Right, state.delta_time);
                 }
             },
             .up => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.Up, state.delta_time);
-                } else {
                     state.camera.process_keyboard(.OrbitUp, state.delta_time);
+                } else {
+                    state.camera.process_keyboard(.Up, state.delta_time);
                 }
             },
             .down => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.Down, state.delta_time);
-                } else {
                     state.camera.process_keyboard(.OrbitDown, state.delta_time);
+                } else {
+                    state.camera.process_keyboard(.Down, state.delta_time);
                 }
             },
             .one => {
-                state.view_type = .LookTo;
+                state.camera.set_look_to();
             },
             .two => {
-                state.view_type = .LookAt;
+                state.camera.set_look_at();
             },
             .three => {
                 if (!toggle.spin_is_set) {

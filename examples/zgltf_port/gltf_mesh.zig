@@ -99,6 +99,8 @@ pub const MeshPrimitive = struct {
                 .position => |accessor_id| {
                     mesh_primitive.vbo_positions = createGlArrayBuffer(gltf, 0, accessor_id);
                     std.debug.print("has_positions\n", .{});
+                    const aabb = getAABB(gltf, accessor_id);
+                    std.debug.print("aabb: {any}", .{aabb});
                 },
                 .normal => |accessor_id| {
                     mesh_primitive.vbo_normals = createGlArrayBuffer(gltf, 1, accessor_id);
@@ -270,7 +272,31 @@ fn loadMaterialTexture(allocator: Allocator, directory: []const u8, gltf: *Gltf,
     }
 }
 
-pub fn createGlArrayBuffer(gltf: *Gltf, index: u32, accessor_id: usize) c_uint {
+pub fn getAABB(gltf: *Gltf, accessor_id: usize) core.AABB {
+    const accessor = gltf.data.accessors.items[accessor_id];
+    const buffer_view = gltf.data.buffer_views.items[accessor.buffer_view.?];
+    const buffer_data = gltf.buffer_data.items[buffer_view.buffer];
+
+    const data_size = accessor.getComponentSize() * accessor.getTypeSize() * accessor.count;
+    const start = accessor.byte_offset + buffer_view.byte_offset;
+    const end = start + data_size;
+
+    const data = buffer_data[start..end];
+    const len: usize = data.len/@sizeOf(Vec3);
+    std.debug.assert(len == accessor.count);
+    std.debug.print("aabb number of positions: {d}\n", .{len});
+
+    const positions = @as([*]Vec3, @ptrCast(@alignCast(@constCast(data))))[0..len];
+
+    var aabb = core.AABB.init();
+    for (positions) |position| {
+        aabb.expand_to_include(position);
+    }
+
+    return aabb;
+}
+
+pub fn createGlArrayBuffer(gltf: *Gltf, gl_index: u32, accessor_id: usize) c_uint {
     const accessor = gltf.data.accessors.items[accessor_id];
     const buffer_view = gltf.data.buffer_views.items[accessor.buffer_view.?];
     const buffer_data = gltf.buffer_data.items[buffer_view.buffer];
@@ -298,9 +324,9 @@ pub fn createGlArrayBuffer(gltf: *Gltf, index: u32, accessor_id: usize) c_uint {
         data.ptr,
         gl.STATIC_DRAW,
     );
-    gl.enableVertexAttribArray(index);
+    gl.enableVertexAttribArray(gl_index);
     gl.vertexAttribPointer(
-        index,
+        gl_index,
         @intCast(accessor.getTypeSize()),
         gl.FLOAT,
         gl.FALSE,
