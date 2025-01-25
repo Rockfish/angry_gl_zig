@@ -10,11 +10,9 @@ const Builder = @import("builder.zig").GltfBuilder;
 
 const gl = zopengl.bindings;
 
-const Assimp = core.assimp.Assimp;
 const Model = core.Model;
 const ModelBuilder = core.ModelBuilder;
 const animation = core.animation;
-//const Camera = core.Camera;
 const String = core.string.String;
 const FrameCount = core.FrameCount;
 
@@ -51,6 +49,9 @@ const content_dir = "assets";
 const state_ = @import("state.zig");
 const State = state_.State;
 
+const camera_position = vec3(0.0, 12.0, 40.0);
+const camera_target = vec3(0.0, 12.0, 0.0);
+
 pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []const u8) !void {
     std.debug.print("running test_animation\n", .{});
 
@@ -64,8 +65,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     const camera = try Camera.init(
         allocator,
         .{
-            .position = vec3(8.0, 1.0, 0.0),
-            .target = vec3(0.0, 0.0, 0.0),
+            .position = camera_position,
+            .target = camera_target,
             .scr_width = scaled_width,
             .scr_height = scaled_height,
         },
@@ -78,15 +79,15 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         .scaled_height = scaled_height,
         .window_scale = window_scale,
         .camera = camera,
-        .projection = camera.get_perspective_projection(),
+        .projection = camera.getPerspectiveProjection(),
         .projection_type = .Perspective,
         .view_type = .LookAt,
-        .light_postion = vec3(-10.0, 10.0, 30.0),
+        .light_postion = vec3(10.0, 10.0, -30.0),
         .delta_time = 0.0,
         .total_time = 0.0,
         .world_point = null,
-        .current_position = vec3(0.0, 0.0, 0.0), // not used
-        .target_position = vec3(0.0, 0.0, 0.0), // not used
+        .camera_initial_position = camera_position,
+        .camera_initial_target = camera_target,
         .input = .{
             .first_mouse = true,
             .mouse_x = scaled_width / 2.0,
@@ -196,12 +197,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
 
     gl.enable(gl.CULL_FACE);
 
-    shader.set_mat4("matProjection", &state.projection);
-
-    camera.position = vec3(-10.0, 8.0, 0.0);
-    camera.target = vec3(0.0, 2.0, 0.0);
+    // camera.position = vec3(0.0, 8.0, 10.0);
+    // camera.target = vec3(0.0, 8.0, 0.0);
     // camera.forward = vec3(-4.0, 2.0, 0.0);
-    camera.target_pans = true;
+    // camera.target_pans = true;
 
     var buf: [1024]u8 = undefined;
     std.debug.print("{s}\n", .{ camera.asString(&buf) });
@@ -219,9 +218,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         gl.clearColor(0.5, 0.5, 0.5, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-
-        // shader.set_mat4("matView", &state.camera.get_lookat_view());
-        shader.set_mat4("matView", &state.camera.get_view_by_type());
+        shader.set_mat4("matProjection", &state.projection);
+        shader.set_mat4("matView", &state.camera.getViewByType());
 
         // _ = conversion_matrix;
         var model_transform = Mat4.identity();
@@ -231,7 +229,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         // model_transform.translate(&vec3(0.0, -10.4, -400.0));
         //model_transform.scale(&vec3(1.0, 1.0, 1.0));
         ////model_transform.translation(&vec3(0.0, 0.0, 0.0));
-        //model_transform.rotateByDegrees(&vec3(1.0, 0.0, 0.0), -90.0);
+        // model_transform.rotateByDegrees(&vec3(0.0, 1.0, 0.0), 180.0);
         // model_transform.scale(&vec3(3.0, 3.0, 3.0));
         // model_transform.scale(&vec3(0.02, 0.02, 0.02));
         shader.set_mat4("matModel", &model_transform);

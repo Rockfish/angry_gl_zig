@@ -28,6 +28,7 @@ pub const Input = struct {
     mouse_left_button: bool = false,
     key_presses: EnumSet(glfw.Key),
     key_shift: bool = false,
+    key_alt: bool = false,
 };
 
 pub const State = struct {
@@ -47,8 +48,8 @@ pub const State = struct {
     total_time: f32,
     spin: bool = false,
     world_point: ?Vec3,
-    current_position: Vec3,
-    target_position: Vec3,
+    camera_initial_position: Vec3,
+    camera_initial_target: Vec3,
     single_mesh_id: i32 = -1,
     animation_id: i32 = -1,
 
@@ -79,6 +80,7 @@ pub fn keyHandler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: gl
     }
 
     state.input.key_shift = mods.shift;
+    state.input.key_alt = mods.alt;
 
     if (key == .escape) {
         window.setShouldClose(true);
@@ -99,51 +101,76 @@ pub fn processKeys() void {
             .t => std.debug.print("time: {d}\n", .{state.delta_time}),
             .w => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.RadiusIn, state.delta_time);
+                    state.camera.processMovement(.RadiusIn, state.delta_time);
+                } else if (state.input.key_alt) {
+                    state.camera.processMovement(.RotateUp, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.Forward, state.delta_time);
+                    state.camera.processMovement(.Forward, state.delta_time);
                 }
             },
             .s => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.RadiusOut, state.delta_time);
+                    state.camera.processMovement(.RadiusOut, state.delta_time);
+                } else if (state.input.key_alt) {
+                    state.camera.processMovement(.RotateDown, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.Backward, state.delta_time);
+                    state.camera.processMovement(.Backward, state.delta_time);
                 }
             },
             .a => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.OrbitLeft, state.delta_time);
+                    state.camera.processMovement(.OrbitLeft, state.delta_time);
+                } else if (state.input.key_alt) {
+                    state.camera.processMovement(.RotateLeft, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.Left, state.delta_time);
+                    state.camera.processMovement(.Left, state.delta_time);
                 }
             },
             .d => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.OrbitRight, state.delta_time);
+                    state.camera.processMovement(.OrbitRight, state.delta_time);
+                } else if (state.input.key_alt) {
+                    state.camera.processMovement(.RotateRight, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.Right, state.delta_time);
+                    state.camera.processMovement(.Right, state.delta_time);
                 }
             },
             .up => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.OrbitUp, state.delta_time);
+                    state.camera.processMovement(.OrbitUp, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.Up, state.delta_time);
+                    state.camera.processMovement(.Up, state.delta_time);
                 }
             },
             .down => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.OrbitDown, state.delta_time);
+                    state.camera.processMovement(.OrbitDown, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.Down, state.delta_time);
+                    state.camera.processMovement(.Down, state.delta_time);
                 }
             },
+            .right => {
+                if (state.input.key_shift) {
+                    state.camera.processMovement(.OrbitRight, state.delta_time);
+                } else {
+                    state.camera.processMovement(.Right, state.delta_time);
+                }
+            },
+            .left => {
+                if (state.input.key_shift) {
+                    state.camera.processMovement(.OrbitLeft, state.delta_time);
+                } else {
+                    state.camera.processMovement(.Left, state.delta_time);
+                }
+            },
+            .r => {
+                state.camera.reset(state.camera_initial_position, state.camera_initial_target);
+            },
             .one => {
-                state.camera.set_look_to();
+                state.camera.setLookTo();
             },
             .two => {
-                state.camera.set_look_at();
+                state.camera.setLookAt();
             },
             .three => {
                 if (!toggle.spin_is_set) {
@@ -152,11 +179,11 @@ pub fn processKeys() void {
             },
             .four => {
                 state.projection_type = .Perspective;
-                state.projection = state.camera.get_perspective_projection();
+                state.projection = state.camera.getPerspectiveProjection();
             },
             .five => {
                 state.projection_type = .Orthographic;
-                state.projection = state.camera.get_ortho_projection();
+                state.projection = state.camera.getOrthoProjection();
             },
             .zero => { 
                 if (last_time + delay_time < state.total_time) {
@@ -205,15 +232,15 @@ pub fn setViewPort(w: i32, h: i32) void {
     // const ortho_width = (state.viewport_width / 500);
     // const ortho_height = (state.viewport_height / 500);
     const aspect_ratio = (state.scaled_width / state.scaled_height);
-    state.camera.set_aspect(aspect_ratio);
+    state.camera.setAspect(aspect_ratio);
 
     switch (state.projection_type) {
         .Perspective => {
-            state.projection = state.camera.get_perspective_projection();
+            state.projection = state.camera.getPerspectiveProjection();
         },
         .Orthographic => {
-            state.camera.set_ortho_dimensions(state.scaled_width / 100.0, state.scaled_height / 100.0);
-            state.projection = state.camera.get_ortho_projection();
+            state.camera.setScreenDimensions(state.scaled_width, state.scaled_height);
+            state.projection = state.camera.getOrthoProjection();
         },
     }
 }
@@ -247,12 +274,12 @@ pub fn cursorPositionHandler(window: *glfw.Window, xposIn: f64, yposIn: f64) cal
     state.input.mouse_y = ypos;
 
     if (state.input.key_shift) {
-        state.camera.process_mouse_movement(xoffset, yoffset, true);
+        state.camera.processMouseMovement(xoffset, yoffset, true);
     }
 }
 
 pub fn scrollHandler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {
     _ = window;
     _ = xoffset;
-    state.camera.process_mouse_scroll(@floatCast(yoffset));
+    state.camera.processMouseScroll(@floatCast(yoffset));
 }

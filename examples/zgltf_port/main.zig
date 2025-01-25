@@ -5,7 +5,7 @@ const gl = @import("zopengl").bindings;
 const core = @import("core");
 const math = @import("math");
 const glftReport = @import("gltf_report.zig").gltfReport;
-const run_animation = @import("run_animation.zig").run;
+const run = @import("run_animation.zig").run;
 
 const root = @import("assets_list.zig").root;
 const model_paths = @import("assets_list.zig").model_paths;
@@ -74,7 +74,7 @@ pub fn main() !void {
 
     std.debug.print("Model path: {s}\n", .{path});
 
-    try run_animation(allocator, window, path);
+    try run(allocator, window, path);
 
     glfw.terminate();
 }

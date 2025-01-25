@@ -34,7 +34,7 @@ pub const Vec2 = extern struct {
     }
 
     pub fn asString(self: *const Vec2, buf: []u8) []u8 {
-        return std.fmt.bufPrint(buf, "Vec2{{ {d}, {d} }}", .{self.x, self.y}) catch |err| std.debug.panic("{any}", .{err});
+        return std.fmt.bufPrint(buf, "Vec2{{ {d}, {d} }}", .{ self.x, self.y }) catch |err| std.debug.panic("{any}", .{err});
     }
 };
 
@@ -102,7 +102,11 @@ pub const Vec3 = extern struct {
     }
 
     pub fn sub(a: *const Vec3, b: *const Vec3) Vec3 {
-        return .{ .x = a.x - b.x, .y = a.y - b.y, .z = a.z - b.z };
+        return .{
+            .x = a.x - b.x,
+            .y = a.y - b.y,
+            .z = a.z - b.z,
+        };
     }
 
     pub fn mul(a: *const Vec3, b: *const Vec3) Vec3 {
@@ -170,8 +174,16 @@ pub const Vec3 = extern struct {
         self.z = self.z + @min(a.z, b.z);
     }
 
+    /// angle in radians between two vectors
+    pub fn angle(a: *const Vec3, b: *const Vec3) f32 {
+        return cglm.glmc_vec3_angle(
+            @as([*c]f32, @ptrCast(@constCast(a))),
+            @as([*c]f32, @ptrCast(@constCast(b))),
+        );
+    }
+
     pub fn asString(self: *const Self, buf: []u8) []u8 {
-        return std.fmt.bufPrint(buf, "Vec3{{ {d}, {d}, {d} }}", .{self.x, self.y, self.z}) catch |err| std.debug.panic("{any}", .{err});
+        return std.fmt.bufPrint(buf, "Vec3{{ {d}, {d}, {d} }}", .{ self.x, self.y, self.z }) catch |err| std.debug.panic("{any}", .{err});
     }
 };
 
@@ -238,7 +250,7 @@ pub const Vec4 = extern struct {
     }
 
     pub fn asString(self: *const Vec4, buf: []u8) []u8 {
-        return std.fmt.bufPrint(buf, "Vec4{{ {d}, {d}, {d}, {d} }", .{self.x, self.y, self.z, self.w}) catch |err| std.debug.panic("{any}", .{err});
+        return std.fmt.bufPrint(buf, "Vec4{{ {d}, {d}, {d}, {d} }", .{ self.x, self.y, self.z, self.w }) catch |err| std.debug.panic("{any}", .{err});
     }
 };
 
