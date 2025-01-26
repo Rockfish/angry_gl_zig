@@ -27,6 +27,7 @@ out vec3 fragWorldPos;
 
 //uniform mat4 aimRot;
 
+
 void main() {
     vec4 totalPosition = vec4(0.0f);
 
@@ -46,6 +47,13 @@ void main() {
     //
     //     vec3 localNormal = mat3(finalBonesMatrices[inBoneIds[i]]) * inNormal;
     // }
+
+    // This would work if the inBonesIds has zeros instead of -1
+    // vec4 skinMatrix = inWeights[0] * finalBonesMatrices[inBoneIds[0]] +
+    //                   inWeights[1] * finalBonesMatrices[inBoneIds[1]] +
+    //                   inWeights[2] * finalBonesMatrices[inBoneIds[2]] +
+    //                   inWeights[3] * finalBonesMatrices[inBoneIds[3]];
+    // totalPosition = skinMatrix * vec4(inPosition, 1.0f);
 
     // if (totalPosition == vec4(0.0f)) {
     //     totalPosition = nodeTransform * vec4(inPosition, 1.0f);

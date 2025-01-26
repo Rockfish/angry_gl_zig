@@ -133,7 +133,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // builder.deinit();
 
     var model = blk: {
-        const model_path = "/Users/john/Dev/Assets/bit.bot.2/scene.gltf";
+        //const model_path = "/Users/john/Dev/Assets/bit.bot.2/scene.gltf";
+        const model_path = "/Users/john/Dev/Assets/modular_characters/Individual Characters/glTF/Spacesuit.gltf";
         std.debug.print("Main: loading model: {s}\n", .{model_path});
         var builder = try ModelBuilder.init(allocator, &texture_cache, "Spacesuit", model_path);
         const model = try builder.build();
