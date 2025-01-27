@@ -6,7 +6,7 @@ const vec3 = math.vec3;
 const Mat3 = math.Mat3;
 const mat3 = math.mat3;
 
-pub fn distance_between_point_and_line_segment(point: *const Vec3, a: *const Vec3, b: *const Vec3) f32 {
+pub fn distanceBetweenPointAndLineSegment(point: *const Vec3, a: *const Vec3, b: *const Vec3) f32 {
     const ab = b.sub(a);
     const ap = point.sub(a);
     if (ap.dot(&ab) <= 0.0) {
@@ -19,7 +19,7 @@ pub fn distance_between_point_and_line_segment(point: *const Vec3, a: *const Vec
     return ab.cross(&ap).length() / ab.length();
 }
 
-pub fn distance_between_line_segments(a0: *const Vec3, a1: *const Vec3, b0: *const Vec3, b1: *const Vec3) f32 {
+pub fn distanceBetweenLineSegments(a0: *const Vec3, a1: *const Vec3, b0: *const Vec3, b1: *const Vec3) f32 {
     const eps: f32 = 0.001;
 
     var a = a1.sub(a0);
@@ -100,7 +100,7 @@ pub fn distance_between_line_segments(a0: *const Vec3, a1: *const Vec3, b0: *con
 }
 
 /// See https://github.com/icaven/glm/blob/master/glm/gtx/vector_angle.inl
-pub fn oriented_angle(x: *const Vec3, y: *const Vec3, ref_axis: *const Vec3) f32 {
+pub fn orientedAngle(x: *const Vec3, y: *const Vec3, ref_axis: *const Vec3) f32 {
 
     const angle = math.radiansToDegrees(math.acos(x.dot(y)));
 

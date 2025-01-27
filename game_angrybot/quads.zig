@@ -30,7 +30,7 @@ const OBNOXIOUS_QUAD: [30]f32 = .{
     0.5, 1.0, -0.9, 0.0, 1.0,
 };
 
-pub fn create_obnoxious_quad_vao() gl.Uint {
+pub fn createObnoxiousQuadVao() gl.Uint {
     var obnoxious_quad_vao: gl.Uint = 0;
     var obnoxious_quad_vbo: gl.Uint = 0;
 
@@ -65,7 +65,7 @@ pub fn create_obnoxious_quad_vao() gl.Uint {
     return obnoxious_quad_vao;
 }
 
-pub fn create_unit_square_vao() gl.Uint {
+pub fn createUnitSquareVao() gl.Uint {
     var unit_square_vao: gl.Uint = 0;
     var unit_square_vbo: gl.Uint = 0;
 
@@ -100,7 +100,7 @@ pub fn create_unit_square_vao() gl.Uint {
     return unit_square_vao;
 }
 
-pub fn create_more_obnoxious_quad_vao() gl.Uint {
+pub fn createMoreObnoxiousQuadVao() gl.Uint {
     var more_obnoxious_quad_vao: gl.Uint = 0;
     var more_obnoxious_quad_vbo: gl.Uint = 0;
 
@@ -135,7 +135,7 @@ pub fn create_more_obnoxious_quad_vao() gl.Uint {
     return more_obnoxious_quad_vao;
 }
 
-pub fn render_quad(quad_vao: *gl.Uint) void {
+pub fn renderQuad(quad_vao: *gl.Uint) void {
     // initialize (if necessary)
     if (*quad_vao == 0) {
         const quad_vertices: [20]f32 = .{

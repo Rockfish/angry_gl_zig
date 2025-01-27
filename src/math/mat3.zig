@@ -8,7 +8,7 @@ const Vec4 = _vec.Vec4;
 // const Quat = _quat.Quat;
 
 pub fn mat3(x_axis: Vec3, y_axis: Vec3, z_axis: Vec3) Mat3 {
-    return Mat3.from_cols(x_axis, y_axis, z_axis);
+    return Mat3.fromCols(x_axis, y_axis, z_axis);
 }
 
 pub const Mat3 = extern struct {
@@ -16,7 +16,7 @@ pub const Mat3 = extern struct {
 
     const Self = @This();
 
-    pub fn from_cols(x_axis: Vec3, y_axis: Vec3, z_axis: Vec3) Self {
+    pub fn fromCols(x_axis: Vec3, y_axis: Vec3, z_axis: Vec3) Self {
         return Mat3{ .data = .{ x_axis.asArray(), y_axis.asArray(), z_axis.asArray() } };
     }
 

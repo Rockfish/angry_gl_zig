@@ -230,7 +230,7 @@ pub const BulletStore = struct {
         const y = vec3(normalized_direction.x, 0.0, normalized_direction.z).normalize();
 
         // direction angle with respect to the canonical direction
-        const theta = geom.oriented_angle(&x, &y, &rot_vec) * -1.0;
+        const theta = geom.orientedAngle(&x, &y, &rot_vec) * -1.0;
         var mid_dir_quat = Quat.new(1.0, 0.0, 0.0, 0.0);
         mid_dir_quat = mid_dir_quat.mulQuat(&Quat.fromAxisAngle(&rot_vec, math.degreesToRadians(theta)));
 
@@ -378,7 +378,7 @@ pub const BulletStore = struct {
             if (!enemy.?.is_alive) {
                 const sprite_sheet_sprite = SpriteSheetSprite{ .age = 0.0, .world_position = enemy.?.position };
                 try self.bullet_impact_sprites.append(sprite_sheet_sprite);
-                try state.burn_marks.add_mark(enemy.?.position);
+                try state.burn_marks.addMark(enemy.?.position);
                 state.sound_engine.playSound(.Explosion);
             }
         }
@@ -598,7 +598,7 @@ fn bulletCollidesWithEnemy(position: *Vec3, direction: *Vec3, enemy: *Enemy) boo
     const b0 = enemy.position.sub(&enemy.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
     const b1 = enemy.position.add(&enemy.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
 
-    const closet_distance = geom.distance_between_line_segments(&a0, &a1, &b0, &b1);
+    const closet_distance = geom.distanceBetweenLineSegments(&a0, &a1, &b0, &b1);
 
     return closet_distance <= (world.BULLET_COLLIDER.radius + world.ENEMY_COLLIDER.radius);
 }
@@ -660,7 +660,7 @@ test "bullets.test_oriented_rotation" {
         const y = vec3(normalized_direction.x, 0.0, normalized_direction.z).normalize_or_zero();
 
         // direction angle with respect to the canonical direction
-        const theta = geom.oriented_angle(x, y, rot_vec) * -1.0;
+        const theta = geom.orientedAngle(x, y, rot_vec) * -1.0;
 
         std.debug.print("angle: {d}  direction: {any}   theta: {d}", .{ angle, normalized_direction, theta });
     }

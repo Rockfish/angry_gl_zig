@@ -13,7 +13,7 @@ pub const FrameBuffer = struct {
     texture_id: u32,     // texture object
 };
 
-pub fn create_depth_map_fbo() FrameBuffer {
+pub fn createDepthMapFbo() FrameBuffer {
     var depth_map_fbo: gl.Uint = 0;
     var depth_map_texture: gl.Uint = 0;
 
@@ -55,7 +55,7 @@ pub fn create_depth_map_fbo() FrameBuffer {
     };
 }
 
-pub fn create_emission_fbo(viewport_width: f32, viewport_height: f32) FrameBuffer {
+pub fn createEmissionFbo(viewport_width: f32, viewport_height: f32) FrameBuffer {
     const width: i32 = @intFromFloat(viewport_width);
     const height: i32 = @intFromFloat(viewport_height);
     var emission_fbo: gl.Uint = 0;
@@ -99,7 +99,7 @@ pub fn create_emission_fbo(viewport_width: f32, viewport_height: f32) FrameBuffe
     };
 }
 
-pub fn create_scene_fbo(viewport_width: f32, viewport_height: f32) FrameBuffer {
+pub fn createSceneFbo(viewport_width: f32, viewport_height: f32) FrameBuffer {
     const width: i32 = @intFromFloat(viewport_width);
     const height: i32 = @intFromFloat(viewport_height);
     var scene_fbo: gl.Uint = 0;
@@ -146,7 +146,7 @@ pub fn create_scene_fbo(viewport_width: f32, viewport_height: f32) FrameBuffer {
     };
 }
 
-pub fn create_horizontal_blur_fbo(viewport_width: f32, viewport_height: f32) FrameBuffer {
+pub fn createHorizontalBlurFbo(viewport_width: f32, viewport_height: f32) FrameBuffer {
     const width: i32 = @intFromFloat(viewport_width / BLUR_SCALE);
     const height: i32 = @intFromFloat(viewport_height / BLUR_SCALE);
     var horizontal_blur_fbo: gl.Uint = 0;
@@ -189,7 +189,7 @@ pub fn create_horizontal_blur_fbo(viewport_width: f32, viewport_height: f32) Fra
     };
 }
 
-pub fn create_vertical_blur_fbo(viewport_width: f32, viewport_height: f32) FrameBuffer {
+pub fn createVerticalBlurFbo(viewport_width: f32, viewport_height: f32) FrameBuffer {
     const width: i32 = @intFromFloat(viewport_width / BLUR_SCALE);
     const height: i32 = @intFromFloat(viewport_height / BLUR_SCALE);
     var vertical_blur_fbo: gl.Uint = 0;

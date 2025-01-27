@@ -83,7 +83,7 @@ pub const EnemySystem = struct {
         self.count_down -= state.delta_time;
         if (self.count_down <= 0.0) {
             for (0..world.SPAWNS_PER_INTERVAL) |_| {
-                const rand_num = self.random.rand_float();
+                const rand_num = self.random.randFloat();
                 try self.spawnEnemy(state, rand_num);
             }
             self.count_down += world.ENEMY_SPAWN_INTERVAL;
@@ -99,7 +99,7 @@ pub const EnemySystem = struct {
         try state.enemies.append(enemy);
     }
 
-    pub fn chase_player(self: *Self, state: *State) void {
+    pub fn chasePlayer(self: *Self, state: *State) void {
         _ = self;
         const player_collision_position = vec3(state.player.position.x, world.MONSTER_Y, state.player.position.z);
 
@@ -113,7 +113,7 @@ pub const EnemySystem = struct {
             if (state.player.is_alive) {
                 const p1 = enemy.position.sub(&enemy.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
                 const p2 = enemy.position.sub(&enemy.dir.mulScalar(world.ENEMY_COLLIDER.height / 2.0));
-                const dist = geom.distance_between_point_and_line_segment(&player_collision_position, &p1, &p2);
+                const dist = geom.distanceBetweenPointAndLineSegment(&player_collision_position, &p1, &p2);
 
                 if (dist <= (world.PLAYER_COLLISION_RADIUS + world.ENEMY_COLLIDER.radius)) {
                     // println!("GOTTEM!");

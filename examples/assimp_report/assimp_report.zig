@@ -289,7 +289,7 @@ const SceneParser = struct {
         var bone_id: u32 = undefined;
         const bone_name = bone.mName.data[0..bone.mName.length];
         const bone_entry = self.bone_map.get(bone_name);
-        const offset_transform = Transform.from_matrix(&assimp.mat4FromAiMatrix(&bone.mOffsetMatrix));
+        const offset_transform = Transform.fromMatrix(&assimp.mat4FromAiMatrix(&bone.mOffsetMatrix));
 
         if (bone_entry != null) {
             bone_id = bone_entry.?.bone_index;
@@ -481,6 +481,6 @@ fn aiQuatKeyAsString(buf: []u8, v: Assimp.aiQuatKey) [:0]u8 {
 }
 
 fn transformAsString(buf: []u8, matrix: *Assimp.aiMatrix4x4) [:0]u8 {
-    const transform = Transform.from_matrix(&core.assimp.mat4FromAiMatrix(matrix));
+    const transform = Transform.fromMatrix(&core.assimp.mat4FromAiMatrix(matrix));
     return transform.asString(buf);
 }

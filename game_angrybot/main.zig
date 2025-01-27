@@ -178,18 +178,18 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     // -- Framebuffers ---
 
-    const depth_map_fbo = fb.create_depth_map_fbo();
-    var emissions_fbo = fb.create_emission_fbo(viewport_width, viewport_height);
-    var scene_fbo = fb.create_scene_fbo(viewport_width, viewport_height);
-    var horizontal_blur_fbo = fb.create_horizontal_blur_fbo(viewport_width, viewport_height);
-    var vertical_blur_fbo = fb.create_vertical_blur_fbo(viewport_width, viewport_height);
+    const depth_map_fbo = fb.createDepthMapFbo();
+    var emissions_fbo = fb.createEmissionFbo(viewport_width, viewport_height);
+    var scene_fbo = fb.createSceneFbo(viewport_width, viewport_height);
+    var horizontal_blur_fbo = fb.createHorizontalBlurFbo(viewport_width, viewport_height);
+    var vertical_blur_fbo = fb.createVerticalBlurFbo(viewport_width, viewport_height);
 
     log.info("framebuffers loaded", .{});
     // --- quads ---
 
-    const unit_square_quad = quads.create_unit_square_vao();
+    const unit_square_quad = quads.createUnitSquareVao();
     // const _obnoxious_quad_vao = quads.create_obnoxious_quad_vao();
-    const more_obnoxious_quad_vao = quads.create_more_obnoxious_quad_vao();
+    const more_obnoxious_quad_vao = quads.createMoreObnoxiousQuadVao();
 
     log.info("quads loaded", .{});
 
@@ -402,10 +402,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             scaled_height = state.scaled_height;
 
             if (use_framebuffers) {
-                emissions_fbo = fb.create_emission_fbo(viewport_width, viewport_height);
-                scene_fbo = fb.create_scene_fbo(viewport_width, viewport_height);
-                horizontal_blur_fbo = fb.create_horizontal_blur_fbo(viewport_width, viewport_height);
-                vertical_blur_fbo = fb.create_vertical_blur_fbo(viewport_width, viewport_height);
+                emissions_fbo = fb.createEmissionFbo(viewport_width, viewport_height);
+                scene_fbo = fb.createSceneFbo(viewport_width, viewport_height);
+                horizontal_blur_fbo = fb.createHorizontalBlurFbo(viewport_width, viewport_height);
+                vertical_blur_fbo = fb.createVerticalBlurFbo(viewport_width, viewport_height);
             }
             // log.info(
             //     "view port size: {d}, {d}  scaled size: {d}, {d}",
@@ -540,7 +540,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         if (player.is_alive) {
             // log.info("updating enemies", .{});
             try enemy_system.update(&state);
-            enemy_system.chase_player(&state);
+            enemy_system.chasePlayer(&state);
         }
 
         // Update Player
@@ -671,7 +671,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
                 basicer_shader.setInt("tex", texture_unit);
 
                 // log.info("rendering quads ", .{});
-                quads.render_quad(&quad_vao);
+                quads.renderQuad(&quad_vao);
 
                 buffer_ready = true;
                 window.swap_buffers();
@@ -729,7 +729,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         enemy_system.drawEnemies(wiggly_shader, &state);
 
         // log.info("rendering burn_marks", .{});
-        state.burn_marks.draw_marks(basic_texture_shader, &projection_view, state.delta_time);
+        state.burn_marks.drawMarks(basic_texture_shader, &projection_view, state.delta_time);
 
         // log.info("rendering bullet_impacts", .{});
         bullet_store.drawBulletImpacts(sprite_shader, &projection_view);
@@ -810,7 +810,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
                 basicer_shader.setBool("greyscale", false);
                 basicer_shader.setInt("tex", texture_unit);
 
-                quads.render_quad(&quad_vao);
+                quads.renderQuad(&quad_vao);
 
                 buffer_ready = true;
                 window.swap_buffers();

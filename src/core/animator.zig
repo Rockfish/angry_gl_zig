@@ -221,7 +221,7 @@ pub const Animator = struct {
             .animation_state = animation_state,
             .transitions = try allocator.create(ArrayList(?*AnimationTransition)),
             .node_transform_map = try allocator.create(StringHashMap(*NodeTransform)),
-            .global_inverse_transform = Transform.from_matrix(&Mat4.getInverse(&root_transform)),
+            .global_inverse_transform = Transform.fromMatrix(&Mat4.getInverse(&root_transform)),
             .final_bone_matrices = [_]Mat4{Mat4.identity()} ** MAX_BONES,
             .final_node_matrices = [_]Mat4{Mat4.identity()} ** MAX_NODES,
         };
@@ -468,7 +468,7 @@ pub const Animator = struct {
         const node_keyframes = getNodeKeyframes(node_animations, node_data.node_name);
 
         if (node_keyframes) |keyframes| {
-            const node_transform = keyframes.get_animation_transform(current_tick);
+            const node_transform = keyframes.getAnimationTransform(current_tick);
             // if (node_transform.scale.x < 0.9 or node_transform.scale.y < 0.9 or node_transform.scale.z < 0.9) {
             //     std.log.debug("node_transform: tick: {d} {any}", .{current_tick, node_transform});
             // }

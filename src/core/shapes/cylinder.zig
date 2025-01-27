@@ -29,7 +29,7 @@ pub const Cylinder = struct {
         defer builder.deinit();
 
         // Top of cylinder
-        try add_disk_mesh(
+        try addDiskMesh(
             &builder,
             vec3(0.0, height, 0.0),
             radius / 2.0,
@@ -37,7 +37,7 @@ pub const Cylinder = struct {
         );
 
         // Bottom of cylinder
-        try add_disk_mesh(
+        try addDiskMesh(
             &builder,
             vec3(0.0, 0.0, 0.0),
             radius / 2.0,
@@ -45,7 +45,7 @@ pub const Cylinder = struct {
         );
 
         // // Tube - cylinder wall
-        try add_tube_mesh(
+        try addTubeMesh(
             &builder,
             vec3(0.0, 0.0, 0.0),
             height,
@@ -60,7 +60,7 @@ pub const Cylinder = struct {
         return shape.initGLBuffers(&builder);
     }
 
-    fn add_disk_mesh(builder: *shape.ShapeBuilder, position: Vec3, radius: f32, sides: u32) !void {
+    fn addDiskMesh(builder: *shape.ShapeBuilder, position: Vec3, radius: f32, sides: u32) !void {
         const intial_count: u32 = @intCast(builder.vertices.items.len);
         // Start with adding the center vertex in the center of the disk.
         try builder.vertices.append(shape.Vertex{
@@ -106,7 +106,7 @@ pub const Cylinder = struct {
         try builder.indices.append(num_vertices - 1);
     }
 
-    pub fn add_tube_mesh(builder: *shape.ShapeBuilder, position: Vec3, height: f32, radius: f32, sides: u32) !void {
+    pub fn addTubeMesh(builder: *shape.ShapeBuilder, position: Vec3, height: f32, radius: f32, sides: u32) !void {
         const intial_count: u32 = @intCast(builder.vertices.items.len);
         //        const initial_indice_count: u32 = @intCast(builder.indices.items.len);
 

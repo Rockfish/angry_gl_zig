@@ -156,8 +156,8 @@ pub const ModelBuilder = struct {
             std.debug.panic("aiImportFile failed. aiScene is null. file: {s}", .{self.filepath});
         }
 
-        try self.load_model(aiScene);
-        try self.add_textures();
+        try self.loadModel(aiScene);
+        try self.addTextures();
 
         // TODO: investigate a better way of determining the root node.
         var root = findRootNode(aiScene[0].mRootNode);
@@ -190,7 +190,7 @@ pub const ModelBuilder = struct {
         return model;
     }
 
-    fn load_model(self: *Self, aiScene: [*]const Assimp.aiScene) !void {
+    fn loadModel(self: *Self, aiScene: [*]const Assimp.aiScene) !void {
         try self.processNode(aiScene[0].mRootNode, aiScene);
     }
 
@@ -260,7 +260,7 @@ pub const ModelBuilder = struct {
         const texture_types = [_]TextureType{ .Diffuse, .Specular, .Ambient, .Emissive, .Normals };
         const textures = try self.loadMaterialTextures(&material, texture_types[0..]);
 
-        try self.extract_bone_weights_for_vertices(vertices, aiMesh);
+        try self.extractBoneWeightsForVertices(vertices, aiMesh);
 
         const model_mesh = try ModelMesh.init(
             self.allocator,
@@ -332,7 +332,7 @@ pub const ModelBuilder = struct {
         return material_textures;
     }
 
-    fn add_textures(self: *Self) !void {
+    fn addTextures(self: *Self) !void {
         for (self.added_textures.items) |added_texture| {
             const mesh: *ModelMesh = for (self.meshes.items) |_mesh| {
                 if (std.mem.eql(u8, _mesh.*.name, added_texture.mesh_name)) {
@@ -377,7 +377,7 @@ pub const ModelBuilder = struct {
         return try texture.clone();
     }
 
-    fn extract_bone_weights_for_vertices(self: *Self, vertices: *ArrayList(ModelVertex), aiMesh: Assimp.aiMesh) !void {
+    fn extractBoneWeightsForVertices(self: *Self, vertices: *ArrayList(ModelVertex), aiMesh: Assimp.aiMesh) !void {
         if (aiMesh.mNumBones == 0) {
             return;
         }
@@ -396,7 +396,7 @@ pub const ModelBuilder = struct {
                 model_bone.* = ModelBone{
                     .bone_name = try String.new(bone_name),
                     .bone_index = self.bone_count,
-                    .offset_transform = Transform.from_matrix(&assimp.mat4FromAiMatrix(&bone.*.mOffsetMatrix)),
+                    .offset_transform = Transform.fromMatrix(&assimp.mat4FromAiMatrix(&bone.*.mOffsetMatrix)),
                     .allocator = self.allocator,
                 };
 
@@ -524,7 +524,7 @@ fn createModelNodeTree(allocator: Allocator, aiNode: [*c]Assimp.aiNode) !*ModelN
 
     const aiTransform = aiNode.*.mTransformation;
     const transformMatrix = assimp.mat4FromAiMatrix(&aiTransform);
-    const transform = Transform.from_matrix(&transformMatrix);
+    const transform = Transform.fromMatrix(&transformMatrix);
     model_node.*.transform = transform;
 
     if (aiNode.*.mNumMeshes > 0) {

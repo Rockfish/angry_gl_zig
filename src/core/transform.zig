@@ -19,7 +19,7 @@ pub const Transform = struct {
 
     const Self = @This();
 
-    pub fn from_matrix(m: *const Mat4) Transform {
+    pub fn fromMatrix(m: *const Mat4) Transform {
         const trs = m.getTranslationRotationScale();
         return Transform {
             .translation = trs.translation,
@@ -29,11 +29,11 @@ pub const Transform = struct {
     }
 
     pub fn default() Transform {
-        return from_matrix(&Mat4.identity());
+        return fromMatrix(&Mat4.identity());
     }
 
     pub fn init() Transform {
-        return from_matrix(&Mat4.identity());
+        return fromMatrix(&Mat4.identity());
     }
 
     pub fn clear(self: *Self) void {

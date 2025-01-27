@@ -54,7 +54,7 @@ pub const BurnMarks = struct {
         return burn_marks;
     }
 
-    pub fn add_mark(self: *Self, position: Vec3) !void {
+    pub fn addMark(self: *Self, position: Vec3) !void {
         const burn_mark = BurnMark{
             .position = position,
             .time_left = world.BURN_MARK_TIME,
@@ -62,7 +62,7 @@ pub const BurnMarks = struct {
         try self.marks.append(burn_mark);
     }
 
-    pub fn draw_marks(self: *Self, shader: *Shader, projection_view: *const Mat4, delta_time: f32) void {
+    pub fn drawMarks(self: *Self, shader: *Shader, projection_view: *const Mat4, delta_time: f32) void {
         if (self.marks.items.len == 0) {
             return;
         }
