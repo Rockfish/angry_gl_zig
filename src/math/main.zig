@@ -25,12 +25,12 @@ pub const Quat = quat_.Quat;
 pub const mat3 = mat3_.mat3;
 pub const mat4 = mat4_.mat4;
 
-pub const get_world_ray_from_mouse = utils.get_world_ray_from_mouse;
-pub const screen_to_model_glam = utils.screen_to_model_glam;
-pub const ray_plane_intersection = utils.ray_plane_intersection;
-pub const ray_triangle_intersection = ray_.ray_triangle_intersection;
-pub const ray_sphere_intersection = ray_.ray_sphere_intersection;
-pub const calculate_normal = utils.calculate_normal;
+pub const getWorldRayFromMouse = utils.getWorldRayFromMouse;
+pub const screenToModelGlam = utils.screenToModelGlam;
+pub const getRayPlaneIntersection = utils.getRayPlaneIntersection;
+pub const getRayTriangleIntersection = ray_.getRayTriangleIntersection;
+pub const getRaySphereIntersection = ray_.getRaySphereIntersection;
+pub const calculateNormal = utils.calculateNormal;
 
 // @abs
 pub const inf = std.math.inf;
@@ -76,7 +76,7 @@ pub fn truncate(v: Vec2, max: f32) Vec2 {
     return v;
 }
 
-pub fn wrap_around(pos: *Vec2, max_x: i32, max_y: i32) void {
+pub fn wrapAround(pos: *Vec2, max_x: i32, max_y: i32) void {
     const max_x_f32: f32 = @floatCast(max_x);
     const max_y_f32: f32 = @floatCast(max_y);
     if (pos.x > max_x_f32) {

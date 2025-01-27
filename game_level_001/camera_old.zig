@@ -18,7 +18,8 @@ pub const SPEED: f32 = 100.5;
 pub const SENSITIVITY: f32 = 0.1;
 pub const FOV: f32 = 45.0;
 pub const NEAR: f32 = 0.01;
-pub const FAR: f32 = 1000.0;
+pub const FAR: f32 = 2000.0;
+pub const ORTHO_SCALE: f32 = 10.0;
 
 pub const CameraMovement = enum {
     // panning movement in relation to up, front, right axes at camera position
@@ -66,6 +67,7 @@ pub const Camera = struct {
     zoom: f32, // hmm
     fovy: f32,
     projection_type: ProjectionType,
+    ortho_scale: f32,
     ortho_width: f32,
     ortho_height: f32,
     aspect: f32,
@@ -81,30 +83,39 @@ pub const Camera = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn init(allocator: Allocator, position: Vec3, target: Vec3, scr_width: f32, scr_height: f32) !*Camera {
+    const Config = struct {
+        position: Vec3,
+        target: Vec3,
+        scr_width: f32,
+        scr_height: f32,
+    };
+
+
+    pub fn init(allocator: Allocator, config: Config) !*Camera {
         const camera = try allocator.create(Camera);
         camera.* = Camera{
             .world_up = vec3(0.0, 1.0, 0.0),
-            .position = position,
-            .target = target,
+            .position = config.position,
+            .target = config.target,
             .front = vec3(0.0, 0.0, -1.0),
             .up = vec3(0.0, 1.0, 0.0),
             .right = vec3(0.0, 0.0, 0.0),
             .yaw = YAW,
             .pitch = PITCH,
-            .zoom = 0.0,
+            .zoom = 45.0,
             .fovy = FOV,
-            .ortho_width = scr_width / 100.0,
-            .ortho_height = scr_height / 100.0,
+            .ortho_scale = ORTHO_SCALE,
+            .ortho_width = config.scr_width / ORTHO_SCALE,
+            .ortho_height = config.scr_height / ORTHO_SCALE,
             .projection_type = ProjectionType.Perspective,
-            .aspect = scr_width / scr_height,
+            .aspect = config.scr_width / config.scr_height,
             .camera_speed = SPEED,
             .target_speed = SPEED,
             .mouse_sensitivity = SENSITIVITY,
             .target_pans = false,
             .allocator = allocator,
         };
-        camera.update_camera_vectors();
+        camera.updateCameraVectors();
         return camera;
     }
 
@@ -152,10 +163,10 @@ pub const Camera = struct {
         // const top = self.fovy / 2.0;
         // const right = top * self.aspect;
         return Mat4.orthographicRhGl(
-            -self.ortho_width / 2.0,
-            self.ortho_width / 2.0,
-            -self.ortho_height / 2.0,
-            self.ortho_height / 2.0,
+            -self.ortho_width / self.ortho_scale,
+            self.ortho_width / self.ortho_scale,
+            -self.ortho_height / self.ortho_scale,
+            self.ortho_height / self.ortho_scale,
             NEAR,
             FAR,
         );
@@ -165,32 +176,20 @@ pub const Camera = struct {
         return Mat4.perspectiveRhGl(to_rads(self.fovy), self.aspect, NEAR, FAR);
     }
 
-    // CameraMovement.Right => {
-    //     const angle = to_rads(90.0);
-    //     const turn_rotation = Quat.fromAxisAngle(&self.up, angle);
-    //     const right = turn_rotation.rotateVec(&self.front);
-    //     self.position = self.position.sub(&right.mulScalar(velocity));
-    // },
-    // CameraMovement.Left => {
-    //     const angle = to_rads(90.0);
-    //     const turn_rotation = Quat.fromAxisAngle(&self.up, angle);
-    //     const right = turn_rotation.rotateVec(&self.front);
-    //     self.position = self.position.add(&right.mulScalar(velocity));
-    // },
     // processes input received from any keyboard-like input system. Accepts input parameter
     // in the form of camera defined ENUM (to abstract it from windowing systems)
-    pub fn process_keyboard(self: *Self, direction: CameraMovement, delta_time: f32) void {
+    pub fn processMovement(self: *Self, direction: CameraMovement, delta_time: f32) void {
         const velocity: f32 = self.camera_speed * delta_time;
 
         switch (direction) {
             .Forward => {
-                self.position = self.position.add(&self.front.mulScalar(velocity));
+                self.position = self.position.add(&self.front.mulScalar(velocity * 0.2));
                 if (self.target_pans) {
                     self.target = self.target.add(&self.front.mulScalar(velocity));
                 }
             },
             .Backward => {
-                self.position = self.position.sub(&self.front.mulScalar(velocity));
+                self.position = self.position.sub(&self.front.mulScalar(velocity * 0.2));
                 if (self.target_pans) {
                     self.target = self.target.sub(&self.front.mulScalar(velocity));
                 }
@@ -236,32 +235,40 @@ pub const Camera = struct {
             },
             .OrbitRight => { // OrbitRight along latitude
                 const angle = to_rads(velocity);
-                const turn_rotation = Quat.fromAxisAngle(&self.up, angle);
+                const rotation = Quat.fromAxisAngle(&self.up, angle);
                 const radius_vec = self.position.sub(&self.target);
-                const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                const rotated_vec = rotation.rotateVec(&radius_vec);
                 self.position = self.target.add(&rotated_vec);
+
+                // revisit - maybe accumulates errors?
+                self.front = rotation.rotateVec(&self.front);
+                self.right = rotation.rotateVec(&self.right);
                 //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
             },
             .OrbitLeft => { // OrbitLeft along latitude
                 const angle = to_rads(velocity);
-                const turn_rotation = Quat.fromAxisAngle(&self.up, -angle);
+                const rotation = Quat.fromAxisAngle(&self.up, -angle);
                 const radius_vec = self.position.sub(&self.target);
-                const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                const rotated_vec = rotation.rotateVec(&radius_vec);
                 self.position = self.target.add(&rotated_vec);
+
+                // revisit - maybe accumulates errors?
+                self.front = rotation.rotateVec(&self.front);
+                self.right = rotation.rotateVec(&self.right);
                 //std.debug.print("position: {d}, {d}, {d}\n", .{ self.position.x, self.position.y, self.position.z });
             },
             .OrbitUp => { // OrbitUp along longitude
                 const angle = to_rads(velocity);
-                const turn_rotation = Quat.fromAxisAngle(&self.right, -angle);
+                const rotation = Quat.fromAxisAngle(&self.right, -angle);
                 const radius_vec = self.position.sub(&self.target);
-                const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                const rotated_vec = rotation.rotateVec(&radius_vec);
                 self.position = self.target.add(&rotated_vec);
             },
             .OrbitDown => { // OrbitDown along longitude
                 const angle = to_rads(velocity);
-                const turn_rotation = Quat.fromAxisAngle(&self.right, angle);
+                const rotation = Quat.fromAxisAngle(&self.right, angle);
                 const radius_vec = self.position.sub(&self.target);
-                const rotated_vec = turn_rotation.rotateVec(&radius_vec);
+                const rotated_vec = rotation.rotateVec(&radius_vec);
                 self.position = self.target.add(&rotated_vec);
             },
         }
@@ -271,7 +278,7 @@ pub const Camera = struct {
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
-    pub fn process_mouse_movement(self: *Self, xoffset_in: f32, yoffset_in: f32, constrain_pitch: bool) void {
+    pub fn processMouseMovement(self: *Self, xoffset_in: f32, yoffset_in: f32, constrain_pitch: bool) void {
         const xoffset: f32 = xoffset_in * self.mouse_sensitivity;
         const yoffset: f32 = yoffset_in * self.mouse_sensitivity;
 
@@ -295,7 +302,7 @@ pub const Camera = struct {
     }
 
     // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
-    pub fn process_mouse_scroll(self: *Self, yoffset: f32) void {
+    pub fn processMouseScroll(self: *Self, yoffset: f32) void {
         self.zoom -= yoffset;
         if (self.zoom < 1.0) {
             self.zoom = 1.0;

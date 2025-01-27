@@ -102,10 +102,10 @@ pub const Model = struct {
             .rotation = Quat.fromArray(node.rotation),
             .scale = Vec3.fromArray(node.scale),
         };
-        const local_matrix = transform.get_matrix();
+        const local_matrix = transform.getMatrix();
         const global_matrix = parent_transform.mulMat4(&local_matrix);
 
-        shader.set_mat4("nodeTransform", &global_matrix);
+        shader.setMat4("nodeTransform", &global_matrix);
 
         if (node.mesh) |mesh_index| { 
             const mesh = self.meshes.items[mesh_index]; 
@@ -126,7 +126,7 @@ pub const Model = struct {
             const uniform = try std.fmt.bufPrintZ(&buf, "finalBonesMatrices[{d}]", .{i});
             shader.set_mat4(uniform, &bone_transform);
         }
-        shader.set_mat4("nodeTransform", &self.animator.final_node_matrices[@intCast(mesh.id)]);
+        shader.setMat4("nodeTransform", &self.animator.final_node_matrices[@intCast(mesh.id)]);
     }
 
     pub fn update_animation(self: *Self, delta_time: f32) !void {

@@ -32,9 +32,7 @@ const TextureFilter = core.texture.TextureFilter;
 const TextureWrap = core.texture.TextureWrap;
 const Node = nodes_.Node;
 const Transform = core.Transform;
-
-const cam = @import("camera.zig");
-const Camera = cam.Camera;
+const Camera = core.Camera;
 
 const Window = glfw.Window;
 
@@ -65,9 +63,9 @@ pub const State = struct {
     input: Input,
     camera: *Camera,
     projection: Mat4 = undefined,
-    projection_type: cam.ProjectionType,
+    projection_type: core.ProjectionType,
     view: Mat4 = undefined,
-    view_type: cam.ViewType,
+    view_type: core.ViewType,
     light_postion: Vec3,
     delta_time: f32,
     total_time: f32,
@@ -153,52 +151,52 @@ pub fn processKeys() void {
             .t => std.debug.print("time: {d}\n", .{state.delta_time}),
             .w => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.Forward, state.delta_time);
+                    state.camera.processMovement(.Forward, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.MoveIn, state.delta_time);
+                    state.camera.processMovement(.RadiusIn, state.delta_time);
                 }
             },
             .s => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.Backward, state.delta_time);
+                    state.camera.processMovement(.Backward, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.MoveOut, state.delta_time);
+                    state.camera.processMovement(.RadiusOut, state.delta_time);
                 }
             },
             .a => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.Left, state.delta_time);
+                    state.camera.processMovement(.Left, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.OrbitLeft, state.delta_time);
+                    state.camera.processMovement(.OrbitLeft, state.delta_time);
                 }
             },
             .d => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.Right, state.delta_time);
+                    state.camera.processMovement(.Right, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.OrbitRight, state.delta_time);
+                    state.camera.processMovement(.OrbitRight, state.delta_time);
                 }
             },
             .up => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.Up, state.delta_time);
+                    state.camera.processMovement(.Up, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.OrbitUp, state.delta_time);
+                    state.camera.processMovement(.OrbitUp, state.delta_time);
                 }
             },
             .down => {
                 if (state.input.key_shift) {
-                    state.camera.process_keyboard(.Down, state.delta_time);
+                    state.camera.processMovement(.Down, state.delta_time);
                 } else {
-                    state.camera.process_keyboard(.OrbitDown, state.delta_time);
+                    state.camera.processMovement(.OrbitDown, state.delta_time);
                 }
             },
-            .one => {
-                state.view_type = .LookTo;
-            },
-            .two => {
-                state.view_type = .LookAt;
-            },
+            // .one => {
+            //     state.view_type = .LookTo;
+            // },
+            // .two => {
+            //     state.view_type = .LookAt;
+            // },
             .three => {
                 if (!toggle.spin_is_set) {
                     state.spin = !state.spin;
@@ -206,11 +204,11 @@ pub fn processKeys() void {
             },
             .four => {
                 state.projection_type = .Perspective;
-                state.projection = state.camera.get_perspective_projection();
+                state.projection = state.camera.getPerspectiveProjection();
             },
             .five => {
                 state.projection_type = .Orthographic;
-                state.projection = state.camera.get_ortho_projection();
+                state.projection = state.camera.getOrthoProjection();
             },
             else => {},
         }
@@ -236,15 +234,15 @@ fn setViewPort(w: i32, h: i32) void {
     // const ortho_width = (state.viewport_width / 500);
     // const ortho_height = (state.viewport_height / 500);
     const aspect_ratio = (state.scaled_width / state.scaled_height);
-    state.camera.set_aspect(aspect_ratio);
+    state.camera.setAspect(aspect_ratio);
 
     switch (state.projection_type) {
         .Perspective => {
-            state.projection = state.camera.get_perspective_projection();
+            state.projection = state.camera.getPerspectiveProjection();
         },
         .Orthographic => {
-            state.camera.set_ortho_dimensions(state.scaled_width / 100.0, state.scaled_height / 100.0);
-            state.projection = state.camera.get_ortho_projection();
+            state.camera.setOrthoDimensions(state.scaled_width / 100.0, state.scaled_height / 100.0);
+            state.projection = state.camera.getOrthoProjection();
         },
     }
 }
@@ -278,12 +276,12 @@ fn cursorPositionHandler(window: *glfw.Window, xposIn: f64, yposIn: f64) callcon
     state.input.mouse_y = ypos;
 
     if (state.input.key_shift) {
-        state.camera.process_mouse_movement(xoffset, yoffset, true);
+        state.camera.processMouseMovement(xoffset, yoffset, true);
     }
 }
 
 fn scrollHandler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {
     _ = window;
     _ = xoffset;
-    state.camera.process_mouse_scroll(@floatCast(yoffset));
+    state.camera.processMouseScroll(@floatCast(yoffset));
 }

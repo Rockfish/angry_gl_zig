@@ -32,8 +32,7 @@ const Transform = core.Transform;
 
 const AnimationClip = core.animation.AnimationClip;
 
-const cam = @import("camera.zig");
-const Camera = cam.Camera;
+const Camera = core.Camera;
 
 const Window = glfw.Window;
 
@@ -60,10 +59,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const camera = try Camera.init(
         allocator,
-        vec3(0.0, 10.0, 30.0),
-        vec3(0.0, 2.0, 0.0),
-        scaled_width,
-        scaled_height,
+        .{
+            .position = vec3(0.0, 10.0, 30.0),
+            .target = vec3(0.0, 2.0, 0.0),
+            .scr_width = scaled_width,
+            .scr_height = scaled_height,
+        },
     );
     defer camera.deinit();
 
@@ -160,7 +161,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .wrap = TextureWrap.Repeat,
     };
 
-    const cube_texture = try Texture.new(
+    const cube_texture = try Texture.init(
         allocator,
         "assets/textures/container.jpg",
         texture_diffuse,
@@ -169,7 +170,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     texture_diffuse.wrap = TextureWrap.Repeat;
 
-    const surface_texture = try Texture.new(
+    const surface_texture = try Texture.init(
         allocator,
         "angrybots_assets/Models/Floor D.png",
         //"assets/texturest/IMGP5487_seamless.jpg",
@@ -251,7 +252,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     var moving = false;
 
-    const clip = AnimationClip.new(0.0, 32.0, core.animation.AnimationRepeatMode.Forever);
+    const clip = AnimationClip.init(0.0, 32.0, core.animation.AnimationRepeatMode.Forever);
     try model_obj.model.playClip(clip);
 
     gl.enable(gl.DEPTH_TEST);
@@ -273,7 +274,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         gl.clearColor(0.1, 0.3, 0.1, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        const world_ray = math.get_world_ray_from_mouse(
+        const world_ray = math.getWorldRayFromMouse(
             state.scaled_width,
             state.scaled_height,
             &state.projection,
@@ -282,7 +283,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
             state.input.mouse_y,
         );
 
-        state.world_point = math.ray_plane_intersection(
+        state.world_point = math.getRayPlaneIntersection(
             &state.camera.position,
             &world_ray, // direction
             &xz_plane_point,
@@ -295,18 +296,18 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         };
 
 
-        basic_shader.set_mat4("matProjection", &state.projection);
-        basic_shader.set_mat4("matView", &state.view);
-        basic_shader.set_vec3("ambient_color", &vec3(1.0, 0.6, 0.6));
-        basic_shader.set_vec3("light_color", &vec3(0.35, 0.4, 0.5));
-        basic_shader.set_vec3("light_dir", &vec3(3.0, 3.0, 3.0));
-        basic_shader.bind_texture(0, "texture_diffuse", cube_texture);
+        basic_shader.setMat4("matProjection", &state.projection);
+        basic_shader.setMat4("matView", &state.view);
+        basic_shader.setVec3("ambient_color", &vec3(1.0, 0.6, 0.6));
+        basic_shader.setVec3("light_color", &vec3(0.35, 0.4, 0.5));
+        basic_shader.setVec3("light_dir", &vec3(3.0, 3.0, 3.0));
+        basic_shader.bindTexture(0, "texture_diffuse", cube_texture);
 
-        model_shader.set_mat4("matProjection", &state.projection);
-        model_shader.set_mat4("matView", &state.view);
-        model_shader.set_vec3("ambient_color", &vec3(1.0, 0.6, 0.6));
-        model_shader.set_vec3("light_color", &vec3(0.35, 0.4, 0.5));
-        model_shader.set_vec3("light_dir", &vec3(3.0, 3.0, 3.0));
+        model_shader.setMat4("matProjection", &state.projection);
+        model_shader.setMat4("matView", &state.view);
+        model_shader.setVec3("ambient_color", &vec3(1.0, 0.6, 0.6));
+        model_shader.setVec3("light_color", &vec3(0.35, 0.4, 0.5));
+        model_shader.setVec3("light_dir", &vec3(3.0, 3.0, 3.0));
 
         if (state.input.mouse_left_button and state.world_point != null) {
             state.target_position = state.world_point.?;
@@ -355,7 +356,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         for (node_manager.node_list.items, 0..) |n, id| {
             if (n.object.getBoundingBox()) |aabb| {
                 const box = aabb.transform(&n.global_transform.get_matrix());
-                const distance = box.ray_intersects(ray);
+                const distance = box.rayIntersects(ray);
                 if (distance) |d| {
                     if (picked.id != null) {
                         if (d < picked.distance) {
@@ -372,21 +373,21 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         for (node_manager.node_list.items, 0..) |n, id| {
             if (picked.id != null and picked.id == @as(u32, @intCast(id))) {
-                basic_shader.set_vec4("hit_color", &vec4(1.0, 0.0, 0.0, 0.0));
+                basic_shader.setVec4("hit_color", &vec4(1.0, 0.0, 0.0, 0.0));
             }
             _ = n;
             //n.render(basic_shader);
-            basic_shader.set_vec4("hit_color", &vec4(0.0, 0.0, 0.0, 0.0));
+            basic_shader.setVec4("hit_color", &vec4(0.0, 0.0, 0.0, 0.0));
         }
 
         const plane_transform = Mat4.fromTranslation(&vec3(0.0, -1.0, 0.0));
 
-        basic_shader.set_mat4("matModel", &plane_transform);
-        basic_shader.bind_texture(0, "texture_diffuse", surface_texture);
+        basic_shader.setMat4("matModel", &plane_transform);
+        basic_shader.bindTexture(0, "texture_diffuse", surface_texture);
         plane.render();
 
         if (state.spin) {
-            state.camera.process_keyboard(.OrbitRight, state.delta_time * 1.0);
+            state.camera.processMovement(.OrbitRight, state.delta_time * 1.0);
         }
 
         window.swapBuffers();

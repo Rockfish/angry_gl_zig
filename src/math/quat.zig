@@ -99,9 +99,9 @@ pub const Quat = extern struct {
         const wy = w * y2;
         const wz = w * z2;
 
-        const x_axis: Vec4 = Vec4.new(1.0 - (yy + zz), xy + wz, xz - wy, 0.0);
-        const y_axis: Vec4 = Vec4.new(xy - wz, 1.0 - (xx + zz), yz + wx, 0.0);
-        const z_axis: Vec4 = Vec4.new(xz + wy, yz - wx, 1.0 - (xx + yy), 0.0);
+        const x_axis: Vec4 = Vec4.init(1.0 - (yy + zz), xy + wz, xz - wy, 0.0);
+        const y_axis: Vec4 = Vec4.init(xy - wz, 1.0 - (xx + zz), yz + wx, 0.0);
+        const z_axis: Vec4 = Vec4.init(xz + wy, yz - wx, 1.0 - (xx + yy), 0.0);
         return .{ x_axis, y_axis, z_axis };
     }
 };

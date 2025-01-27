@@ -123,7 +123,7 @@ pub const Node = struct {
 
     pub fn updateTransform(self: *Node, parent_transform: ?*Transform) void {
         if (parent_transform) |transform| {
-            self.global_transform = transform.mul_transform(self.transform);
+            self.global_transform = transform.mulTransform(self.transform);
         } else {
             self.global_transform = self.transform;
         }
@@ -138,8 +138,8 @@ pub const Node = struct {
     }
 
     pub fn render(self: *Node, shader: *Shader) void {
-        const mat = self.global_transform.get_matrix();
-        shader.set_mat4("model", &mat);
+        const mat = self.global_transform.getMatrix();
+        shader.setMat4("model", &mat);
         self.impl.renderfn(self.ptr, shader);
         for (self.children.items) |child| {
             child.render(shader);

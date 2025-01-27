@@ -55,7 +55,7 @@ pub const ShapeObj = struct {
     }
 
     pub fn render(self: *ShapeObj, shader: *Shader) void {
-        shader.bind_texture(0, "texture_diffuse", self.texture);
+        shader.bindTexture(0, "texture_diffuse", self.texture);
         self.shape.render();
     }
 };
@@ -79,7 +79,7 @@ pub const ModelObj = struct {
     //     return self.model.aabb;
     // }
     fn updateAnimation(self: *ModelObj, delta_time: f32) void {
-        self.model.update_animation(delta_time) catch {};
+        self.model.updateAnimation(delta_time) catch {};
     }
 
     pub fn render(self: *ModelObj, shader: *Shader) void {
@@ -215,7 +215,7 @@ pub const Node = struct {
     /// Update all objects' transform matrix in tree
     pub fn updateTransforms(self: *Node, parent_transform: ?*Transform) void {
         if (parent_transform) |transform| {
-            self.global_transform = transform.mul_transform(self.transform);
+            self.global_transform = transform.mulTransform(self.transform);
         } else {
             self.global_transform = self.transform;
         }
@@ -246,8 +246,8 @@ pub const Node = struct {
     }
 
     pub fn render(self: *Node, shader: *Shader) void {
-        const model_mat = self.global_transform.get_matrix();
-        shader.set_mat4("matModel", &model_mat);
+        const model_mat = self.global_transform.getMatrix();
+        shader.setMat4("matModel", &model_mat);
         self.object.render(shader);
         // for (self.children.items) |child| {
         //     child.render(shader);

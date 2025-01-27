@@ -43,10 +43,10 @@ const State = struct {
     delta_time: f32,
     last_frame: f32,
     first_mouse: bool,
-    last_x: i32,
-    last_y: i32,
-    scr_width: i32 = @intFromFloat(SCR_WIDTH),
-    scr_height: i32 = @intFromFloat(SCR_HEIGHT),
+    last_x: f32,
+    last_y: f32,
+    scr_width: f32 = SCR_WIDTH,
+    scr_height: f32 = SCR_HEIGHT,
     key_presses: EnumSet(glfw.Key),
     key_shift: bool = false,
     mouse_right_button: bool = false,
@@ -84,11 +84,11 @@ pub fn main() !void {
     );
     defer window.destroy();
 
-    _ = window.setKeyCallback(key_handler);
-    _ = window.setFramebufferSizeCallback(framebuffer_size_handler);
-    _ = window.setCursorPosCallback(cursor_position_handler);
-    _ = window.setScrollCallback(scroll_handler);
-    _ = window.setMouseButtonCallback(mouse_hander);
+    _ = window.setKeyCallback(keyHandler);
+    _ = window.setFramebufferSizeCallback(framebufferSizeHandler);
+    _ = window.setCursorPosCallback(cursorPositionHandler);
+    _ = window.setScrollCallback(scrollHandler);
+    _ = window.setMouseButtonCallback(mouseHandler);
 
     glfw.makeContextCurrent(window);
     glfw.swapInterval(1);
@@ -107,8 +107,15 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // const target = vec3(0.0, -0.2, 1.0);
     // const up = vec3(0.0, 1.0, 0.0);
 
-    // const camera = try Camera.camera_vec3(allocator, postion);
-    const camera = try Camera.camera_vec3(allocator, vec3(0.0, 0.0, 6.0));
+    const camera = try Camera.init(
+        allocator,
+        .{
+            .position = vec3(0.0, 0.0, 6.0),
+            .target = vec3(0.0, 0.0, 0.0),
+            .scr_width = SCR_WIDTH,
+            .scr_height = SCR_HEIGHT,
+        },
+    );
     defer camera.deinit();
 
     const key_presses = EnumSet(glfw.Key).initEmpty();
@@ -124,14 +131,14 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .key_presses = key_presses,
     };
 
-    const basic_shader = try Shader.new(
+    const basic_shader = try Shader.init(
         allocator,
         "examples/picker/basic.vert",
         "examples/picker/basic.frag",
     );
     defer basic_shader.deinit();
 
-    const basic_model_shader = try Shader.new(
+    const basic_model_shader = try Shader.init(
         allocator,
         "examples/picker/basic_model.vert",
         "examples/picker/basic_model.frag",
@@ -160,7 +167,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .gamma_correction = false,
         .wrap = .Clamp,
     };
-    const cube_texture = try Texture.new(
+    const cube_texture = try Texture.init(
         allocator,
         "assets/textures/container.jpg",
         texture_config,
@@ -169,12 +176,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const projection = Mat4.perspectiveRhGl(math.degreesToRadians(camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 500.0);
 
-    basic_shader.use_shader();
-    basic_shader.set_mat4("projection", &projection);
-    basic_shader.set_uint("texture1", cube_texture.id);
+    basic_shader.useShader();
+    basic_shader.setMat4("projection", &projection);
+    basic_shader.setUint("texture1", cube_texture.gl_texture_id);
 
-    basic_model_shader.use_shader();
-    basic_model_shader.set_mat4("projection", &projection);
+    basic_model_shader.useShader();
+    basic_model_shader.setMat4("projection", &projection);
 
     var picker = try Picker.init(allocator, SCR_WIDTH, SCR_HEIGHT);
     defer picker.deinit();
@@ -186,7 +193,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         state.delta_time = currentFrame - state.last_frame;
         state.last_frame = currentFrame;
 
-        const view = camera.get_lookto_view();
+        const view = camera.getLookToView();
 
         var model_transform = Mat4.identity();
         model_transform.translate(&vec3(0.0, -1.4, -50.0));
@@ -202,17 +209,17 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         var cubeboid_transform = Mat4.identity();
         cubeboid_transform.translate(&vec3(-2.0, 0.0, 0.0));
 
-        picker.set_projection_view(&projection, &view);
+        picker.setProjectView(&projection, &view);
 
-        picker.set_model_transform(&cube_transform1);
-        picker.set_object_id(1);
-        picker.set_mesh_id(1);
+        picker.setModelTransform(&cube_transform1);
+        picker.setObjectId(1);
+        picker.setMeshId(1);
 
         cube.render();
 
-        picker.set_model_transform(&cube_transform2);
-        picker.set_object_id(2);
-        picker.set_mesh_id(2);
+        picker.setModelTransform(&cube_transform2);
+        picker.setObjectId(2);
+        picker.setMeshId(2);
 
         cube.render();
 
@@ -222,7 +229,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         var pixel_info = PixelInfo{};
         if (state.mouse_left_button) {
-            pixel_info = picker.read_pixel_info(state.last_x, state.scr_width - state.last_y - 1);
+            pixel_info = picker.readPixelInfo(state.last_x, state.scr_width - state.last_y - 1);
             std.debug.print(
                 "pixel_info x: {d} y: {d} object_id: {d} mesh_id: {d} primative_id: {d}\n",
                 .{ state.last_x, state.last_y, pixel_info.object_id, pixel_info.draw_id, pixel_info.primative_id },
@@ -233,34 +240,34 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         gl.clearColor(0.1, 0.3, 0.1, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        basic_shader.use_shader();
-        basic_shader.set_mat4("view", &view);
-        basic_shader.bind_texture(0, "texture_diffuse", cube_texture);
+        basic_shader.useShader();
+        basic_shader.setMat4("view", &view);
+        basic_shader.bindTexture(0, "texture_diffuse", cube_texture);
 
         var selected: i32 = if (pixel_info.object_id == 1.0) @intFromFloat(pixel_info.primative_id) else 0;
 
-        basic_shader.set_int("primative_id", selected);
-        basic_shader.set_mat4("model", &cube_transform1);
+        basic_shader.setInt("primative_id", selected);
+        basic_shader.setMat4("model", &cube_transform1);
         cube.render();
 
         selected = if (pixel_info.object_id == 2.0) @intFromFloat(pixel_info.primative_id) else 0;
 
-        basic_shader.set_int("primative_id", selected);
-        basic_shader.set_mat4("model", &cube_transform2);
+        basic_shader.setInt("primative_id", selected);
+        basic_shader.setMat4("model", &cube_transform2);
         cube.render();
 
-        basic_model_shader.use_shader();
-        basic_model_shader.set_mat4("view", &view);
+        basic_model_shader.useShader();
+        basic_model_shader.setMat4("view", &view);
 
-        basic_model_shader.set_mat4("model", &cubeboid_transform);
-        basic_model_shader.bind_texture(0, "texture_diffuse", cube_texture);
+        basic_model_shader.setMat4("model", &cubeboid_transform);
+        basic_model_shader.bindTexture(0, "texture_diffuse", cube_texture);
         cube.render();
 
         const cylinder_transform = Mat4.fromTranslation(&vec3(3.0, 0.0, 0.0));
-        basic_model_shader.set_mat4("model", &cylinder_transform);
+        basic_model_shader.setMat4("model", &cylinder_transform);
         cylinder.render();
 
-        basic_model_shader.set_mat4("model", &model_transform);
+        basic_model_shader.setMat4("model", &model_transform);
         model.render(basic_model_shader);
 
         window.swapBuffers();
@@ -275,11 +282,11 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     glfw.terminate();
 }
 
-fn get_pvm_matrix(projection: *const Mat4, view: *const Mat4, model_transform: *const Mat4) Mat4 {
+fn getPvmMatrix(projection: *const Mat4, view: *const Mat4, model_transform: *const Mat4) Mat4 {
     return projection.mulMat4(&view.mulMat4(model_transform));
 }
 
-fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
+fn keyHandler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = scancode;
 
     switch (action) {
@@ -295,23 +302,23 @@ fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.
         switch (k) {
             .escape => window.setShouldClose(true),
             .t => std.debug.print("time: {d}\n", .{state.delta_time}),
-            .w => state.camera.process_keyboard(.Forward, state.delta_time),
-            .s => state.camera.process_keyboard(.Backward, state.delta_time),
-            .a => state.camera.process_keyboard(.Left, state.delta_time),
-            .d => state.camera.process_keyboard(.Right, state.delta_time),
-            .up => state.camera.process_keyboard(.Up, state.delta_time),
-            .down => state.camera.process_keyboard(.Down, state.delta_time),
+            .w => state.camera.processMovement(.Forward, state.delta_time),
+            .s => state.camera.processMovement(.Backward, state.delta_time),
+            .a => state.camera.processMovement(.Left, state.delta_time),
+            .d => state.camera.processMovement(.Right, state.delta_time),
+            .up => state.camera.processMovement(.Up, state.delta_time),
+            .down => state.camera.processMovement(.Down, state.delta_time),
             else => {},
         }
     }
 }
 
-fn framebuffer_size_handler(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {
+fn framebufferSizeHandler(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {
     _ = window;
     gl.viewport(0, 0, width, height);
 }
 
-fn mouse_hander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
+fn mouseHandler(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = window;
     _ = mods;
 
@@ -319,10 +326,10 @@ fn mouse_hander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Act
     state.mouse_right_button = action == .press and button == glfw.MouseButton.right;
 }
 
-fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
+fn cursorPositionHandler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
     _ = window;
-    var xpos: i32 = @intFromFloat(xposIn);
-    var ypos: i32 = @intFromFloat(yposIn);
+    var xpos: f32 = @floatCast(xposIn);
+    var ypos: f32 = @floatCast(yposIn);
 
     xpos = if (xpos < 0) 0 else if (xpos < state.scr_width) xpos else state.scr_width;
     ypos = if (ypos < 0) 0 else if (ypos < state.scr_height) ypos else state.scr_height;
@@ -340,12 +347,12 @@ fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callc
     state.last_y = ypos;
 
     if (state.key_shift) {
-        state.camera.process_mouse_movement(xoffset, yoffset, true);
+        state.camera.processMouseMovement(xoffset, yoffset, true);
     }
 }
 
-fn scroll_handler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {
+fn scrollHandler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {
     _ = window;
     _ = xoffset;
-    state.camera.process_mouse_scroll(@floatCast(yoffset));
+    state.camera.processMouseScroll(@floatCast(yoffset));
 }

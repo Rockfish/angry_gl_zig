@@ -17,8 +17,7 @@ const Allocator = std.mem.Allocator;
 const EnumSet = std.EnumSet;
 
 const Window = glfw.Window;
-const cam = @import("camera.zig");
-const Camera = cam.Camera;
+const Camera = core.Camera;
 
 pub const Input = struct {
     first_mouse: bool = false,
@@ -40,9 +39,9 @@ pub const State = struct {
     input: Input,
     camera: *Camera,
     projection: Mat4 = undefined,
-    projection_type: cam.ProjectionType,
+    projection_type: core.ProjectionType,
     view: Mat4 = undefined,
-    view_type: cam.ViewType,
+    view_type: core.ViewType,
     light_postion: Vec3,
     delta_time: f32,
     total_time: f32,

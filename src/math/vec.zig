@@ -49,7 +49,7 @@ pub const Vec3 = extern struct {
 
     const Self = @This();
 
-    pub fn new(x: f32, y: f32, z: f32) Vec3 {
+    pub fn init(x: f32, y: f32, z: f32) Vec3 {
         return .{ .x = x, .y = y, .z = z };
     }
 
@@ -197,7 +197,7 @@ pub const Vec4 = extern struct {
     z: f32,
     w: f32,
 
-    pub fn new(x: f32, y: f32, z: f32, w: f32) Vec4 {
+    pub fn init(x: f32, y: f32, z: f32, w: f32) Vec4 {
         return .{ .x = x, .y = y, .z = z, .w = w };
     }
 

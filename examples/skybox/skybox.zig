@@ -52,7 +52,7 @@ const SKYBOX_VERTICES = [_]f32{
     1.0,  -1.0, 1.0,
 };
 
-pub fn init_skybox() u32 {
+pub fn initSkybox() u32 {
     var vao: u32 = undefined;
     var vbo: u32 = undefined;
 

@@ -53,22 +53,22 @@ pub const Model = struct {
         try self.animator.playTick(tick);
     }
 
-    pub fn play_clip_with_transition(self: *Self, clip: AnimationClip, transition_duration: f32) !void {
-        try self.animator.play_clip_with_transition(clip, transition_duration);
+    pub fn playClipWithTransition(self: *Self, clip: AnimationClip, transition_duration: f32) !void {
+        try self.animator.playClipWithTransition(clip, transition_duration);
     }
 
-    pub fn play_weight_animations(self: *Self, weighted_animation: []const WeightedAnimation, frame_time: f32) !void {
-        try self.animator.play_weight_animations(weighted_animation, frame_time);
+    pub fn playWeightAnimations(self: *Self, weighted_animation: []const WeightedAnimation, frame_time: f32) !void {
+        try self.animator.playWeightAnimations(weighted_animation, frame_time);
     }
 
     pub fn render(self: *Self, shader: *const Shader) void {
-        shader.use_shader();
+        shader.useShader();
         var buf: [256:0]u8 = undefined;
 
         for (0..MAX_BONES) |i| {
             const bone_transform = self.animator.final_bone_matrices[i];
             const uniform = std.fmt.bufPrintZ(&buf, "finalBonesMatrices[{d}]", .{i}) catch unreachable;
-            shader.set_mat4(uniform, &bone_transform);
+            shader.setMat4(uniform, &bone_transform);
         }
 
         for (self.meshes.items, 0..) |mesh,n| {
@@ -76,25 +76,25 @@ pub const Model = struct {
                 continue;
             }
 
-            shader.set_int("mesh_id", mesh.id);
-            shader.set_mat4("nodeTransform", &self.animator.final_node_matrices[@intCast(mesh.id)]);
+            shader.setInt("mesh_id", mesh.id);
+            shader.setMat4("nodeTransform", &self.animator.final_node_matrices[@intCast(mesh.id)]);
             mesh.render(shader);
         }
     }
 
-    pub fn set_shader_bones_for_mesh(self: *Self, shader: *const Shader, mesh: *ModelMesh) !void {
+    pub fn setShaderBonesForMesh(self: *Self, shader: *const Shader, mesh: *ModelMesh) !void {
         var buf: [256:0]u8 = undefined;
 
         for (0..MAX_BONES) |i| {
             const bone_transform = self.animator.final_bone_matrices[i];
             const uniform = try std.fmt.bufPrintZ(&buf, "finalBonesMatrices[{d}]", .{i});
-            shader.set_mat4(uniform, &bone_transform);
+            shader.setMat4(uniform, &bone_transform);
         }
-        shader.set_mat4("nodeTransform", &self.animator.final_node_matrices[@intCast(mesh.id)]);
+        shader.setMat4("nodeTransform", &self.animator.final_node_matrices[@intCast(mesh.id)]);
     }
 
-    pub fn update_animation(self: *Self, delta_time: f32) !void {
-        try self.animator.update_animation(delta_time);
+    pub fn updateAnimation(self: *Self, delta_time: f32) !void {
+        try self.animator.updateAnimation(delta_time);
     }
 };
 

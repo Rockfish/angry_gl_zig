@@ -59,17 +59,17 @@ pub const Floor = struct {
             .wrap = TextureWrap.Repeat,
         };
 
-        const texture_floor_diffuse = try Texture.new(
+        const texture_floor_diffuse = try Texture.init(
             allocator,
             "angrybots_assets/Models/Floor D.png",
             texture_config,
         );
-        const texture_floor_normal = try Texture.new(
+        const texture_floor_normal = try Texture.init(
             allocator,
             "angrybots_assets/Models/Floor N.png",
             texture_config,
         );
-        const texture_floor_spec = try Texture.new(
+        const texture_floor_spec = try Texture.init(
             allocator,
             "angrybots_assets/Models/Floor M.png",
             texture_config,
@@ -119,19 +119,19 @@ pub const Floor = struct {
     }
 
     pub fn draw(self: *const Self, shader: *const Shader, projection_view: *const Mat4) void {
-        shader.use_shader();
+        shader.useShader();
 
-        shader.bind_texture(0, "texture_diffuse", self.texture_floor_diffuse);
-        shader.bind_texture(1, "texture_normal", self.texture_floor_normal);
-        shader.bind_texture(2, "texture_spec", self.texture_floor_spec);
+        shader.bindTexture(0, "texture_diffuse", self.texture_floor_diffuse);
+        shader.bindTexture(1, "texture_normal", self.texture_floor_normal);
+        shader.bindTexture(2, "texture_spec", self.texture_floor_spec);
 
         // angle floor
         // const _model = Mat4.from_axis_angle(vec3(0.0, 1.0, 0.0), math.degreesToRadians(45.0));
 
         const model = Mat4.identity();
 
-        shader.set_mat4("PV", projection_view);
-        shader.set_mat4("model", &model);
+        shader.setMat4("PV", projection_view);
+        shader.setMat4("model", &model);
 
         gl.bindVertexArray(self.floor_vao);
         gl.drawArrays(gl.TRIANGLES, 0, 6);

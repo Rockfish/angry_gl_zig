@@ -369,7 +369,7 @@ pub const ModelBuilder = struct {
             }
         }
 
-        const texture = try Texture.new(self.allocator, filename, texture_config);
+        const texture = try Texture.init(self.allocator, filename, texture_config);
         try self.texture_cache.append(texture);
 
         std.log.debug("loaded {any}  path: {s}", .{texture.texture_type, texture.texture_path});
@@ -425,11 +425,11 @@ inline fn vec2FromVector2D(aiVec: Assimp.aiVector2D) Vec2 {
 }
 
 inline fn vec3FromVector3D(aiVec: Assimp.aiVector3D) Vec3 {
-    return Vec3.new(aiVec.x, aiVec.y, aiVec.z);
+    return Vec3.init(aiVec.x, aiVec.y, aiVec.z);
 }
 
 inline fn vec4FromColor4D(aiColor: Assimp.aiColor4D) Vec4 {
-    return Vec4.new(aiColor.r, aiColor.g, aiColor.b, aiColor.a);
+    return Vec4.init(aiColor.r, aiColor.g, aiColor.b, aiColor.a);
 }
 
 inline fn GetMaterialTexture(

@@ -152,7 +152,7 @@ pub const BulletStore = struct {
         self.bullet_impact_spritesheet.deinit();
     }
 
-    pub fn new(allocator: Allocator, unit_square_vao: c_uint) !Self {
+    pub fn init(allocator: Allocator, unit_square_vao: c_uint) !Self {
         const texture_config = TextureConfig{
             .flip_v = false,
             // .flip_h = true,
@@ -162,10 +162,10 @@ pub const BulletStore = struct {
             .wrap = TextureWrap.Repeat,
         };
 
-        const bullet_texture = try Texture.new(allocator, "assets/bullet/bullet_texture_transparent.png", texture_config);
+        const bullet_texture = try Texture.init(allocator, "assets/bullet/bullet_texture_transparent.png", texture_config);
 
-        const texture_impact_sprite_sheet = try Texture.new(allocator, "assets/bullet/impact_spritesheet_with_00.png", texture_config);
-        const bullet_impact_spritesheet = SpriteSheet.new(texture_impact_sprite_sheet, 11, 0.05);
+        const texture_impact_sprite_sheet = try Texture.init(allocator, "assets/bullet/impact_spritesheet_with_00.png", texture_config);
+        const bullet_impact_spritesheet = SpriteSheet.init(texture_impact_sprite_sheet, 11, 0.05);
 
         // Pre calculate the bullet spread rotations. Only needs to be done once.
         var x_rotations = ArrayList(Quat).init(allocator);
@@ -207,14 +207,14 @@ pub const BulletStore = struct {
             .allocator = allocator,
         };
 
-        Self.create_shader_buffers(&bullet_store);
+        Self.createShaderBuffers(&bullet_store);
         log.info("bullet_store created", .{});
         //log.debug("bullet_store = {any}", .{bullet_store});
 
         return bullet_store;
     }
 
-    pub fn create_bullets(self: *Self, dx: f32, dz: f32, muzzle_transform: *const Mat4, _: i32) !bool {
+    pub fn createBullets(self: *Self, dx: f32, dz: f32, muzzle_transform: *const Mat4, _: i32) !bool {
         // limit number of bullet groups
         ////if (self.bullet_groups.items.len > 10) {
         //return false;
@@ -264,7 +264,7 @@ pub const BulletStore = struct {
         return true;
     }
 
-    pub fn update_bullets(self: *Self, state: *State) !void {
+    pub fn updateBullets(self: *Self, state: *State) !void {
         if (self.all_bullet_positions.items.len == 0) {
             return;
         }
@@ -323,7 +323,7 @@ pub const BulletStore = struct {
                             continue;
                         }
                         for (bullet_start..bullet_end) |bullet_index| {
-                            if (bullet_collides_with_enemy(
+                            if (bulletCollidesWithEnemy(
                                 &self.all_bullet_positions.items[bullet_index],
                                 &self.all_bullet_directions.items[bullet_index],
                                 enemy,
@@ -407,7 +407,7 @@ pub const BulletStore = struct {
         }
     };
 
-    fn create_shader_buffers(self: *Self) void {
+    fn createShaderBuffers(self: *Self) void {
         var bullet_vao: gl.Uint = 0;
         var bullet_vertices_vbo: gl.Uint = 0;
         var bullet_indices_ebo: gl.Uint = 0;
@@ -501,7 +501,7 @@ pub const BulletStore = struct {
         self.positions_vbo = positions_vbo;
     }
 
-    pub fn draw_bullets(self: *Self, shader: *Shader, projection_view: *const Mat4) void {
+    pub fn drawBullets(self: *Self, shader: *Shader, projection_view: *const Mat4) void {
         if (self.all_bullet_positions.items.len == 0) {
             return;
         }
@@ -512,12 +512,12 @@ pub const BulletStore = struct {
         gl.depthMask(gl.FALSE);
         gl.disable(gl.CULL_FACE);
 
-        shader.use_shader();
-        shader.set_mat4("PV", projection_view);
-        shader.set_bool("useLight", false);
+        shader.useShader();
+        shader.setMat4("PV", projection_view);
+        shader.setBool("useLight", false);
 
-        shader.bind_texture(0, "texture_diffuse", self.bullet_texture);
-        shader.bind_texture(1, "texture_normal", self.bullet_texture);
+        shader.bindTexture(0, "texture_diffuse", self.bullet_texture);
+        shader.bindTexture(1, "texture_normal", self.bullet_texture);
 
         // bind bullet vertices and indices
         gl.bindVertexArray(self.bullet_vao);
@@ -554,14 +554,14 @@ pub const BulletStore = struct {
         gl.depthMask(gl.TRUE);
     }
 
-    pub fn draw_bullet_impacts(self: *const Self, sprite_shader: *Shader, projection_view: *const Mat4) void {
-        sprite_shader.use_shader();
-        sprite_shader.set_mat4("PV", projection_view);
+    pub fn drawBulletImpacts(self: *const Self, sprite_shader: *Shader, projection_view: *const Mat4) void {
+        sprite_shader.useShader();
+        sprite_shader.setMat4("PV", projection_view);
 
-        sprite_shader.set_int("numCols", @intFromFloat(self.bullet_impact_spritesheet.num_columns));
-        sprite_shader.set_float("timePerSprite", self.bullet_impact_spritesheet.time_per_sprite);
+        sprite_shader.setInt("numCols", @intFromFloat(self.bullet_impact_spritesheet.num_columns));
+        sprite_shader.setFloat("timePerSprite", self.bullet_impact_spritesheet.time_per_sprite);
 
-        sprite_shader.bind_texture(0, "spritesheet", self.bullet_impact_spritesheet.texture);
+        sprite_shader.bindTexture(0, "spritesheet", self.bullet_impact_spritesheet.texture);
 
         gl.enable(gl.BLEND);
         gl.depthMask(gl.FALSE);
@@ -576,8 +576,8 @@ pub const BulletStore = struct {
             model = model.mulMat4(&Mat4.fromRotationX(math.degreesToRadians(-90.0)));
             model = model.mulMat4(&Mat4.fromScale(&vec3(scale, scale, scale)));
 
-            sprite_shader.set_float("age", sprite.?.age);
-            sprite_shader.set_mat4("model", &model);
+            sprite_shader.setFloat("age", sprite.?.age);
+            sprite_shader.setMat4("model", &model);
 
             gl.drawArrays(gl.TRIANGLES, 0, 6);
         }
@@ -588,7 +588,7 @@ pub const BulletStore = struct {
     }
 };
 
-fn bullet_collides_with_enemy(position: *Vec3, direction: *Vec3, enemy: *Enemy) bool {
+fn bulletCollidesWithEnemy(position: *Vec3, direction: *Vec3, enemy: *Enemy) bool {
     if (position.distance(&enemy.position) > BULLET_ENEMY_MAX_COLLISION_DIST) {
         return false;
     }
@@ -603,12 +603,12 @@ fn bullet_collides_with_enemy(position: *Vec3, direction: *Vec3, enemy: *Enemy) 
     return closet_distance <= (world.BULLET_COLLIDER.radius + world.ENEMY_COLLIDER.radius);
 }
 
-pub fn rotate_by_quat(v: *Vec3, q: *Quat) Vec3 {
+pub fn rotateByQuat(v: *Vec3, q: *Quat) Vec3 {
     const q_prime = Quat.from_xyzw(q.w, -q.x, -q.y, -q.z);
-    return partial_hamilton_product(&partial_hamilton_product2(q, v), &q_prime);
+    return partialHamiltonProduct(&partialHamiltonProduct2(q, v), &q_prime);
 }
 
-pub fn partial_hamilton_product2(quat: *Quat, vec: *Vec3) Quat {
+pub fn partialHamiltonProduct2(quat: *Quat, vec: *Vec3) Quat {
     return Quat.from_xyzw(
         quat.w * vec.x + quat.y * vec.z - quat.z * vec.y,
         quat.w * vec.y - quat.x * vec.z + quat.z * vec.x,
@@ -617,7 +617,7 @@ pub fn partial_hamilton_product2(quat: *Quat, vec: *Vec3) Quat {
     );
 }
 
-pub fn partial_hamilton_product(q1: *Quat, q2: *Quat) Vec3 {
+pub fn partialHamiltonProduct(q1: *Quat, q2: *Quat) Vec3 {
     return vec3(
         q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y,
         q1.w * q2.y - q1.x * q2.z + q1.y * q2.w + q1.z * q2.x,
@@ -625,7 +625,7 @@ pub fn partial_hamilton_product(q1: *Quat, q2: *Quat) Vec3 {
     );
 }
 
-fn hamilton_product_quat_vec(quat: *Quat, vec: *Vec3) Quat {
+fn hamiltonProductQuatVec(quat: *Quat, vec: *Vec3) Quat {
     return Quat.from_xyzw(
         quat.w * vec.x + quat.y * vec.z - quat.z * vec.y,
         quat.w * vec.y - quat.x * vec.z + quat.z * vec.x,
@@ -634,7 +634,7 @@ fn hamilton_product_quat_vec(quat: *Quat, vec: *Vec3) Quat {
     );
 }
 
-fn hamilton_product_quat_quat(first: Quat, other: *Quat) Quat {
+fn hamiltonProductQuatQuat(first: Quat, other: *Quat) Quat {
     return Quat.from_xyzw(
         first.w * other.x + first.x * other.w + first.y * other.z - first.z * other.y,
         first.w * other.y - first.x * other.z + first.y * other.w + first.z * other.x,

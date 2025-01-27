@@ -16,7 +16,7 @@ pub const Quat = quat_.Quat;
 
 pub const epsilon: f32 = 1.19209290e-07;
 
-pub fn screen_to_model_glam(
+pub fn screenToModelGlam(
     mouse_x: f32,
     mouse_y: f32,
     viewport_width: f32,
@@ -29,7 +29,7 @@ pub fn screen_to_model_glam(
     const ndc_x = (2.0 * mouse_x) / viewport_width - 1.0;
     const ndc_y = 1.0 - (2.0 * mouse_y) / viewport_height;
     const ndc_z = 0.7345023; // 1.0; // Assuming the point is on the near plane
-    const ndc = Vec4.new(ndc_x, ndc_y, ndc_z, 1.0);
+    const ndc = Vec4.init(ndc_x, ndc_y, ndc_z, 1.0);
 
     // debug!("ndc: {:?}", ndc);
 
@@ -37,16 +37,16 @@ pub fn screen_to_model_glam(
     const clip_space = projection_matrix.inverse() * ndc;
 
     // Convert clip space to eye space (w-divide)
-    const eye_space = Vec4.new(clip_space.x / clip_space.w, clip_space.y / clip_space.w, -1.0, 0.0);
+    const eye_space = Vec4.init(clip_space.x / clip_space.w, clip_space.y / clip_space.w, -1.0, 0.0);
     // const eye_space = clip_space / clip_space.w;
 
     // Convert eye space to world space (inverse view matrix)
     const world_space = view_matrix.inverse() * eye_space;
 
-    return Vec3.new(world_space.x, world_space.y, world_space.z);
+    return Vec3.init(world_space.x, world_space.y, world_space.z);
 }
 
-pub fn get_world_ray_from_mouse(
+pub fn getWorldRayFromMouse(
     viewport_width: f32,
     viewport_height: f32,
     projection: *const Mat4,
@@ -59,7 +59,7 @@ pub fn get_world_ray_from_mouse(
     const ndc_x = (2.0 * mouse_x) / viewport_width - 1.0;
     const ndc_y = 1.0 - (2.0 * mouse_y) / viewport_height;
     const ndc_z = -1.0; // face the same direction as the opengl camera
-    const ndc = Vec4.new(ndc_x, ndc_y, ndc_z, 1.0);
+    const ndc = Vec4.init(ndc_x, ndc_y, ndc_z, 1.0);
 
     const projection_inverse = projection.getInverse();
     const view_inverse = view_matrix.getInverse();
@@ -77,7 +77,12 @@ pub fn get_world_ray_from_mouse(
     return ray_normalized;
 }
 
-pub fn ray_plane_intersection(ray_origin: *const Vec3, ray_direction: *const Vec3, plane_point: *const Vec3, plane_normal: *const Vec3) ?Vec3 {
+pub fn getRayPlaneIntersection(
+    ray_origin: *const Vec3,
+    ray_direction: *const Vec3,
+    plane_point: *const Vec3,
+    plane_normal: *const Vec3,
+) ?Vec3 {
     const denom = plane_normal.dot(ray_direction);
     if (@abs(denom) > epsilon) {
         const p0l0 = plane_point.sub(ray_origin);
@@ -89,7 +94,7 @@ pub fn ray_plane_intersection(ray_origin: *const Vec3, ray_direction: *const Vec
     return null;
 }
 
-pub fn calculate_normal(a: Vec3, b: Vec3, c: Vec3) Vec3 {
+pub fn calculateNormal(a: Vec3, b: Vec3, c: Vec3) Vec3 {
     // Calculate vectors AB and AC
     const ab = Vec3{
         .x = b.x - a.x,
@@ -115,21 +120,21 @@ test "utils.get_world_ray_from_mouse" {
     const width = 1500.0;
     const height = 1000.0;
 
-    const view_matrix = Mat4.from_cols(
+    const view_matrix = Mat4.fromColumns(
         vec4(0.345086, 0.64576554, -0.68110394, 0.0),
         vec4(0.3210102, 0.6007121, 0.7321868, 0.0),
         vec4(0.8819683, -0.47130874, -0.0, 0.0),
         vec4(1.1920929e-7, -0.0, -5.872819, 1.0),
     );
 
-    const projection = Mat4.from_cols(
+    const projection = Mat4.fromColumns(
         vec4(1.6094756, 0.0, 0.0, 0.0),
         vec4(0.0, 2.4142134, 0.0, 0.0),
         vec4(0.0, 0.0, -1.002002, -1.0),
         vec4(0.0, 0.0, -0.2002002, 0.0),
     );
 
-    const ray = get_world_ray_from_mouse(
+    const ray = getWorldRayFromMouse(
         width,
         height,
         &projection,

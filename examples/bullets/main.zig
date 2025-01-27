@@ -60,7 +60,7 @@ pub fn main() !void {
 
     try zopengl.loadCoreProfile(glfw.getProcAddress, gl_major, gl_minor);
 
-    const shader = try Shader.new(
+    const shader = try Shader.init(
         allocator,
         "examples/bullets/texture.vert",
         "examples/bullets/texture.frag",

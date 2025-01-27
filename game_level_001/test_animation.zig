@@ -5,7 +5,7 @@ const zstbi = @import("zstbi");
 const core = @import("core");
 const math = @import("math");
 
-const Camera = @import("camera.zig").Camera;
+//const Camera = @import("camera.zig").Camera;
 
 const gl = zopengl.bindings;
 
@@ -13,7 +13,7 @@ const Assimp = core.assimp.Assimp;
 const Model = core.Model;
 const ModelBuilder = core.ModelBuilder;
 const animation = core.animation;
-//const Camera = core.Camera;
+const Camera = core.Camera;
 const Shader = core.Shader;
 const String = core.string.String;
 const FrameCount = core.FrameCount;
@@ -77,7 +77,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .scaled_height = scaled_height,
         .window_scale = window_scale,
         .camera = camera,
-        .projection = camera.get_perspective_projection(),
+        .projection = camera.getPerspectiveProjection(),
         .projection_type = .Perspective,
         .view_type = .LookAt,
         .light_postion = vec3(1.2, 1.0, 2.0),
@@ -98,7 +98,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     const state = &state_.state;
     state_.initWindowHandlers(window);
 
-    const shader = try Shader.new(
+    const shader = try Shader.init(
         allocator,
         "game_level_001/shaders/player_shader.vert", 
         //"game_level_001/shaders/player_shader.frag",
@@ -170,12 +170,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     // state.single_mesh_id = 2;
     var last_animation: i32 = 0;
 
-    shader.set_bool("has_color", false);
-    shader.set_vec3("diffuse_color", &vec3(0.0, 0.0, 0.0));
-    shader.set_vec3("ambient_color", &vec3(0.0, 0.0, 0.0));
-    shader.set_vec3("specular_color", &vec3(0.0, 0.0, 0.0));
-    shader.set_vec3("emissive_color", &vec3(0.0, 0.0, 0.0));
-    shader.set_vec3("hit_color", &vec3(0.0, 0.0, 0.0));
+    shader.setBool("has_color", false);
+    shader.setVec3("diffuse_color", &vec3(0.0, 0.0, 0.0));
+    shader.setVec3("ambient_color", &vec3(0.0, 0.0, 0.0));
+    shader.setVec3("specular_color", &vec3(0.0, 0.0, 0.0));
+    shader.setVec3("emissive_color", &vec3(0.0, 0.0, 0.0));
+    shader.setVec3("hit_color", &vec3(0.0, 0.0, 0.0));
 
     while (!window.shouldClose()) {
         const current_time: f32 = @floatCast(glfw.getTime());
@@ -193,8 +193,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         // const debug_camera = try Camera.camera_vec3(allocator, vec3(0.0, 40.0, 120.0));
         // defer debug_camera.deinit();
 
-        shader.set_mat4("matProjection", &state.projection);
-        shader.set_mat4("matView", &state.camera.get_lookat_view());
+        shader.setMat4("matProjection", &state.projection);
+        shader.setMat4("matView", &state.camera.getLookAtView());
   
         var model_transform = Mat4.identity();
         // model_transform.translate(&vec3(0.0, -10.4, -400.0));
@@ -203,19 +203,19 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         model_transform.rotateByDegrees(&vec3(1.0, 0.0, 0.0), -90.0);
         model_transform.scale(&vec3(3.0, 3.0, 3.0));
         // model_transform.scale(&vec3(0.02, 0.02, 0.02));
-        shader.set_mat4("matModel", &model_transform);
+        shader.setMat4("matModel", &model_transform);
 
-        shader.set_bool("useLight", true);
-        shader.set_vec3("ambient", &ambientColor);
-        shader.set_vec3("ambient_light", &vec3(1.0, 0.8, 0.8));
-        shader.set_vec3("light_color", &vec3(0.1, 0.1, 0.1));
-        shader.set_vec3("light_dir", &vec3(10.0, 10.0, 2.0));
+        shader.setBool("useLight", true);
+        shader.setVec3("ambient", &ambientColor);
+        shader.setVec3("ambient_light", &vec3(1.0, 0.8, 0.8));
+        shader.setVec3("light_color", &vec3(0.1, 0.1, 0.1));
+        shader.setVec3("light_dir", &vec3(10.0, 10.0, 2.0));
 
         const identity = Mat4.identity();
-        shader.set_mat4("aimRot", &identity);
-        shader.set_mat4("lightSpaceMatrix", &identity);
+        shader.setMat4("aimRot", &identity);
+        shader.setMat4("lightSpaceMatrix", &identity);
 
-        try model.update_animation(state.delta_time);
+        try model.updateAnimation(state.delta_time);
         //try model.playTick(1.0);
         //model.single_mesh_select = state.single_mesh_id;
         if (last_animation != state.animation_id) {

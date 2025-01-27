@@ -38,18 +38,18 @@ pub const Picker = struct {
     }
 
     pub fn init(allocator: Allocator, width: u32, height: u32) !Self { // Create the FBO
-        const shader = try Shader.new(
+        const shader = try Shader.init(
             allocator,
             "examples/picker/picking.vert",
             "examples/picker/picking.frag",
         );
-        shader.use_shader();
+        shader.useShader();
 
-        const pv_location = shader.get_uniform_location("projection_view");
-        const model_location = shader.get_uniform_location("model_transform");
+        const pv_location = shader.getUniformLocation("projection_view");
+        const model_location = shader.getUniformLocation("model_transform");
 
-        const mesh_id_location = shader.get_uniform_location("object_id");
-        const object_id_location = shader.get_uniform_location("mesh_id");
+        const mesh_id_location = shader.getUniformLocation("object_id");
+        const object_id_location = shader.getUniformLocation("mesh_id");
 
         if (pv_location == INVALID_UNIFORM_LOCATION or
             mesh_id_location == INVALID_UNIFORM_LOCATION or
@@ -66,12 +66,12 @@ pub const Picker = struct {
             .shader = shader,
         };
 
-        picker.create_framebuffer(width, height);
+        picker.createFramebuffer(width, height);
 
         return picker;
     }
 
-    pub fn create_framebuffer(self: *Self, width: u32, height: u32) void {
+    pub fn createFramebuffer(self: *Self, width: u32, height: u32) void {
         var fbo: u32 = undefined;
         var picking_texture_id: u32 = undefined;
         var depth_texture_id: u32 = undefined;
@@ -146,7 +146,7 @@ pub const Picker = struct {
 
     pub fn enable(self: *const Self) void {
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, self.fbo);
-        self.shader.use_shader();
+        self.shader.useShader();
         gl.clearColor(0.0, 0.0, 0.0, 0.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     }
@@ -156,35 +156,35 @@ pub const Picker = struct {
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, 0);
     }
 
-    pub fn set_projection_view(self: *const Self, projection: *const Mat4, view: *const Mat4) void {
+    pub fn setProjectView(self: *const Self, projection: *const Mat4, view: *const Mat4) void {
         const pv = projection.mulMat4(view);
         gl.uniformMatrix4fv(self.pv_location, 1, gl.FALSE, pv.toArrayPtr());
     }
 
-    pub fn set_model_transform(self: *const Self, model_transform: *const Mat4) void {
+    pub fn setModelTransform(self: *const Self, model_transform: *const Mat4) void {
         gl.uniformMatrix4fv(self.model_location, 1, gl.FALSE, model_transform.toArrayPtr());
     }
 
-    pub fn set_projection_view_model(self: *const Self, pv: *const Mat4) void {
+    pub fn setProjectionViewModel(self: *const Self, pv: *const Mat4) void {
         // const pvm = projection.mulMat4(view).mulMat4(model_transform);
         gl.uniformMatrix4fv(self.pv_location, 1, gl.FALSE, pv.toArrayPtr());
     }
 
-    pub fn set_mesh_id(self: *const Self, mesh_id: u32) void {
+    pub fn setMeshId(self: *const Self, mesh_id: u32) void {
         gl.uniform1ui(self.mesh_id_location, mesh_id);
     }
 
-    pub fn set_object_id(self: *const Self, object_index: u32) void {
+    pub fn setObjectId(self: *const Self, object_index: u32) void {
         gl.uniform1ui(self.object_id_location, object_index);
     }
 
-    pub fn read_pixel_info(self: *const Self, x: i32, y: i32) PixelInfo {
+    pub fn readPixelInfo(self: *const Self, x: f32, y: f32) PixelInfo {
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, self.fbo);
         gl.readBuffer(gl.COLOR_ATTACHMENT0);
 
         var pixel: PixelInfo = undefined;
 
-        gl.readPixels(x, y, 1, 1, gl.RGB, gl.FLOAT, &pixel);
+        gl.readPixels(@intFromFloat(x), @intFromFloat(y), 1, 1, gl.RGB, gl.FLOAT, &pixel);
         gl.readBuffer(gl.NONE);
 
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, 0);

@@ -107,7 +107,7 @@ pub const TextureConfig = struct {
 };
 
 pub const Texture = struct {
-    id: u32,
+    gl_texture_id: u32,
     texture_path: []const u8,
     texture_type: TextureType,
     width: u32,
@@ -122,7 +122,7 @@ pub const Texture = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn new(allocator: std.mem.Allocator, path: []const u8, texture_config: TextureConfig) !*Texture {
+    pub fn init(allocator: std.mem.Allocator, path: []const u8, texture_config: TextureConfig) !*Texture {
         zstbi.init(allocator);
         defer zstbi.deinit();
 
@@ -184,7 +184,7 @@ pub const Texture = struct {
 
         const texture = try allocator.create(Texture);
         texture.* = Texture{
-            .id = texture_id,
+            .gl_texture_id = texture_id,
             .texture_path = try allocator.dupe(u8, path),
             .texture_type = texture_config.texture_type,
             .width = image.width,
@@ -197,7 +197,7 @@ pub const Texture = struct {
     pub fn clone(self: *const Self) !*Texture {
         const texture = try self.allocator.create(Texture);
         texture.* = Texture{
-            .id = self.id,
+            .gl_texture_id = self.gl_texture_id,
             .texture_path = try self.allocator.dupe(u8, self.texture_path),
             .texture_type = self.texture_type,
             .width = self.width,

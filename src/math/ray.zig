@@ -14,7 +14,7 @@ const Quat = _quat.Quat;
 /// @param[in] v1             second vertex of triangle
 /// @param[in] v2             third vertex of triangle
 /// @param[return] ?d         distance to intersection if there is intersection
-pub fn ray_triangle_intersection(origin: *const Vec3, direction: *const Vec3, vert0: *const Vec3, vert1: *const Vec3, vert2: *const Vec3) ?f32 {
+pub fn getRayTriangleIntersection(origin: *const Vec3, direction: *const Vec3, vert0: *const Vec3, vert1: *const Vec3, vert2: *const Vec3) ?f32 {
     var distance: f32 = undefined;
     const found = cglm.glmc_ray_triangle(
         @as([*c]f32, @ptrCast(@constCast(origin))),
@@ -46,7 +46,7 @@ pub fn ray_triangle_intersection(origin: *const Vec3, direction: *const Vec3, ve
 ///
 /// @returns whether there is intersection
 ///
-pub fn ray_sphere_intersection(origin: *const Vec3, direction: *const Vec3, sphere: Vec4, t1: f32, t2: f32) bool {
+pub fn getRaySphereIntersection(origin: *const Vec3, direction: *const Vec3, sphere: Vec4, t1: f32, t2: f32) bool {
     // hmm, don't
     const found = cglm.glmc_ray_sphere(
         @as([*c]f32, @ptrCast(@constCast(origin))),

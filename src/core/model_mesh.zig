@@ -133,24 +133,24 @@ pub const ModelMesh = struct {
 
     pub fn render(self: *ModelMesh, shader: *const Shader) void {
         const has_texture = self.*.textures.items.len > 0;
-        shader.set_bool("has_texture", has_texture);
+        shader.setBool("has_texture", has_texture);
 
         for (self.*.textures.items, 0..) |texture, i| {
             const texture_unit: u32 = @intCast(i);
 
             gl.activeTexture(gl.TEXTURE0 + texture_unit);
-            gl.bindTexture(gl.TEXTURE_2D, texture.id);
+            gl.bindTexture(gl.TEXTURE_2D, texture.gl_texture_id);
 
             const uniform = texture.texture_type.toString();
-            shader.set_int(uniform, @as(i32, @intCast(texture_unit)));
+            shader.setInt(uniform, @as(i32, @intCast(texture_unit)));
             // std.debug.print("has_texture: {any} texture id: {d}  name: {s}\n", .{has_texture, i, texture.texture_path});
         }
 
         const has_color = self.*.colors.items.len > 0;
-        shader.set_bool("has_color", has_color);
+        shader.setBool("has_color", has_color);
 
         for (self.*.colors.items) |mesh_color| {
-            shader.set_vec4(mesh_color.uniform, &mesh_color.color);
+            shader.setVec4(mesh_color.uniform, &mesh_color.color);
             // std.debug.print("rendering color: {any}\n", .{mesh_color.color});
         }
 
@@ -163,7 +163,7 @@ pub const ModelMesh = struct {
         );
         gl.bindVertexArray(0);
 
-        shader.set_bool("has_color", false);
+        shader.setBool("has_color", false);
     }
 
     pub fn renderNoTextures(self: *ModelMesh) void {

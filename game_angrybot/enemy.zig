@@ -54,7 +54,7 @@ pub const EnemySystem = struct {
         self.enemy_model.deinit();
     }
 
-    pub fn new(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !Self {
+    pub fn init(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !Self {
         const builder = try ModelBuilder.init(allocator, texture_cache, "enemy", "angrybots_assets/Models/Eeldog/EelDog.FBX");
         defer builder.deinit();
 
@@ -84,13 +84,13 @@ pub const EnemySystem = struct {
         if (self.count_down <= 0.0) {
             for (0..world.SPAWNS_PER_INTERVAL) |_| {
                 const rand_num = self.random.rand_float();
-                try self.spawn_enemy(state, rand_num);
+                try self.spawnEnemy(state, rand_num);
             }
             self.count_down += world.ENEMY_SPAWN_INTERVAL;
         }
     }
 
-    pub fn spawn_enemy(self: *Self, state: *State, rand_num: f32) !void {
+    pub fn spawnEnemy(self: *Self, state: *State, rand_num: f32) !void {
         const theta = math.degreesToRadians(rand_num * 360.0);
         const x = state.player.position.x + math.sin(theta) * world.SPAWN_RADIUS;
         const z = state.player.position.z + math.cos(theta) * world.SPAWN_RADIUS;
@@ -118,17 +118,17 @@ pub const EnemySystem = struct {
                 if (dist <= (world.PLAYER_COLLISION_RADIUS + world.ENEMY_COLLIDER.radius)) {
                     // println!("GOTTEM!");
                     state.player.is_alive = false;
-                    state.player.set_player_death_time(state.frame_time);
+                    state.player.setPlayerDeathTime(state.frame_time);
                     state.player.direction = vec2(0.0, 0.0);
                 }
             }
         }
     }
 
-    pub fn draw_enemies(self: *Self, shader: *Shader, state: *State) void {
-        shader.use_shader();
-        shader.set_vec3("nosePos", &vec3(1.0, world.MONSTER_Y, -2.0));
-        shader.set_float("time", state.frame_time);
+    pub fn drawEnemies(self: *Self, shader: *Shader, state: *State) void {
+        shader.useShader();
+        shader.setVec3("nosePos", &vec3(1.0, world.MONSTER_Y, -2.0));
+        shader.setFloat("time", state.frame_time);
 
         for (state.enemies.items) |e| {
             const zero: f32 = 0.0;
@@ -146,8 +146,8 @@ pub const EnemySystem = struct {
             // rot_only = Mat4.from_axis_angle(vec3(0.0, 0.0, 1.0), PI);
             const rot_only = Mat4.fromAxisAngle(&vec3(1.0, 0.0, 0.0), math.degreesToRadians(90));
 
-            shader.set_mat4("aimRot", &rot_only);
-            shader.set_mat4("model", &model_transform);
+            shader.setMat4("aimRot", &rot_only);
+            shader.setMat4("model", &model_transform);
 
             self.enemy_model.render(shader);
         }

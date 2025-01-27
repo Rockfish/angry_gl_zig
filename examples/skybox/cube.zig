@@ -49,7 +49,7 @@ const CUBE_VERTICES = [_]f32{
     -0.5, 0.5,  -0.5, 0.0, 1.0,
 };
 
-pub fn init_cube() u32 {
+pub fn initCube() u32 {
     var vao: u32 = undefined;
     var vbo: u32 = undefined;
 

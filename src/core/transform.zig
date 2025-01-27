@@ -20,7 +20,7 @@ pub const Transform = struct {
     const Self = @This();
 
     pub fn from_matrix(m: *const Mat4) Transform {
-        const trs = m.to_translation_rotation_scale();
+        const trs = m.getTranslationRotationScale();
         return Transform {
             .translation = trs.translation,
             .rotation = trs.rotation,
@@ -42,7 +42,7 @@ pub const Transform = struct {
         self.scale = Vec3.one();
     }
 
-    pub fn mul_transform_weighted(self: *const Self, transform: Transform, weight: f32) Self {
+    pub fn mulTransformWeighted(self: *const Self, transform: Transform, weight: f32) Self {
         const translation = self.translation.lerp( &transform.translation, weight);
         const rotation = self.rotation.slerp(&transform.rotation, weight);
         const scale = self.scale.lerp(&transform.scale, weight);
@@ -53,8 +53,8 @@ pub const Transform = struct {
         };
     }
 
-    pub fn mul_transform(self: *const Self, transform: Transform) Self {
-        const translation = self.transform_point(transform.translation);
+    pub fn mulTransform(self: *const Self, transform: Transform) Self {
+        const translation = self.transformPoint(transform.translation);
         const rotation = Quat.mulQuat(&self.rotation, &transform.rotation);
         const scale = self.scale.mul(&transform.scale);
         return Transform{
@@ -64,15 +64,15 @@ pub const Transform = struct {
         };
     }
 
-    pub fn transform_point(self: *const Self, point: Vec3) Vec3 {
+    pub fn transformPoint(self: *const Self, point: Vec3) Vec3 {
         var _point = self.scale.mul(&point);
         _point = self.rotation.rotateVec(&_point);
         _point = self.translation.add(&_point);
         return _point;
     }
 
-    pub fn get_matrix(self: *const Self) Mat4 {
-        return  Mat4.from_translation_rotation_scale(&self.translation, &self.rotation, &self.scale);
+    pub fn getMatrix(self: *const Self) Mat4 {
+        return  Mat4.fromTranslationRotationScale(&self.translation, &self.rotation, &self.scale);
     }
 
     pub fn asString(self: *const Self, buf: []u8) [:0]u8 {

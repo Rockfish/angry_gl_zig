@@ -8,7 +8,7 @@ const Vec4 = _vec.Vec4;
 const Quat = _quat.Quat;
 
 pub fn mat4(x_axis: Vec4, y_axis: Vec4, z_axis: Vec4, w_axis: Vec4) Mat4 {
-    return Mat4.from_cols(x_axis, y_axis, z_axis, w_axis);
+    return Mat4.fromColumns(x_axis, y_axis, z_axis, w_axis);
 }
 
 pub const Mat4 = extern struct {
@@ -34,7 +34,7 @@ pub const Mat4 = extern struct {
         } };
     }
 
-    pub fn from_cols(x_axis: Vec4, y_axis: Vec4, z_axis: Vec4, w_axis: Vec4) Self {
+    pub fn fromColumns(x_axis: Vec4, y_axis: Vec4, z_axis: Vec4, w_axis: Vec4) Self {
         return Mat4{ .data = .{
             x_axis.asArray(),
             y_axis.asArray(),
@@ -193,7 +193,7 @@ pub const Mat4 = extern struct {
         scale: Vec3,
     };
 
-    pub fn to_translation_rotation_scale(self: *const Self) TrnRotScl {
+    pub fn getTranslationRotationScale(self: *const Self) TrnRotScl {
         var tran: [4]f32 = undefined;
         var rota: [4][4]f32 = undefined;
         var scal: [3]f32 = undefined;
@@ -204,7 +204,7 @@ pub const Mat4 = extern struct {
         cglm.glmc_mat4_quat(@constCast(&self.data), &quat);
 
         return TrnRotScl{
-            .translation = Vec3.new(tran[0], tran[1], tran[2]),
+            .translation = Vec3.init(tran[0], tran[1], tran[2]),
             .rotation = Quat{
                 .data = quat,
             },
@@ -212,7 +212,7 @@ pub const Mat4 = extern struct {
         };
     }
 
-    pub fn from_translation_rotation_scale(tran: *const Vec3, rota: *const Quat, scal: *const Vec3) Mat4 {
+    pub fn fromTranslationRotationScale(tran: *const Vec3, rota: *const Quat, scal: *const Vec3) Mat4 {
         const axis = Quat.toAxes(rota);
 
         const mat = Mat4{

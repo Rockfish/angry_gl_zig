@@ -38,11 +38,11 @@ pub const BurnMarks = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn new(allocator: Allocator, unit_square_vao: c_uint) !*Self {
+    pub fn init(allocator: Allocator, unit_square_vao: c_uint) !*Self {
         var texture_config = TextureConfig.default();
         texture_config.set_wrap(TextureWrap.Repeat);
 
-        const mark_texture = try Texture.new(allocator, "assets/bullet/burn_mark.png", texture_config);
+        const mark_texture = try Texture.init(allocator, "assets/bullet/burn_mark.png", texture_config);
 
         const burn_marks = try allocator.create(BurnMarks);
         burn_marks.* = .{
@@ -67,11 +67,11 @@ pub const BurnMarks = struct {
             return;
         }
 
-        shader.use_shader();
-        shader.set_mat4("PV", projection_view);
+        shader.useShader();
+        shader.setMat4("PV", projection_view);
 
-        shader.bind_texture(0, "texture_diffuse", self.mark_texture);
-        shader.bind_texture(1, "texture_normal", self.mark_texture);
+        shader.bindTexture(0, "texture_diffuse", self.mark_texture);
+        shader.bindTexture(1, "texture_normal", self.mark_texture);
 
         gl.enable(gl.BLEND);
         gl.depthMask(gl.FALSE);
@@ -89,7 +89,7 @@ pub const BurnMarks = struct {
             model = model.mulMat4(&Mat4.fromRotationX(math.degreesToRadians(-90.0)));
             model = model.mulMat4(&Mat4.fromScale(&vec3(scale, scale, scale)));
 
-            shader.set_mat4("model", &model);
+            shader.setMat4("model", &model);
 
             gl.drawArrays(gl.TRIANGLES, 0, 6);
         }

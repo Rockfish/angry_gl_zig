@@ -62,8 +62,6 @@ pub const AnimationState = struct {
     }
 };
 
-
-
 pub const Animator = struct {
     allocator: Allocator,
 

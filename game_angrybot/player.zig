@@ -48,12 +48,12 @@ pub const PlayerAnimations = struct {
 
     pub fn new() Self {
         return .{
-            .idle = AnimationClip.new(55.0, 130.0, AnimationRepeatMode.Forever),
-            .right = AnimationClip.new(184.0, 204.0, AnimationRepeatMode.Forever),
-            .forward = AnimationClip.new(134.0, 154.0, AnimationRepeatMode.Forever),
-            .back = AnimationClip.new(159.0, 179.0, AnimationRepeatMode.Forever),
-            .left = AnimationClip.new(209.0, 229.0, AnimationRepeatMode.Forever),
-            .dead = AnimationClip.new(234.0, 293.0, AnimationRepeatMode.Once),
+            .idle = AnimationClip.init(55.0, 130.0, AnimationRepeatMode.Forever),
+            .right = AnimationClip.init(184.0, 204.0, AnimationRepeatMode.Forever),
+            .forward = AnimationClip.init(134.0, 154.0, AnimationRepeatMode.Forever),
+            .back = AnimationClip.init(159.0, 179.0, AnimationRepeatMode.Forever),
+            .left = AnimationClip.init(209.0, 229.0, AnimationRepeatMode.Forever),
+            .dead = AnimationClip.init(234.0, 293.0, AnimationRepeatMode.Once),
         };
     }
 
@@ -116,7 +116,7 @@ pub const Player = struct {
         self.allocator.destroy(self);
     }
 
-    pub fn new(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !*Self {
+    pub fn init(allocator: Allocator, texture_cache: *ArrayList(*Texture)) !*Self {
         const model_path = "angrybots_assets/Models/Player/Player.fbx";
 
         var builder = try ModelBuilder.init(allocator, texture_cache, "Player", model_path);
@@ -141,12 +141,12 @@ pub const Player = struct {
         std.debug.print("player model built\n", .{});
 
         var anim_hash = HashMap(AnimationName, AnimationClip).init(allocator);
-        try anim_hash.put(.idle, AnimationClip.new(55.0, 130.0, AnimationRepeatMode.Forever));
-        try anim_hash.put(.forward, AnimationClip.new(134.0, 154.0, AnimationRepeatMode.Forever));
-        try anim_hash.put(.back, AnimationClip.new(159.0, 179.0, AnimationRepeatMode.Forever));
-        try anim_hash.put(.right, AnimationClip.new(184.0, 204.0, AnimationRepeatMode.Forever));
-        try anim_hash.put(.left, AnimationClip.new(209.0, 229.0, AnimationRepeatMode.Forever));
-        try anim_hash.put(.dead, AnimationClip.new(234.0, 293.0, AnimationRepeatMode.Once));
+        try anim_hash.put(.idle, AnimationClip.init(55.0, 130.0, AnimationRepeatMode.Forever));
+        try anim_hash.put(.forward, AnimationClip.init(134.0, 154.0, AnimationRepeatMode.Forever));
+        try anim_hash.put(.back, AnimationClip.init(159.0, 179.0, AnimationRepeatMode.Forever));
+        try anim_hash.put(.right, AnimationClip.init(184.0, 204.0, AnimationRepeatMode.Forever));
+        try anim_hash.put(.left, AnimationClip.init(209.0, 229.0, AnimationRepeatMode.Forever));
+        try anim_hash.put(.dead, AnimationClip.init(234.0, 293.0, AnimationRepeatMode.Once));
 
         const player = try allocator.create(Player);
         player.* = Player{
@@ -170,14 +170,14 @@ pub const Player = struct {
         return player;
     }
 
-    pub fn set_animation(self: *Self, animation_name: AnimationName, seconds: u32) void {
+    pub fn setAnimation(self: *Self, animation_name: AnimationName, seconds: u32) void {
         if (!self.animation_name.eq(animation_name)) {
             self.animation_name = animation_name;
-            self.model.play_clip_with_transition(self.animations.get(self.animation_name.deref()), seconds);
+            self.model.playClipWithTransition(self.animations.get(self.animation_name.deref()), seconds);
         }
     }
 
-    pub fn get_muzzle_position(self: *const Self, player_model_transform: *const Mat4) Mat4 {
+    pub fn getMuzzlePosition(self: *const Self, player_model_transform: *const Mat4) Mat4 {
         // Position in original model of gun muzzle
         // const point_vec = vec3(197.0, 76.143, -3.054);
         const point_vec = vec3(191.04, 79.231, -3.4651); // center of muzzle
@@ -196,7 +196,7 @@ pub const Player = struct {
         return player_model_transform.mulMat4(&muzzle);
     }
 
-    pub fn set_player_death_time(self: *Self, time: f32) void {
+    pub fn setPlayerDeathTime(self: *Self, time: f32) void {
         if (self.death_time < 0.0) {
             self.death_time = time;
         }
@@ -207,11 +207,11 @@ pub const Player = struct {
     }
 
     pub fn update(self: *Self, state: *State, aim_theta: f32) !void {
-        const weight_animations = self.update_animation_weights(self.direction, aim_theta, state.frame_time);
-        try self.model.play_weight_animations(&weight_animations, state.frame_time);
+        const weight_animations = self.updateAnimationWeights(self.direction, aim_theta, state.frame_time);
+        try self.model.playWeightAnimations(&weight_animations, state.frame_time);
     }
 
-    fn update_animation_weights(self: *Self, move_vec: Vec2, aim_theta: f32, frame_time: f32) [6]WeightedAnimation {
+    fn updateAnimationWeights(self: *Self, move_vec: Vec2, aim_theta: f32, frame_time: f32) [6]WeightedAnimation {
         const is_moving = move_vec.lengthSquared() > 0.1;
         const move_theta = math.atan(move_vec.x / move_vec.y) + if (move_vec.y < @as(f32, 0.0)) math.pi else @as(f32, 0.0);
         const theta_delta = move_theta - aim_theta;
@@ -251,12 +251,12 @@ pub const Player = struct {
 
         // weighted animations
         return .{
-            WeightedAnimation.new(idle_weight, 55.0, 130.0, 0.0, 0.0),
-            WeightedAnimation.new(forward_weight, 134.0, 154.0, 0.0, 0.0),
-            WeightedAnimation.new(back_weight, 159.0, 179.0, 10.0, 0.0),
-            WeightedAnimation.new(right_weight, 184.0, 204.0, 10.0, 0.0),
-            WeightedAnimation.new(left_weight, 209.0, 229.0, 0.0, 0.0),
-            WeightedAnimation.new(dead_weight, 234.0, 293.0, 0.0, self.death_time),
+            WeightedAnimation.init(idle_weight, 55.0, 130.0, 0.0, 0.0),
+            WeightedAnimation.init(forward_weight, 134.0, 154.0, 0.0, 0.0),
+            WeightedAnimation.init(back_weight, 159.0, 179.0, 10.0, 0.0),
+            WeightedAnimation.init(right_weight, 184.0, 204.0, 10.0, 0.0),
+            WeightedAnimation.init(left_weight, 209.0, 229.0, 0.0, 0.0),
+            WeightedAnimation.init(dead_weight, 234.0, 293.0, 0.0, self.death_time),
         };
     }
 };

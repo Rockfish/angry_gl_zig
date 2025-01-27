@@ -5,7 +5,7 @@ const zstbi = @import("zstbi");
 const core = @import("core");
 const math = @import("math");
 
-const Camera = @import("camera.zig").Camera;
+const Camera = core.Camera;
 const Builder = @import("builder.zig").GltfBuilder;
 
 const gl = zopengl.bindings;
@@ -100,7 +100,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     const state = &state_.state;
     state_.initWindowHandlers(window);
 
-    const shader = try Shader.new(
+    const shader = try Shader.init(
         allocator,
         // "examples/zgltf_port/shaders/player_shader.vert",
         // "examples/zgltf_port/shaders/basic_model.frag",
@@ -170,7 +170,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
     // state.single_mesh_id = 2;
     // var last_animation: i32 = 0;
 
-    shader.use_shader();
+    shader.useShader();
     // shader.set_bool("has_color", false);
     // shader.set_vec3("diffuse_color", &vec3(0.0, 0.0, 0.0));
     // shader.set_vec3("ambient_color", &vec3(0.0, 0.0, 0.0));
@@ -218,8 +218,8 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         gl.clearColor(0.5, 0.5, 0.5, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        shader.set_mat4("matProjection", &state.projection);
-        shader.set_mat4("matView", &state.camera.getViewByType());
+        shader.setMat4("matProjection", &state.projection);
+        shader.setMat4("matView", &state.camera.getViewByType());
 
         // _ = conversion_matrix;
         var model_transform = Mat4.identity();
@@ -232,19 +232,19 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         // model_transform.rotateByDegrees(&vec3(0.0, 1.0, 0.0), 180.0);
         // model_transform.scale(&vec3(3.0, 3.0, 3.0));
         // model_transform.scale(&vec3(0.02, 0.02, 0.02));
-        shader.set_mat4("matModel", &model_transform);
+        shader.setMat4("matModel", &model_transform);
 
-        // shader.set_bool("useLight", true);
-        // shader.set_vec3("ambient", &ambientColor);
-        // shader.set_vec3("ambient_light", &vec3(1.0, 0.8, 0.8));
-        // shader.set_vec3("light_color", &vec3(0.1, 0.1, 0.1));
-        // shader.set_vec3("light_dir", &vec3(10.0, 10.0, 2.0));
+        // shader.setBool("useLight", true);
+        // shader.setVec3("ambient", &ambientColor);
+        // shader.setVec3("ambient_light", &vec3(1.0, 0.8, 0.8));
+        // shader.setVec3("light_color", &vec3(0.1, 0.1, 0.1));
+        // shader.setVec3("light_dir", &vec3(10.0, 10.0, 2.0));
 
-        shader.set_vec3("lightPosition", &state.light_postion);
-        shader.set_vec3("lightColor", &vec3(1.0, 1.0, 1.0));
-        shader.set_float("lightIntensity", 1.0);
+        shader.setVec3("lightPosition", &state.light_postion);
+        shader.setVec3("lightColor", &vec3(1.0, 1.0, 1.0));
+        shader.setFloat("lightIntensity", 1.0);
 
-        shader.set_vec3("viewPosition", &state.camera.position);
+        shader.setVec3("viewPosition", &state.camera.position);
 
         // shader.set_mat4("aimRot", &identity);
         // lightSpaceMatrix is a view * ortho projection matrix for shadows

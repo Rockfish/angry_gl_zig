@@ -40,10 +40,10 @@ const State = struct {
     delta_time: f32,
     last_frame: f32,
     first_mouse: bool,
-    last_x: i32,
-    last_y: i32,
-    scr_width: i32 = @intFromFloat(SCR_WIDTH),
-    scr_height: i32 = @intFromFloat(SCR_HEIGHT),
+    last_x: f32,
+    last_y: f32,
+    scr_width: f32 = SCR_WIDTH,
+    scr_height: f32 = SCR_HEIGHT,
 };
 
 var state: State = undefined;
@@ -80,10 +80,10 @@ pub fn main() !void {
     );
     defer window.destroy();
 
-    _ = window.setKeyCallback(key_handler);
-    _ = window.setFramebufferSizeCallback(framebuffer_size_handler);
-    _ = window.setCursorPosCallback(cursor_position_handler);
-    _ = window.setScrollCallback(scroll_handler);
+    _ = window.setKeyCallback(keyHandler);
+    _ = window.setFramebufferSizeCallback(framebufferSizeHandler);
+    _ = window.setCursorPosCallback(cursorPositionHandler);
+    _ = window.setScrollCallback(scrollHandler);
 
     glfw.makeContextCurrent(window);
     glfw.swapInterval(1);
@@ -99,7 +99,15 @@ pub fn main() !void {
 pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     gl.enable(gl.DEPTH_TEST);
 
-    const camera = try Camera.camera_vec3(allocator, vec3(0.0, 0.0, 3.0));
+    const camera = try Camera.init(
+        allocator,
+        .{
+            .position = vec3(0.0, 0.0, 3.0),
+            .target = vec3(0.0, 0.0, 0.0),
+            .scr_width = SCR_WIDTH,
+            .scr_height = SCR_HEIGHT,
+        },
+    );
     defer camera.deinit();
 
     state = State{
@@ -112,22 +120,22 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .last_y = SCR_HEIGHT / 2.0,
     };
 
-    const basic_shader = try Shader.new(
+    const basic_shader = try Shader.init(
         allocator,
         "examples/skybox/basic.vert",
         "examples/skybox/basic.frag",
     );
     defer basic_shader.deinit();
 
-    const skybox_shader = try Shader.new(
+    const skybox_shader = try Shader.init(
         allocator,
         "examples/skybox/skybox.vert",
         "examples/skybox/skybox.frag",
     );
     defer skybox_shader.deinit();
 
-    const cubeVAO = cube.init_cube();
-    const skyboxVAO = skybox.init_skybox();
+    const cubeVAO = cube.initCube();
+    const skyboxVAO = skybox.initSkybox();
 
     const texture_config = .{
         .texture_type = .Diffuse,
@@ -137,7 +145,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         .wrap = .Clamp,
     };
 
-    const cube_texture = try Texture.new(
+    const cube_texture = try Texture.init(
         allocator,
         "assets/textures/container.jpg",
         texture_config,
@@ -155,11 +163,11 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
     const cubemap_id = skybox.loadCubemap(allocator, &faces);
 
-    basic_shader.use_shader();
-    basic_shader.set_uint("texture1", cube_texture.id);
+    basic_shader.useShader();
+    basic_shader.setUint("texture1", cube_texture.gl_texture_id);
 
-    skybox_shader.use_shader();
-    skybox_shader.set_int("skybox", 0);
+    skybox_shader.useShader();
+    skybox_shader.setInt("skybox", 0);
 
     const projection = Mat4.perspectiveRhGl(math.degreesToRadians(camera.zoom), SCR_WIDTH / SCR_HEIGHT, 0.1, 100.0);
 
@@ -174,12 +182,12 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         const model = Mat4.identity();
-        const view = camera.get_lookto_view();
+        const view = camera.getLookToView();
 
-        basic_shader.use_shader();
-        basic_shader.set_mat4("model", &model);
-        basic_shader.set_mat4("view", &view);
-        basic_shader.set_mat4("projection", &projection);
+        basic_shader.useShader();
+        basic_shader.setMat4("model", &model);
+        basic_shader.setMat4("view", &view);
+        basic_shader.setMat4("projection", &projection);
 
         // cubes
         gl.bindVertexArray(cubeVAO);
@@ -190,11 +198,11 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
 
         // draw skybox as last
         gl.depthFunc(gl.LEQUAL); // change depth function so depth test passes when values are equal to depth buffer's content
-        skybox_shader.use_shader();
+        skybox_shader.useShader();
 
         const sky_view = view.removeTranslation();
-        skybox_shader.set_mat4("view", &sky_view);
-        skybox_shader.set_mat4("projection", &projection);
+        skybox_shader.setMat4("view", &sky_view);
+        skybox_shader.setMat4("projection", &projection);
 
         // skybox cube
         gl.bindVertexArray(skyboxVAO);
@@ -218,7 +226,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     glfw.terminate();
 }
 
-fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
+fn keyHandler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = scancode;
     _ = mods;
     switch (key) {
@@ -230,30 +238,30 @@ fn key_handler(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.
                 std.debug.print("time: {d}\n", .{state.delta_time});
             }
         },
-        .w => state.camera.process_keyboard(.Forward, state.delta_time),
-        .s => state.camera.process_keyboard(.Backward, state.delta_time),
-        .a => state.camera.process_keyboard(.Left, state.delta_time),
-        .d => state.camera.process_keyboard(.Right, state.delta_time),
+        .w => state.camera.processMovement(.Forward, state.delta_time),
+        .s => state.camera.processMovement(.Backward, state.delta_time),
+        .a => state.camera.processMovement(.Left, state.delta_time),
+        .d => state.camera.processMovement(.Right, state.delta_time),
         else => {},
     }
 }
 
-fn framebuffer_size_handler(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {
+fn framebufferSizeHandler(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {
     _ = window;
     gl.viewport(0, 0, width, height);
 }
 
-fn mouse_hander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
+fn mouseHander(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = window;
     _ = button;
     _ = action;
     _ = mods;
 }
 
-fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
+fn cursorPositionHandler(window: *glfw.Window, xposIn: f64, yposIn: f64) callconv(.C) void {
     _ = window;
-    var xpos: i32 = @intFromFloat(xposIn);
-    var ypos: i32 = @intFromFloat(yposIn);
+    var xpos: f32 = @floatCast(xposIn);
+    var ypos: f32 = @floatCast(yposIn);
 
     xpos = if (xpos < 0) 0 else if (xpos < state.scr_width) xpos else state.scr_width;
     ypos = if (ypos < 0) 0 else if (ypos < state.scr_height) ypos else state.scr_height;
@@ -270,11 +278,11 @@ fn cursor_position_handler(window: *glfw.Window, xposIn: f64, yposIn: f64) callc
     state.last_x = xpos;
     state.last_y = ypos;
 
-    state.camera.process_mouse_movement(xoffset, yoffset, true);
+    state.camera.processMouseMovement(xoffset, yoffset, true);
 }
 
-fn scroll_handler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {
+fn scrollHandler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {
     _ = window;
     _ = xoffset;
-    state.camera.process_mouse_scroll(@floatCast(yoffset));
+    state.camera.processMouseScroll(@floatCast(yoffset));
 }

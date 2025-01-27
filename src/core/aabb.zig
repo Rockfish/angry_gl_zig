@@ -111,7 +111,7 @@ pub const AABB = extern struct {
         return aabb;
     }
 
-    pub fn ray_intersects(self: AABB, ray: Ray) ?f32 {
+    pub fn rayIntersects(self: AABB, ray: Ray) ?f32 {
         var t_min: f32 = math.inf(f32) * -1.0;
         var t_max: f32 = math.inf(f32);
 

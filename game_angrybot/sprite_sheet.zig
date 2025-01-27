@@ -23,7 +23,7 @@ pub const SpriteSheet = struct {
         self.texture.deinit();
     }
 
-    pub fn new(texture: *Texture, num_columns: i32, time_per_sprite: f32) Self {
+    pub fn init(texture: *Texture, num_columns: i32, time_per_sprite: f32) Self {
         return .{
             .texture = texture,
             .num_columns = @floatFromInt(num_columns),

@@ -178,11 +178,11 @@ pub const MeshPrimitive = struct {
             gl.activeTexture(gl.TEXTURE0 + @as(c_uint, @intCast(texUnit)));
             gl.bindTexture(gl.TEXTURE_2D, texture.gl_texture_id);
             shader.set_int("texture_diffuse", texUnit);
-            shader.set_bool("has_texture", true);
+            shader.setBool("has_texture", true);
         } else {
             const color = self.material.pbr_metallic_roughness.base_color_factor;
-            shader.set_4float("diffuse_color", &color);
-            shader.set_bool("has_color", true);
+            shader.set4Float("diffuse_color", &color);
+            shader.setBool("has_color", true);
         }
 
         gl.bindVertexArray(self.vao);
@@ -194,55 +194,55 @@ pub const MeshPrimitive = struct {
         );
         gl.bindVertexArray(0);
 
-        shader.set_bool("has_color", false);
+        shader.setBool("has_color", false);
     }
 
     pub fn renderPBR(self: *MeshPrimitive, gltf: *Gltf, shader: *const Shader) void {
 
         // Base Color
-        shader.set_4float("material.baseColorFactor", &self.material.pbr_metallic_roughness.base_color_factor);
-        shader.set_float("material.metallicFactor", self.material.pbr_metallic_roughness.metallic_factor);
-        shader.set_float("material.roughnessFactor", self.material.pbr_metallic_roughness.roughness_factor);
-        shader.set_3float("material.emissiveFactor", &self.material.emissive_factor);
+        shader.set4Float("material.baseColorFactor", &self.material.pbr_metallic_roughness.base_color_factor);
+        shader.setFloat("material.metallicFactor", self.material.pbr_metallic_roughness.metallic_factor);
+        shader.setFloat("material.roughnessFactor", self.material.pbr_metallic_roughness.roughness_factor);
+        shader.set3Float("material.emissiveFactor", &self.material.emissive_factor);
 
         if (self.material.pbr_metallic_roughness.base_color_texture) |baseColorTexture| {
             const texture = gltf.loaded_textures.get(baseColorTexture.index) orelse std.debug.panic("texture not loaded.", .{});
-            shader.bind_texture(0, "baseColorTexture", texture);
-            shader.set_bool("has_baseColorTexture", true);
+            shader.bindTexture(0, "baseColorTexture", texture);
+            shader.setBool("has_baseColorTexture", true);
         } else {
-            shader.set_bool("has_baseColorTexture", false);
+            shader.setBool("has_baseColorTexture", false);
         }
 
         if (self.material.pbr_metallic_roughness.metallic_roughness_texture) |metallicRoughnessTexture| {
             const texture = gltf.loaded_textures.get(metallicRoughnessTexture.index) orelse std.debug.panic("texture not loaded.", .{});
-            shader.bind_texture(1, "metallicRoughnessTexture", texture);
-            shader.set_bool("has_metallicRoughnessTexture", true);
+            shader.bindTexture(1, "metallicRoughnessTexture", texture);
+            shader.setBool("has_metallicRoughnessTexture", true);
         } else {
-            shader.set_bool("has_metallicRoughnessTexture", false);
+            shader.setBool("has_metallicRoughnessTexture", false);
         }
 
         if (self.material.normal_texture) |normalTexture| {
             const texture = gltf.loaded_textures.get(normalTexture.index) orelse std.debug.panic("texture not loaded.", .{});
-            shader.bind_texture(2, "normalTexture", texture);
-            shader.set_bool("has_normalTexture", true);
+            shader.bindTexture(2, "normalTexture", texture);
+            shader.setBool("has_normalTexture", true);
         } else {
-            shader.set_bool("has_normalTexture", false);
+            shader.setBool("has_normalTexture", false);
         }
 
         if (self.material.emissive_texture) |emissiveTexture| {
             const texture = gltf.loaded_textures.get(emissiveTexture.index) orelse std.debug.panic("texture not loaded.", .{});
-            shader.bind_texture(3, "emissiveTexture", texture);
-            shader.set_bool("has_emissiveTexture", true);
+            shader.bindTexture(3, "emissiveTexture", texture);
+            shader.setBool("has_emissiveTexture", true);
         } else {
-            shader.set_bool("has_emissiveTexture", false);
+            shader.setBool("has_emissiveTexture", false);
         }
 
         if (self.material.occlusion_texture) |occlusionTexture| {
             const texture = gltf.loaded_textures.get(occlusionTexture.index) orelse std.debug.panic("texture not loaded.", .{});
-            shader.set_bool("has_occlusionTexture", true);
-            shader.bind_texture(4, "occlusionTexture", texture);
+            shader.setBool("has_occlusionTexture", true);
+            shader.bindTexture(4, "occlusionTexture", texture);
         } else {
-            shader.set_bool("has_occlusionTexture", false);
+            shader.setBool("has_occlusionTexture", false);
         }
 
         gl.bindVertexArray(self.vao);

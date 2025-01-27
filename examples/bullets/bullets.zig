@@ -129,7 +129,7 @@ pub const Bullets = struct {
             .wrap = TextureWrap.Repeat,
         };
 
-        const bullet_texture = try Texture.new(
+        const bullet_texture = try Texture.init(
             allocator,
             // "angrygl_assets/bullet/bullet_texture_transparent.png",
             "assets/bullet/red_and_green_bullet_transparent.png",
@@ -244,12 +244,12 @@ pub const Bullets = struct {
     }
 
     pub fn render(self: *const Self, shader: *const Shader) void {
-        shader.use_shader();
+        shader.useShader();
 
         gl.clearColor(0.2, 0.3, 0.3, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT); // | gl.DEPTH_BUFFER_BIT);
 
-        gl.bindTexture(gl.TEXTURE_2D, self.bullet_texture.id);
+        gl.bindTexture(gl.TEXTURE_2D, self.bullet_texture.gl_texture_id);
 
         gl.bindVertexArray(self.bullet_vao);
 
