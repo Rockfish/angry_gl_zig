@@ -46,14 +46,21 @@ pub const Quat = extern struct {
 
     pub fn fromAxisAngle(axis: *const Vec3, angle: f32) Quat {
         // glam_assert!(axis.is_normalized());
+        const normalized_axis = axis.normalizeTo();
         const s = std.math.sin(angle * 0.5);
         const c = std.math.cos(angle * 0.5);
-        const v = axis.mulScalar(s);
+        const v = normalized_axis.mulScalar(s);
         return new(v.x, v.y, v.z, c);
     }
 
     pub fn normalize(self: *Self) void {
         cglm.glmc_quat_normalize(&self.data);
+    }
+
+    pub fn normalizeTo(q: *const Quat) Quat {
+        var result: [4]f32 = undefined;
+        cglm.glmc_quat_normalize_to(@as([*c]f32, @ptrCast(@constCast(q))), &result);
+        return @as(*Quat, @ptrCast(&result)).*;
     }
 
     pub fn mulQuat(p: *const Quat, q: *const Quat) Quat {
@@ -82,10 +89,11 @@ pub const Quat = extern struct {
 
     pub fn toAxes(rotation: *const Quat) [3]Vec4 {
         // glam_assert!(rotation.is_normalized());
-        const x = rotation.data[0];
-        const y = rotation.data[1];
-        const z = rotation.data[2];
-        const w = rotation.data[3];
+        const normalized_rotation = rotation.normalizeTo();
+        const x = normalized_rotation.data[0];
+        const y = normalized_rotation.data[1];
+        const z = normalized_rotation.data[2];
+        const w = normalized_rotation.data[3];
         const x2 = x + x;
         const y2 = y + y;
         const z2 = z + z;

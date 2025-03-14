@@ -12,3 +12,6 @@ backup
 *.DS_Store
 .DS_Store
 
+# Ignore tmp files
+*.tmp
+

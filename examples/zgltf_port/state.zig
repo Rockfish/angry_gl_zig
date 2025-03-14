@@ -36,6 +36,8 @@ pub const State = struct {
     scaled_width: f32,
     scaled_height: f32,
     window_scale: [2]f32,
+    delta_time: f32,
+    total_time: f32,
     input: Input,
     camera: *Camera,
     projection: Mat4 = undefined,
@@ -43,8 +45,6 @@ pub const State = struct {
     view: Mat4 = undefined,
     view_type: core.ViewType,
     light_postion: Vec3,
-    delta_time: f32,
-    total_time: f32,
     spin: bool = false,
     world_point: ?Vec3,
     camera_initial_position: Vec3,
@@ -228,8 +228,6 @@ pub fn setViewPort(w: i32, h: i32) void {
     state.scaled_width = width / state.window_scale[0];
     state.scaled_height = height / state.window_scale[1];
 
-    // const ortho_width = (state.viewport_width / 500);
-    // const ortho_height = (state.viewport_height / 500);
     const aspect_ratio = (state.scaled_width / state.scaled_height);
     state.camera.setAspect(aspect_ratio);
 

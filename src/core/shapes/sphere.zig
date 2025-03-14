@@ -145,7 +145,7 @@ pub const Sphere = struct {
 
                 // for spheres the normal is the position
                 var normal = vec3(pos.x, pos.y, pos.z);
-                normal = normal.normalize();
+                normal = normal.normalizeTo();
 
                 // calculate texture coordinates via sphere mapping
                 // tu is the same on each level, so only calculate once

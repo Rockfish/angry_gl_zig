@@ -100,7 +100,7 @@ pub const MeshPrimitive = struct {
                     mesh_primitive.vbo_positions = createGlArrayBuffer(gltf, 0, accessor_id);
                     std.debug.print("has_positions\n", .{});
                     const aabb = getAABB(gltf, accessor_id);
-                    std.debug.print("aabb: {any}", .{aabb});
+                    std.debug.print("aabb: {any}\n", .{aabb});
                 },
                 .normal => |accessor_id| {
                     mesh_primitive.vbo_normals = createGlArrayBuffer(gltf, 1, accessor_id);
@@ -301,7 +301,8 @@ pub fn createGlArrayBuffer(gltf: *Gltf, gl_index: u32, accessor_id: usize) c_uin
     const buffer_view = gltf.data.buffer_views.items[accessor.buffer_view.?];
     const buffer_data = gltf.buffer_data.items[buffer_view.buffer];
 
-    const data_size = accessor.getComponentSize() * accessor.getTypeSize() * accessor.count;
+    const element_size = accessor.getComponentSize() * accessor.getTypeSize();
+    const data_size = element_size * accessor.count;
 
     const start = accessor.byte_offset + buffer_view.byte_offset;
     const end = start + data_size;
@@ -312,8 +313,12 @@ pub fn createGlArrayBuffer(gltf: *Gltf, gl_index: u32, accessor_id: usize) c_uin
     std.debug.print("data size:  {d}\n", .{data_size});
     std.debug.print("start:  {d}\n", .{start});
     std.debug.print("end:  {d}\n", .{end});
+    std.debug.print("element_size: {d}  byte_stride: {d}  type size: {d}\n", .{element_size, buffer_view.byte_stride, accessor.getTypeSize()});
 
     const data = buffer_data[start..end];
+
+    // Note: this will break if the data is interleved with other data. 
+    std.debug.assert(buffer_view.byte_stride == 0);
 
     var vbo: gl.Uint = undefined;
     gl.genBuffers(1, &vbo);

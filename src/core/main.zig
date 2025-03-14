@@ -22,6 +22,9 @@ pub const Transform = @import("transform.zig").Transform;
 pub const SoundEngine = @import("sound_engine.zig").SoundEngine;
 pub const String = @import("string.zig").String;
 
+pub const Movement = @import("movement.zig").Movement;
+pub const MovementDirection = @import("movement.zig").MovementDirection;
+
 pub const AABB = @import("aabb.zig").AABB;
 pub const Ray = @import("aabb.zig").Ray;
 

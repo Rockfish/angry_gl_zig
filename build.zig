@@ -103,6 +103,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "scene_tree", .exe_name = "scene_tree_example", .source = "examples/scene_tree/main.zig" },
         .{ .name = "game_level_001", .exe_name = "game_level_001", .source = "game_level_001/main.zig" },
         .{ .name = "zgltf_port", .exe_name = "zgltf_port", .source = "examples/zgltf_port/main.zig" },
+        .{ .name = "chat_gltf", .exe_name = "chat_gltf", .source = "examples/chat_gltf/main.zig" },
     }) |app| {
         const exe = b.addExecutable(.{
             .name = app.exe_name,
@@ -164,7 +165,7 @@ pub fn build(b: *std.Build) void {
     // See https://kristoff.it/blog/improving-your-zls-experience/
     const exe_check = b.addExecutable(.{
         .name = "angry_monsters",
-        .root_source_file = b.path("game_level_001/main.zig"),
+        .root_source_file = b.path("examples/zgltf_port/run_animation.zig"),
         .target = target,
         .optimize = optimize,
     });

@@ -1,0 +1,37 @@
+Shader saving uniform: matProjection location: 23  value: mat4.Mat4{ .data = { { 2.4142134e0, 0e0, 0e0, 0e0 }, { 0e0, 2.4142134e0, 0e0, 0e0 }, { 0e0, 0e0, -1.00001e0, -1e0 }, { 0e0, 0e0, -2.00001e-2, 0e0 } } }
+Shader saving uniform: matView location: 6  value: mat4.Mat4{ .data = { { 1e0, 0e0, -0e0, 0e0 }, { -0e0, 1e0, -0e0, 0e0 }, { 0e0, 0e0, 1e0, 0e0 }, { -0e0, -1.2e1, -4e1, 1e0 } } }
+Shader saving uniform: matModel location: 30  value: mat4.Mat4{ .data = { { 1e0, 0e0, 0e0, 0e0 }, { 0e0, 1e0, 0e0, 0e0 }, { 0e0, 0e0, 1e0, 0e0 }, { 0e0, 0e0, 0e0, 1e0 } } }
+Shader saving uniform: lightPosition location: 16  value: vec.Vec3{ .x = 1e1, .y = 1e1, .z = 1e1 }
+Shader saving uniform: lightColor location: 5  value: vec.Vec3{ .x = 1e0, .y = 1e0, .z = 1e0 }
+Shader saving uniform: lightIntensity location: 13  value: 5e2
+Shader saving uniform: viewPosition location: 22  value: vec.Vec3{ .x = 0e0, .y = 1.2e1, .z = 4e1 }
+Shader saving uniform: nodeTransform location: 18  value: mat4.Mat4{ .data = { { -1e0, 0e0, 0e0, 0e0 }, { 0e0, 1e0, 0e0, 0e0 }, { 0e0, 0e0, -1e0, 0e0 }, { 0e0, 0e0, 0e0, 1e0 } } }
+Shader saving uniform: material.baseColorFactor location: 0  value: { 1e0, 1e0, 1e0, 1e0 }
+Shader saving uniform: material.metallicFactor location: 1  value: 1e0
+Shader saving uniform: material.roughnessFactor location: 2  value: 1e0
+Shader saving uniform: material.emissiveFactor location: 3  value: { 1e0, 1e0, 1e0 }
+Shader saving uniform: baseColorTexture location: 4  value: 0
+Shader saving uniform: has_baseColorTexture location: 28  value: true
+Shader saving uniform: metallicRoughnessTexture location: 17  value: 1
+Shader saving uniform: has_metallicRoughnessTexture location: 12  value: true
+Shader saving uniform: normalTexture location: 10  value: 2
+Shader saving uniform: has_normalTexture location: 14  value: true
+Shader saving uniform: emissiveTexture location: 27  value: 3
+Shader saving uniform: has_emissiveTexture location: 11  value: true
+Shader saving uniform: has_occlusionTexture location: 15  value: false
+
+
+
+
+
+    // set color space
+    const linear_space = false;
+    if (linear_space) {
+        // these are not defined in zopengl
+        const GL_TEXTURE_SRGB_DECODE_EXT = 0x8A48;
+        const GL_DECODE_EXT = 0x8A49;
+        gl.texParameteri(gl.TEXTURE_2D, GL_TEXTURE_SRGB_DECODE_EXT, GL_DECODE_EXT);
+        glSuccess("glTexParameteri");
+    }
+
+ 

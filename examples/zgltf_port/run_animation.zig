@@ -79,7 +79,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         .scaled_height = scaled_height,
         .window_scale = window_scale,
         .camera = camera,
-        .projection = camera.getPerspectiveProjection(),
+        .projection = camera.getProjectionMatrix(),
         .projection_type = .Perspective,
         .view_type = .LookAt,
         .light_postion = vec3(10.0, 10.0, -30.0),
@@ -240,11 +240,11 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window, model_path: []con
         // shader.setVec3("light_color", &vec3(0.1, 0.1, 0.1));
         // shader.setVec3("light_dir", &vec3(10.0, 10.0, 2.0));
 
-        shader.setVec3("lightPosition", &state.light_postion);
+        shader.setVec3("lightPosition", &vec3(0.0, 20.0, 5.0));
         shader.setVec3("lightColor", &vec3(1.0, 1.0, 1.0));
-        shader.setFloat("lightIntensity", 1.0);
+        shader.setFloat("lightIntensity", 1500.0);
 
-        shader.setVec3("viewPosition", &state.camera.position);
+        shader.setVec3("viewPosition", &state.camera.movement.position);
 
         // shader.set_mat4("aimRot", &identity);
         // lightSpaceMatrix is a view * ortho projection matrix for shadows

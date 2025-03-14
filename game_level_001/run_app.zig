@@ -322,7 +322,7 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
                 state.current_position = state.target_position;
                 moving = false;
             } else {
-                direction = direction.normalize();
+                direction = direction.normalizeTo();
                 const moveDistance = state.delta_time * 20.0;
 
                 if (moveDistance > distance) {
@@ -431,7 +431,7 @@ pub fn moveTowards(currentPosition: Vec3, targetPosition: Vec3, speed: f32, delt
     }
 
     // Normalize the direction to get a constant movement vector
-    direction = direction.normalize();
+    direction = direction.normalizeTo();
 
     // Calculate how far to move this frame (based on speed and deltaTime)
     const moveDistance = speed * deltaTime;

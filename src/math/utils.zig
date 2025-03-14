@@ -72,7 +72,7 @@ pub fn getWorldRayFromMouse(
     const ray_world = (view_inverse.mulVec4(&ray_eye)).xyz();
 
     // ray from camera
-    const ray_normalized = ray_world.normalize();
+    const ray_normalized = ray_world.normalizeTo();
 
     return ray_normalized;
 }
@@ -111,7 +111,7 @@ pub fn calculateNormal(a: Vec3, b: Vec3, c: Vec3) Vec3 {
     const normal = ab.cross(&ac);
 
     // Normalize the resulting normal vector
-    return normal.normalize();
+    return normal.normalizeTo();
 }
 
 test "utils.get_world_ray_from_mouse" {

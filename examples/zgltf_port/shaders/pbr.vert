@@ -6,21 +6,14 @@ layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inTexCoord;
 layout(location = 3) in vec3 inTangent;
 layout(location = 4) in vec4 inColor;
-layout(location = 5) in ivec4 inBoneIds;
-layout(location = 6) in vec4 inWeights;
 
-const int MAX_BONES = 100;
-const int MAX_BONE_INFLUENCE = 4;
-
-uniform mat4 finalBonesMatrices[MAX_BONES];
-uniform mat4 nodeTransform;
-
+// Uniforms
 uniform mat4 matProjection;
 uniform mat4 matView;
 uniform mat4 matModel;
-uniform mat4 matLightSpace;
+uniform mat4 nodeTransform;
 
-// Output
+// Outputs to the fragment shader
 out vec3 fragWorldPosition;
 out vec2 fragTexCoord;
 out vec3 fragTangent;
@@ -29,22 +22,33 @@ out vec3 fragNormal;
 out mat3 fragTBN;
 
 void main() {
-
-    mat4 matTest = finalBonesMatrices[0];
-
+    // Compute the normal matrix from the model matrix for correct normal transformation.
     mat3 normalMatrix = transpose(inverse(mat3(matModel)));
+
+    // Transform the normal and tangent into world space.
     vec3 N = normalize(normalMatrix * inNormal);
     vec3 T = normalize(normalMatrix * inTangent);
+
+    // Re-orthogonalize the tangent relative to the normal.
     T = normalize(T - dot(T, N) * N);
+
+    // Compute the bitangent using the cross product.
     vec3 B = cross(N, T);
 
-    fragWorldPosition = vec3(matModel * vec4(inPosition, 1.0));
+    // Compute the world-space position using both matModel and nodeTransform.
+    vec4 worldPos = matModel * nodeTransform * vec4(inPosition, 1.0);
+    fragWorldPosition = worldPos.xyz;
+
+    // Pass through texture coordinates and vertex color.
     fragTexCoord = inTexCoord;
-    fragTangent = inTangent;
     fragColor = inColor;
-    fragNormal = normalize(normalMatrix * inNormal);
+
+    // Output the transformed normal.
+    fragNormal = N;
+
+    // Construct the TBN matrix to transform normals from tangent space to world space.
     fragTBN = mat3(T, B, N);
 
-    gl_Position = matProjection * matView * matModel * nodeTransform * vec4(inPosition, 1.0f);
+    // Compute the final vertex position in clip space.
+    gl_Position = matProjection * matView * matModel * nodeTransform * vec4(inPosition, 1.0);
 }
-

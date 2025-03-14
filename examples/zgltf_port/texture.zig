@@ -18,7 +18,8 @@ pub const Texture = struct {
     const Self = @This();
 
     pub fn deinit(self: *const Texture) void {
-        // todo: delete texture from gpu
+        // delete texture from gpu
+        gl.deleteTextures(1, &self.gl_texture_id);
         // self.allocator.free(self.texture_path);
         self.allocator.destroy(self);
     }
@@ -87,6 +88,7 @@ pub fn loadImage(allocator: Allocator, gltf: *Gltf, gltf_image: Gltf.Image, dire
                 const decoded_length = decoder.calcSizeForSlice(uri[idx..uri.len]) catch |err| {
                     std.debug.panic("Texture base64 decoder error: {any}\n", .{ err });
                 };
+                // TODO: review if the data_buffer needs to be freed. May not since the allocator does not complain on exit.
                 const data_buffer: []align(4) u8 = allocator.allocWithOptions(u8, decoded_length, 4, null) catch |err| {
                     std.debug.panic("Texture allocator error: {any}\n", .{ err });
                 };
@@ -115,7 +117,11 @@ pub fn loadImage(allocator: Allocator, gltf: *Gltf, gltf_image: Gltf.Image, dire
 
     } else if (gltf_image.buffer_view) |buffer_view_id| {
         const buffer_view = gltf.data.buffer_views.items[buffer_view_id];
-        const data = gltf.buffer_data.items[buffer_view.buffer][buffer_view.byte_offset..buffer_view.byte_length];
+
+        // TODO: testing the length of the buffer should include the byte_offset:width:
+        //const data = gltf.buffer_data.items[buffer_view.buffer][buffer_view.byte_offset..buffer_view.byte_length];
+        const data = gltf.buffer_data.items[buffer_view.buffer][buffer_view.byte_offset .. buffer_view.byte_offset + buffer_view.byte_length];
+
         const image = zstbi.Image.loadFromMemory(data, 0) catch |err| {
             std.debug.print("Texture loadFromMemory error: {any}  bufferview: {any}\n", .{ err, buffer_view });
             @panic(@errorName(err));
@@ -152,8 +158,9 @@ pub fn createGlTexture( image: zstbi.Image, sampler: Gltf.TextureSampler) c_uint
         gl.UNSIGNED_BYTE,
         image.data.ptr,
     );
+    glSuccess("glTexImage2D");
 
-    gl.generateMipmap(gl.TEXTURE_2D);
+   gl.generateMipmap(gl.TEXTURE_2D);
 
     const wrap_s: i32 = switch (sampler.wrap_s) {
         Gltf.WrapMode.clamp_to_edge => gl.CLAMP_TO_EDGE,
@@ -200,4 +207,14 @@ pub fn createGlTexture( image: zstbi.Image, sampler: Gltf.TextureSampler) c_uint
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mag_filter);
 
     return gl_texture_id;
+}
+
+pub fn glSuccess(func_name: []const u8) void {
+    for (0..8) |_| {
+        const error_code = gl.getError();
+        if (error_code == gl.NO_ERROR) {
+            break;
+        }
+        std.debug.print("GL error for function: {s}  error code: {d}\n", .{func_name, error_code});
+    }
 }
