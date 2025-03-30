@@ -1,5 +1,6 @@
 .{
-    .name = "angry_gl_zig",
+    .name = .redfish_gl_zig,
+    .fingerprint = 0x8cceed5d037701e2,
     .version = "0.0.0",
 
     .dependencies = .{

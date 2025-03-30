@@ -1,6 +1,7 @@
 .{
-    .name = "zig-assimp",
+    .name = .zig_assimp,
     .version = "5.4.3",
+    .fingerprint = 0x3e92a7cf59a4f9bf,
     .paths = .{
         "build.zig",
         "build.zig.zon",

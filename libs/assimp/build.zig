@@ -19,10 +19,12 @@ pub fn build(b: *std.Build) !void {
 
     const assimp = b.dependency("assimp", .{});
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "assimp",
-        .optimize = optimize,
-        .target = target,
+        //.optimize = optimize,
+        //.target = target,
+        .linkage = .static,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.linkLibC();
@@ -41,11 +43,16 @@ pub fn build(b: *std.Build) !void {
             .style = .{ .cmake = assimp.path("include/assimp/revision.h.in") },
             .include_path = "assimp/revision.h",
         },
-        .{ 
+        .{
+            .GIT_BRANCH = "master",
             .GIT_COMMIT_HASH = "122080",
             .ASSIMP_VERSION_MAJOR = 5,
             .ASSIMP_VERSION_MINOR = 4,
             .ASSIMP_VERSION_PATCH = 3,
+            .ASSIMP_PACKAGE_VERSION = 0,
+            .CMAKE_SHARED_LIBRARY_PREFIX = "",
+            .LIBRARY_SUFFIX = "",
+            .CMAKE_DEBUG_POSTFIX = "",
         },
     );
 
@@ -65,7 +72,13 @@ pub fn build(b: *std.Build) !void {
     lib.addIncludePath(assimp.path("contrib/openddlparser/include"));
     lib.addIncludePath(assimp.path("contrib/utf8cpp/source"));
 
-    lib.defineCMacro("RAPIDJSON_HAS_STDSTRING", "1");
+    //lib.defineCMacro("RAPIDJSON_HAS_STDSTRING", "1");
+
+    var flags = std.ArrayList([]const u8).init(b.allocator);
+    defer flags.deinit();
+    try flags.appendSlice(&.{
+        "-DRAPIDJSON_HAS_STDSTRING=1",
+    });
 
     lib.installConfigHeader(config_h);
 
@@ -74,7 +87,7 @@ pub fn build(b: *std.Build) !void {
     lib.addCSourceFiles(.{
         .root = assimp.path(""),
         .files = &sources.common,
-        .flags = &.{},
+        .flags = flags.items,
     });
 
     inline for (comptime std.meta.declarations(sources.libraries)) |ext_lib| {
@@ -107,7 +120,7 @@ pub fn build(b: *std.Build) !void {
     var enabled_formats = std.BufSet.init(b.allocator);
     defer enabled_formats.deinit();
 
-    var tokenizer = std.mem.tokenize(u8, formats, ",");
+    var tokenizer = std.mem.tokenizeAny(u8, formats, ",");
 
     while (tokenizer.next()) |format| {
         if (std.mem.eql(u8, format, "all")) {
@@ -145,8 +158,8 @@ pub fn build(b: *std.Build) !void {
             const define_importer = b.fmt("ASSIMP_BUILD_NO_{}_IMPORTER", .{fmtUpperCase(format_files.name)});
             const define_exporter = b.fmt("ASSIMP_BUILD_NO_{}_EXPORTER", .{fmtUpperCase(format_files.name)});
 
-            lib.defineCMacro(define_importer, null);
-            lib.defineCMacro(define_exporter, null);
+            lib.root_module.addCMacro(define_importer, "1");
+            lib.root_module.addCMacro(define_exporter, "1");
         }
     }
 
@@ -154,8 +167,8 @@ pub fn build(b: *std.Build) !void {
         const define_importer = b.fmt("ASSIMP_BUILD_NO_{}_IMPORTER", .{fmtUpperCase(unsupported_format)});
         const define_exporter = b.fmt("ASSIMP_BUILD_NO_{}_EXPORTER", .{fmtUpperCase(unsupported_format)});
 
-        lib.defineCMacro(define_importer, null);
-        lib.defineCMacro(define_exporter, null);
+        lib.root_module.addCMacro(define_importer, "1");
+        lib.root_module.addCMacro(define_exporter, "1");
     }
 
     b.installArtifact(lib);

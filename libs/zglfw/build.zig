@@ -38,21 +38,12 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    const glfw = if (options.shared) blk: {
-        const lib = b.addSharedLibrary(.{
+    const glfw = b.addLibrary(.{
             .name = "glfw",
-            .target = target,
-            .optimize = optimize,
-        });
-        if (target.result.os.tag == .windows) {
-            lib.defineCMacro("_GLFW_BUILD_DLL", null);
-        }
-        break :blk lib;
-    } else b.addStaticLibrary(.{
-        .name = "glfw",
-        .target = target,
-        .optimize = optimize,
-    });
+            .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
+            .linkage = if (options.shared) .dynamic else .static,
+            });
+
     b.installArtifact(glfw);
 
     glfw.addIncludePath(b.path("libs/glfw/include" ));
@@ -88,7 +79,7 @@ pub fn build(b: *std.Build) void {
                     src_dir ++ "win32_window.c",
                     src_dir ++ "win32_module.c",
                 },
-                .flags = &.{"-D_GLFW_WIN32"},
+                .flags = &.{"-D_GLFW_WIN32", "-D_GLFW_BUILD_DLL"},
             });
         },
         .macos => {
@@ -181,9 +172,8 @@ pub fn build(b: *std.Build) void {
                         src_dir ++ "x11_window.c",
                         src_dir ++ "glx_context.c",
                     },
-                    .flags = &.{},
+                    .flags = &.{"-D_GLFW_X11"},
                 });
-                glfw.defineCMacro("_GLFW_X11", "1");
                 glfw.linkSystemLibrary("X11");
             }
             if (options.enable_wayland) {
@@ -193,9 +183,8 @@ pub fn build(b: *std.Build) void {
                         src_dir ++ "wl_monitor.c",
                         src_dir ++ "wl_window.c",
                     },
-                    .flags = &.{},
+                    .flags = &.{"-D_GLFW_WAYLAND"},
                 });
-                glfw.defineCMacro("_GLFW_WAYLAND", "1");
             }
         },
         else => {},

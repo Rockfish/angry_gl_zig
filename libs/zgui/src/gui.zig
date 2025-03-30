@@ -994,7 +994,7 @@ pub const Style = extern struct {
     curve_tessellation_tol: f32,
     circle_tessellation_max_error: f32,
 
-    colors: [@typeInfo(StyleCol).Enum.fields.len][4]f32,
+    colors: [@typeInfo(StyleCol).@"enum".fields.len][4]f32,
 
     hover_stationary_delay: f32,
     hover_delay_short: f32,
@@ -1653,7 +1653,7 @@ pub fn comboFromEnum(
 ) bool {
     const EnumType = @TypeOf(current_item.*);
     const enum_type_info = switch (@typeInfo(EnumType)) {
-        .Enum => |enum_type_info| enum_type_info,
+        .@"enum" => |enum_type_info| enum_type_info,
         else => @compileError("Error: current_item must be a pointer-to-an-enum, not a " ++ @TypeOf(current_item)),
     };
 
@@ -3575,7 +3575,7 @@ pub const DragDropFlags = packed struct(c_int) {
 };
 
 const Payload = extern struct {
-    data: *anyopaque = null,
+    data: ?*anyopaque = null,
     data_size: c_int = 0,
     source_id: c_uint = 0,
     source_parent_id: c_uint = 0,
