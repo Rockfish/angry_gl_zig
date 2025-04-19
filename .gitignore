@@ -15,3 +15,6 @@ backup
 # Ignore tmp files
 *.tmp
 
+error_log.txt
+
+

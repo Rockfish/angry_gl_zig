@@ -112,6 +112,8 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         });
 
+        // exe.addCxxFlag("-std=c++14");
+
         if (exe.root_module.optimize == .ReleaseFast) {
             exe.root_module.strip = true;
         }

@@ -27,6 +27,8 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    // lib.root_module.addCxxCompileFlag("-std=c++14");
+
     lib.linkLibC();
     lib.linkLibCpp();
 
@@ -77,7 +79,8 @@ pub fn build(b: *std.Build) !void {
     var flags = std.ArrayList([]const u8).init(b.allocator);
     defer flags.deinit();
     try flags.appendSlice(&.{
-        "-DRAPIDJSON_HAS_STDSTRING=1",
+        "-std=c++14",
+        //"-DRAPIDJSON_HAS_STDSTRING=1",
     });
 
     lib.installConfigHeader(config_h);
@@ -94,7 +97,7 @@ pub fn build(b: *std.Build) !void {
         lib.addCSourceFiles(.{
             .root = assimp.path(""),
             .files = &@field(sources.libraries, ext_lib.name),
-            .flags = &.{},
+            .flags = &.{}, //"-std=c++14"},
         });
     }
 
@@ -104,7 +107,7 @@ pub fn build(b: *std.Build) !void {
             lib.addCSourceFiles(.{
                 .root = assimp.path(""),
                 .files = &sources.zlib,
-                .flags = &.{},
+                .flags = &.{}, // "-std=c++14"},
             });
         },
         .macos => {
@@ -152,7 +155,7 @@ pub fn build(b: *std.Build) !void {
             lib.addCSourceFiles(.{
                 .root = assimp.path(""),
                 .files = &@field(sources.formats, format_files.name),
-                .flags = &.{},
+                .flags = &.{}, // "-std=c++14"},
             });
         } else {
             const define_importer = b.fmt("ASSIMP_BUILD_NO_{}_IMPORTER", .{fmtUpperCase(format_files.name)});
