@@ -1,5 +1,4 @@
 const std = @import("std");
-const cglm = @import("cglm.zig").CGLM;
 const _vec = @import("vec.zig");
 // const _quat = @import("quat.zig");
 
@@ -33,5 +32,17 @@ pub const Mat3 = extern struct {
         const y_axis = Vec3.fromArray(self.data[1]);
         const z_axis = Vec3.fromArray(self.data[2]);
         return z_axis.dot(&x_axis.cross(&y_axis));
+    }
+
+    pub fn asString(self: *const Self, buf: []u8) []u8 {
+        return std.fmt.bufPrint(
+            buf,
+            "Mat3{{[{d:.3}, {d:.3}, {d:.3}], [{d:.3}, {d:.3}, {d:.3}], [{d:.3}, {d:.3}, {d:.3}]}}",
+            .{
+                self.data[0][0], self.data[0][1], self.data[0][2],
+                self.data[1][0], self.data[1][1], self.data[1][2],
+                self.data[2][0], self.data[2][1], self.data[2][2],
+            },
+        ) catch |err| std.debug.panic("{any}", .{err});
     }
 };

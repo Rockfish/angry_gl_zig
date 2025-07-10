@@ -26,6 +26,7 @@ const Quat = math.Quat;
 
 const Texture = core.texture.Texture;
 const TextureType = core.texture.TextureType;
+const TextureConfig = core.texture.TextureConfig;
 const Animator = animation.Animator;
 const AnimationClip = animation.AnimationClip;
 const AnimationRepeat = animation.AnimationRepeatMode;
@@ -86,13 +87,13 @@ pub fn main() !void {
 
     const gl_major = 4;
     const gl_minor = 0;
-    glfw.windowHintTyped(.context_version_major, gl_major);
-    glfw.windowHintTyped(.context_version_minor, gl_minor);
-    glfw.windowHintTyped(.opengl_profile, .opengl_core_profile);
-    glfw.windowHintTyped(.client_api, .opengl_api);
-    glfw.windowHintTyped(.doublebuffer, true);
+    glfw.windowHint(.context_version_major, gl_major);
+    glfw.windowHint(.context_version_minor, gl_minor);
+    glfw.windowHint(.opengl_profile, .opengl_core_profile);
+    glfw.windowHint(.client_api, .opengl_api);
+    glfw.windowHint(.doublebuffer, true);
     // For MacOS
-    glfw.windowHintTyped(.opengl_forward_compat, true);
+    glfw.windowHint(.opengl_forward_compat, true);
 
     const window = try glfw.Window.create(600, 600, "Angry ", null);
     defer window.destroy();
@@ -163,10 +164,10 @@ pub fn run(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var texture_cache = std.ArrayList(*Texture).init(allocator);
     var builder = try ModelBuilder.init(allocator, &texture_cache, "Player", model_path);
 
-    const texture_diffuse = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
-    const texture_specular = .{ .texture_type = .Specular, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
-    const texture_emissive = .{ .texture_type = .Emissive, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
-    const texture_normals = .{ .texture_type = .Normals, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
+    const texture_diffuse: TextureConfig = .{ .texture_type = .Diffuse, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
+    const texture_specular: TextureConfig = .{ .texture_type = .Specular, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
+    const texture_emissive: TextureConfig = .{ .texture_type = .Emissive, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
+    const texture_normals: TextureConfig = .{ .texture_type = .Normals, .filter = .Linear, .flip_v = true, .gamma_correction = false, .wrap = .Clamp };
 
     std.debug.print("Main: adding textures\n", .{});
     try builder.addTexture("Player", texture_diffuse, "Textures/Player_D.tga");
@@ -341,7 +342,7 @@ fn cursorPositionHandler(window: *glfw.Window, xposIn: f64, yposIn: f64) callcon
     state.last_x = xpos;
     state.last_y = ypos;
 
-    state.camera.processMouseMovement(xoffset, yoffset, true);
+    state.camera.movement.processMouseMovement(xoffset, yoffset, true);
 }
 
 fn scrollHandler(window: *Window, xoffset: f64, yoffset: f64) callconv(.C) void {

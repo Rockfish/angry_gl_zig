@@ -74,12 +74,12 @@ pub fn build(b: *std.Build) !void {
     lib.addIncludePath(assimp.path("contrib/openddlparser/include"));
     lib.addIncludePath(assimp.path("contrib/utf8cpp/source"));
 
-    //lib.defineCMacro("RAPIDJSON_HAS_STDSTRING", "1");
+    lib.root_module.addCMacro("RAPIDJSON_HAS_STDSTRING", "1");
 
     var flags = std.ArrayList([]const u8).init(b.allocator);
     defer flags.deinit();
     try flags.appendSlice(&.{
-        "-std=c++14",
+        "-std=c++17",
         //"-DRAPIDJSON_HAS_STDSTRING=1",
     });
 
@@ -485,9 +485,9 @@ const sources = struct {
             "code/AssetLib/FBX/FBXUtil.cpp",
         };
         pub const glTF = [_][]const u8{
-            "code/AssetLib/glTF/glTFCommon.cpp",
             "code/AssetLib/glTF/glTFExporter.cpp",
             "code/AssetLib/glTF/glTFImporter.cpp",
+            "code/AssetLib/glTFCommon/glTFCommon.cpp",
         };
         pub const glTF2 = [_][]const u8{
             "code/AssetLib/glTF2/glTF2Exporter.cpp",

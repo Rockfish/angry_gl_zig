@@ -6,4 +6,5 @@
   <component name="ZigProjectSettings">
     <option name="toolchainPath" value="$USER_HOME$/zig/bin" />
   </component>
+  <component name="ZigToolchain" toolchain="a3bdbc96-0be9-4a4a-8262-9d3aaf7e8605" />
 </project>

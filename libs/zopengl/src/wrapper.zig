@@ -6,7 +6,7 @@ const assert = std.debug.assert;
 
 const meta = struct {
     pub fn mergeEnums(comptime Enums: anytype) type {
-        const tag_type = @typeInfo(Enums[0]).Enum.tag_type;
+        const tag_type = @typeInfo(Enums[0]).@"enum".tag_type;
         const num_fields = countFields: {
             var count: comptime_int = 0;
             for (Enums) |Subset| {
@@ -17,7 +17,7 @@ const meta = struct {
         comptime var fields: [num_fields]std.builtin.Type.EnumField = .{undefined} ** num_fields;
         comptime var i = 0;
         for (Enums) |Subset| {
-            const subset_info = @typeInfo(Subset).Enum;
+            const subset_info = @typeInfo(Subset).@"enum";
             assert(subset_info.tag_type == tag_type);
             for (subset_info.fields) |field| {
                 assert(i < fields.len);
@@ -25,7 +25,7 @@ const meta = struct {
                 i += 1;
             }
         }
-        return @Type(.{ .Enum = .{
+        return @Type(.{ .@"enum" = .{
             .tag_type = tag_type,
             .fields = &fields,
             .decls = &.{},
@@ -677,6 +677,41 @@ pub fn Wrap(comptime bindings: anytype) type {
             texture_cube_map_array = TEXTURE_CUBE_MAP_ARRAY,
         };
 
+        pub const TexUnit = enum(Enum) {
+            texture_0 = TEXTURE0,
+            texture_1 = TEXTURE1,
+            texture_2 = TEXTURE2,
+            texture_3 = TEXTURE3,
+            texture_4 = TEXTURE4,
+            texture_5 = TEXTURE5,
+            texture_6 = TEXTURE6,
+            texture_7 = TEXTURE7,
+            texture_8 = TEXTURE8,
+            texture_9 = TEXTURE9,
+            texture_10 = TEXTURE10,
+            texture_11 = TEXTURE11,
+            texture_12 = TEXTURE12,
+            texture_13 = TEXTURE13,
+            texture_14 = TEXTURE14,
+            texture_15 = TEXTURE15,
+            texture_16 = TEXTURE16,
+            texture_17 = TEXTURE17,
+            texture_18 = TEXTURE18,
+            texture_19 = TEXTURE19,
+            texture_20 = TEXTURE20,
+            texture_21 = TEXTURE21,
+            texture_22 = TEXTURE22,
+            texture_23 = TEXTURE23,
+            texture_24 = TEXTURE24,
+            texture_25 = TEXTURE25,
+            texture_26 = TEXTURE26,
+            texture_27 = TEXTURE27,
+            texture_28 = TEXTURE28,
+            texture_29 = TEXTURE29,
+            texture_30 = TEXTURE30,
+            texture_31 = TEXTURE31,
+        };
+
         pub const TexImageTarget = enum(Enum) {
             //--------------------------------------------------------------------------------------
             // OpenGL 1.0 (Core Profile)
@@ -1056,6 +1091,22 @@ pub fn Wrap(comptime bindings: anytype) type {
             //--------------------------------------------------------------------------------------
             // TODO
             // buffer_offset = TEXTURE_BUFFER_OFFSET,
+        };
+
+        pub const MipmapTarget = enum(Enum) {
+            //--------------------------------------------------------------------------------------
+            // OpenGL 3.0 (Core Profile)
+            //--------------------------------------------------------------------------------------
+            texture_1d = TEXTURE_1D,
+            texture_2d = TEXTURE_2D,
+            texture_3d = TEXTURE_3D,
+            texture_1d_array = TEXTURE_1D_ARRAY,
+            texture_2d_array = TEXTURE_2D_ARRAY,
+            texture_cube_map = TEXTURE_CUBE_MAP,
+            //--------------------------------------------------------------------------------------
+            // OpenGL 4.0 (Core Profile)
+            //--------------------------------------------------------------------------------------
+            texture_cube_map_array = TEXTURE_CUBE_MAP_ARRAY,
         };
 
         pub const PixelStoreParameter = meta.mergeEnums(.{
@@ -1569,6 +1620,11 @@ pub fn Wrap(comptime bindings: anytype) type {
 
         // pub var clear: *const fn (mask: Bitfield) callconv(.C) void = undefined;
         pub fn clear(mask: packed struct(Bitfield) {
+            comptime {
+                assert(@clz(@bitReverse(@as(Bitfield, DEPTH_BUFFER_BIT))) == @bitOffsetOf(@This(), "depth"));
+                assert(@clz(@bitReverse(@as(Bitfield, STENCIL_BUFFER_BIT))) == @bitOffsetOf(@This(), "stencil"));
+                assert(@clz(@bitReverse(@as(Bitfield, COLOR_BUFFER_BIT))) == @bitOffsetOf(@This(), "color"));
+            }
             __unused1: u8 = 0,
             depth: bool = false,
             __unused2: u1 = 0,
@@ -1576,21 +1632,6 @@ pub fn Wrap(comptime bindings: anytype) type {
             __unused3: u3 = 0,
             color: bool = false,
             __unused4: u17 = 0,
-
-            test {
-                try std.testing.expectEqual(
-                    @clz(@bitReverse(@as(Bitfield, DEPTH_BUFFER_BIT))),
-                    @bitOffsetOf(@This(), "depth"),
-                );
-                try std.testing.expectEqual(
-                    @clz(@bitReverse(@as(Bitfield, STENCIL_BUFFER_BIT))),
-                    @bitOffsetOf(@This(), "stencil"),
-                );
-                try std.testing.expectEqual(
-                    @clz(@bitReverse(@as(Bitfield, COLOR_BUFFER_BIT))),
-                    @bitOffsetOf(@This(), "color"),
-                );
-            }
         }) void {
             bindings.clear(@bitCast(mask));
         }
@@ -2150,6 +2191,9 @@ pub fn Wrap(comptime bindings: anytype) type {
         pub const CLAMP_TO_BORDER = bindings.CLAMP_TO_BORDER;
 
         // pub var activeTexture: *const fn (texture: Enum) callconv(.C) void = undefined;
+        pub fn activeTexture(texture_unit: TexUnit) void {
+            bindings.activeTexture(@intFromEnum(texture_unit));
+        }
         // pub var sampleCoverage: *const fn (value: Float, invert: Boolean) callconv(.C) void = undefined;
         // pub var compressedTexImage3D: *const fn (
         //     target: Enum,
@@ -2325,6 +2369,12 @@ pub fn Wrap(comptime bindings: anytype) type {
         }
 
         // pub var deleteBuffers: *const fn (n: Sizei, buffers: [*c]const Uint) callconv(.C) void = undefined;
+        pub fn deleteBuffer(ptr: *Buffer) void {
+            bindings.deleteBuffers(1, @as([*c]Uint, @ptrCast(ptr)));
+        }
+        pub fn deleteBuffers(buffers: []Buffer) void {
+            bindings.deleteBuffers(@intCast(buffers.len), @as([*c]Uint, @ptrCast(buffers.ptr)));
+        }
 
         // pub var genBuffers: *const fn (n: Sizei, buffers: [*c]Uint) callconv(.C) void = undefined;
         pub fn genBuffer(ptr: *Buffer) void {
@@ -2517,6 +2567,10 @@ pub fn Wrap(comptime bindings: anytype) type {
         }
 
         // pub var deleteProgram: *const fn (program: Uint) callconv(.C) void = undefined;
+        pub fn deleteProgram(program: Program) void {
+            assert(@as(Uint, @bitCast(program)) > 0);
+            bindings.deleteProgram(@as(Uint, @bitCast(program)));
+        }
 
         // pub var deleteShader: *const fn (shader: Uint) callconv(.C) void = undefined;
         pub fn deleteShader(shader: Shader) void {
@@ -3496,7 +3550,12 @@ pub fn Wrap(comptime bindings: anytype) type {
             );
             return result;
         }
+
         // pub var generateMipmap: *const fn (target: Enum) callconv(.C) void = undefined;
+        pub fn generateMipmap(target: MipmapTarget) void {
+            bindings.generateMipmap(@intFromEnum(target));
+        }
+
         // pub var blitFramebuffer: *const fn (
         //     srcX0: Int,
         //     srcY0: Int,
@@ -4749,7 +4808,7 @@ pub fn Wrap(comptime bindings: anytype) type {
         //     basevertex: Int,
         //     baseinstance: Uint,
         // ) callconv(.C) void = undefined;
-        // pub var getInternalFormativ: *const fn (
+        // pub var getInternalformativ: *const fn (
         //     target: Enum,
         //     internalformat: Enum,
         //     pname: Enum,

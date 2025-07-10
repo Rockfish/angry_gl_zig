@@ -1,10 +1,12 @@
 .{
-    .name = "zopengl",
-    .version = "0.5.0",
+    .name = .zopengl,
+    .version = "0.6.0-dev",
+    .fingerprint = 0xf50d3c53cf67ebe7,
     .paths = .{
         "build.zig",
         "build.zig.zon",
         "src",
         "README.md",
+        "LICENSE",
     },
 }

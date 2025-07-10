@@ -1,5 +1,4 @@
 const std = @import("std");
-const cglm = @import("cglm.zig").CGLM;
 const _vec = @import("vec.zig");
 const _quat = @import("quat.zig");
 
@@ -15,16 +14,47 @@ const Quat = _quat.Quat;
 /// @param[in] v2             third vertex of triangle
 /// @param[return] ?d         distance to intersection if there is intersection
 pub fn getRayTriangleIntersection(origin: *const Vec3, direction: *const Vec3, vert0: *const Vec3, vert1: *const Vec3, vert2: *const Vec3) ?f32 {
-    var distance: f32 = undefined;
-    const found = cglm.glmc_ray_triangle(
-        @as([*c]f32, @ptrCast(@constCast(origin))),
-        @as([*c]f32, @ptrCast(@constCast(direction))),
-        @as([*c]f32, @ptrCast(@constCast(vert0))),
-        @as([*c]f32, @ptrCast(@constCast(vert1))),
-        @as([*c]f32, @ptrCast(@constCast(vert2))),
-        &distance,
-    );
-    return if (found) distance else null;
+    const epsilon = 1e-8;
+
+    // Calculate edge vectors
+    const edge1 = vert1.sub(vert0);
+    const edge2 = vert2.sub(vert0);
+
+    // Calculate cross product of direction and edge2
+    const h = direction.cross(&edge2);
+    const a = edge1.dot(&h);
+
+    // Ray is parallel to triangle
+    if (@abs(a) < epsilon) {
+        return null;
+    }
+
+    const f = 1.0 / a;
+    const s = origin.sub(vert0);
+    const u = f * s.dot(&h);
+
+    // Check if intersection point is outside triangle
+    if (u < 0.0 or u > 1.0) {
+        return null;
+    }
+
+    const q = s.cross(&edge1);
+    const v = f * direction.dot(&q);
+
+    // Check if intersection point is outside triangle
+    if (v < 0.0 or u + v > 1.0) {
+        return null;
+    }
+
+    // Calculate t (distance along ray)
+    const t = f * edge2.dot(&q);
+
+    // Check if intersection is in front of ray origin
+    if (t > epsilon) {
+        return t;
+    }
+
+    return null;
 }
 
 /// @brief ray sphere intersection
@@ -47,13 +77,40 @@ pub fn getRayTriangleIntersection(origin: *const Vec3, direction: *const Vec3, v
 /// @returns whether there is intersection
 ///
 pub fn getRaySphereIntersection(origin: *const Vec3, direction: *const Vec3, sphere: Vec4, t1: f32, t2: f32) bool {
-    // hmm, don't
-    const found = cglm.glmc_ray_sphere(
-        @as([*c]f32, @ptrCast(@constCast(origin))),
-        @as([*c]f32, @ptrCast(@constCast(direction))),
-        @as([*c]f32, @ptrCast(@constCast(sphere))),
-        t1,
-        t2,
-    );
-    return found;
+    // Extract sphere center and radius
+    const center = Vec3.init(sphere.x, sphere.y, sphere.z);
+    const radius = sphere.w;
+
+    // Calculate vector from ray origin to sphere center
+    const oc = origin.sub(&center);
+
+    // Quadratic equation coefficients: a*t^2 + b*t + c = 0
+    const a = direction.dot(direction);
+    const b = 2.0 * oc.dot(direction);
+    const c = oc.dot(&oc) - radius * radius;
+
+    // Calculate discriminant
+    const discriminant = b * b - 4.0 * a * c;
+
+    // No intersection if discriminant is negative
+    if (discriminant < 0.0) {
+        return false;
+    }
+
+    // Calculate the two intersection points
+    const sqrt_discriminant = std.math.sqrt(discriminant);
+    const t_near = (-b - sqrt_discriminant) / (2.0 * a);
+    const t_far = (-b + sqrt_discriminant) / (2.0 * a);
+
+    // Check if intersections are within the specified range
+    if ((t_near >= t1 and t_near <= t2) or (t_far >= t1 and t_far <= t2)) {
+        return true;
+    }
+
+    // Check if the ray segment is entirely inside the sphere
+    if (t_near < t1 and t_far > t2) {
+        return true;
+    }
+
+    return false;
 }

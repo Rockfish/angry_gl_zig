@@ -501,11 +501,11 @@ pub const Animator = struct {
 
             if (self.bone_map.get(node_name)) |bone| {
                 const transform = node_transform.transform.mulTransform(bone.offset_transform);
-                self.final_bone_matrices[bone.bone_index] = transform.getMatrix();
+                self.final_bone_matrices[bone.bone_index] = transform.toMatrix();
             }
 
             for (node_transform.meshes.items) |mesh_index| {
-                self.final_node_matrices[mesh_index] = node_transform.transform.getMatrix();
+                self.final_node_matrices[mesh_index] = node_transform.transform.toMatrix();
             }
         }
     }
